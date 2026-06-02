@@ -312,6 +312,19 @@
                 color: #ffffff !important;
             }
 
+            @media (max-width: 640px) {
+                .leaderboard-table {
+                    table-layout: fixed;
+                    min-width: 0;
+                }
+
+                .mobile-table-container {
+                    overflow-x: visible;
+                    border-radius: 0.75rem;
+                    box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+                }
+            }
+
             @media (max-width: 1023px) {
                 .committee-shell {
                     display: block;
@@ -1097,34 +1110,40 @@
                 </div>
 
                 <!-- Leaderboard Tab -->
-                <div id="leaderboard" class="tab-content hidden mt-8 ml-5 mr-5">
+                <div id="leaderboard" class="tab-content hidden mt-8 ml-5 mr-5 space-y-4 animate-in fade-in duration-500">
+                    <div class="text-center">
+                        <h2 class="text-3xl font-extrabold text-slate-950 tracking-tight leading-none">Team Leaderboard</h2>
+                    </div>
+
+                    <p class="text-center text-sm font-bold text-slate-800">
+                        To see the history of the games, click the team you want.
+                    </p>
+
                     <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/60 border border-slate-200 overflow-hidden">
+                        <div class="mobile-table-container">
+                            <table class="leaderboard-table">
+                                <thead>
+                                    <tr class="bg-gradient-to-r from-slate-800 to-slate-900 text-white">
+                                        <th class="leaderboard-rank-cell text-left py-5 px-6 font-bold uppercase text-xs tracking-wider">Rank</th>
+                                        <th class="leaderboard-team-cell text-left py-5 px-6 font-bold uppercase text-xs tracking-wider">Team Name</th>
+                                        <th class="leaderboard-stat-cell text-center py-5 px-6 font-bold uppercase text-xs tracking-wider">Points</th>
+                                        <th class="leaderboard-stat-cell text-center py-5 px-6 font-bold uppercase text-xs tracking-wider">Wins</th>
+                                        <th class="leaderboard-stat-cell text-center py-5 px-6 font-bold uppercase text-xs tracking-wider">Losses</th>
+                                    </tr>
+                                </thead>
 
-                        <div class="flex items-center justify-between p-6 pb-4">
-                            <h2 class="text-2xl font-extrabold text-slate-900">
-                                Leaderboard Rankings
-                            </h2>
+                                <tbody id="leaderboardBody" class="divide-y divide-slate-100">
+                                    <tr>
+                                        <td colspan="5" class="text-center py-16">
+                                            <div class="flex flex-col items-center space-y-3">
+                                                <div class="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                                <p class="text-slate-500 font-medium">Loading leaderboard data...</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
-
-                        <table class="leaderboard-table w-full">
-                            <thead>
-                                <tr class="bg-gradient-to-r from-slate-800 to-slate-900 text-white">
-                                    <th class="leaderboard-rank-cell text-left py-5 px-6 font-bold uppercase text-xs tracking-wider">Rank</th>
-                                    <th class="leaderboard-team-cell text-left py-5 px-6 font-bold uppercase text-xs tracking-wider">Team Name</th>
-                                    <th class="leaderboard-stat-cell text-center py-5 px-6 font-bold uppercase text-xs tracking-wider">Points</th>
-                                    <th class="leaderboard-stat-cell text-center py-5 px-6 font-bold uppercase text-xs tracking-wider">Wins</th>
-                                    <th class="leaderboard-stat-cell text-center py-5 px-6 font-bold uppercase text-xs tracking-wider">Losses</th>
-                                </tr>
-                            </thead>
-
-                            <tbody id="leaderboardBody" class="divide-y divide-slate-100">
-                                <tr>
-                                    <td colspan="5" class="text-center py-8 text-gray-500">
-                                        Loading leaderboard...
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
                     </div>
                 </div>
 
@@ -2081,6 +2100,7 @@
                 let currentUser = null;
                 let hasRenderedCommitteeLeaderboard = false;
                 let isRefreshingCommitteeLeaderboard = false;
+                let lastCommitteeLeaderboardSignature = "";
                 let contactPersonnelData = [];
                 let committeeAllConversationsData = [];
                 let committeeConversationsData = [];
@@ -3812,6 +3832,27 @@
                     return 0;
                 }
 
+                function findPointValue(...values) {
+                    for (const value of values) {
+                        if (value === null || value === undefined || value === "") {
+                            continue;
+                        }
+
+                        const numericValue = Number(value);
+                        if (Number.isFinite(numericValue)) {
+                            return {
+                                found: true,
+                                value: numericValue
+                            };
+                        }
+                    }
+
+                    return {
+                        found: false,
+                        value: 0
+                    };
+                }
+
                 function findSportForHistory(history) {
                     const sportId = history.sport_id ?? history.game_id ?? history.category_id;
                     if (sportId !== null && sportId !== undefined && sportsById.has(String(sportId))) {
@@ -3824,11 +3865,11 @@
 
                 function getHistoryPoints(history, side) {
                     const explicitPoints = side === "winner"
-                        ? getPointValue(history.winner_points_awarded, history.winner_award, history.winner_points, history.points_winner, history.winning_points)
-                        : getPointValue(history.loser_points_awarded, history.loser_award, history.loser_points, history.points_loser, history.losing_points);
+                        ? findPointValue(history.winner_points_awarded, history.winner_award, history.winner_points, history.points_winner, history.winning_points)
+                        : findPointValue(history.loser_points_awarded, history.loser_award, history.loser_points, history.points_loser, history.losing_points);
 
-                    if (explicitPoints) {
-                        return explicitPoints;
+                    if (explicitPoints.found) {
+                        return explicitPoints.value;
                     }
 
                     const sport = findSportForHistory(history);
@@ -3843,12 +3884,13 @@
                 }
 
                     function addRegisteredTeam(team) {
-                        const key = makeTeamKey(team.id, team.team);
+                        const teamName = team.team || team.team_name || team.name;
+                        const key = makeTeamKey(team.id, teamName);
 
                     if (!teamStats.has(key)) {
                         teamStats.set(key, {
                             id: team.id,
-                            team: team.team || "Unknown Team",
+                            team: teamName || "Unknown Team",
                             points: getPointValue(team.points, team.total_points, team.score, 0),
                             wins: getPointValue(team.wins, team.win, team.total_wins, 0),
                             losses: getPointValue(team.losses, team.loss, team.total_losses, 0)
@@ -3881,21 +3923,25 @@
                     (historyRows || []).forEach(history => {
                     const winnerPoints = getHistoryPoints(history, "winner");
                     const loserPoints = getHistoryPoints(history, "loser");
+                    const winnerId = history.winner_team_id ?? history.winning_team_id ?? history.winner_id ?? history.team_winner_id;
+                    const winnerName = history.winner_team_name || history.winning_team_name || history.winner_name || history.winner;
+                    const loserId = history.loser_team_id ?? history.losing_team_id ?? history.loser_id ?? history.team_loser_id;
+                    const loserName = history.loser_team_name || history.losing_team_name || history.loser_name || history.loser;
 
-                        if (history.winner_team_id || history.winner_team_name) {
+                        if (winnerId || winnerName) {
                             addTeamResult(
-                                history.winner_team_id,
-                                history.winner_team_name,
+                                winnerId,
+                                winnerName,
                                 winnerPoints,
                                 1,
                                 0
                             );
                         }
 
-                        if (history.loser_team_id || history.loser_team_name) {
+                        if (loserId || loserName) {
                             addTeamResult(
-                                history.loser_team_id,
-                                history.loser_team_name,
+                                loserId,
+                                loserName,
                                 loserPoints,
                                 0,
                                 1
@@ -3923,6 +3969,11 @@
                         return;
                     }
 
+                    const leaderboardSignature = JSON.stringify(leaderboard);
+                    if (leaderboardSignature === lastCommitteeLeaderboardSignature) {
+                        return;
+                    }
+
                     const previousPositions = new Map(
                         [...leaderboardBody.querySelectorAll("tr[data-team-key]")]
                             .map(row => [row.dataset.teamKey, row.getBoundingClientRect().top])
@@ -3936,6 +3987,9 @@
                     leaderboard.forEach((team, index) => {
                         let medal = "";
                         let rowClass = "hover:bg-slate-50 transition-colors";
+                        const rankLabel = index < 3
+                            ? ["&#129351;", "&#129352;", "&#129353;"][index]
+                            : `#${index + 1}`;
 
                         if (index === 0) {
                             medal = "🥇";
@@ -3961,9 +4015,8 @@
 
                         row.innerHTML = `
                             <td class="py-5 px-6">
-                                <div class="flex items-center space-x-3">
-                                    <span class="text-lg font-black text-slate-400 w-6">${index + 1}</span>
-                                    <span class="text-2xl">${medal}</span>
+                                <div class="flex items-center">
+                                    <span class="${index < 3 ? 'text-3xl leading-none' : 'text-sm font-black text-slate-700'}">${rankLabel}</span>
                                 </div>
                             </td>
 
@@ -3995,6 +4048,7 @@
                     });
                     animateCommitteeLeaderboardRows(previousPositions, previousRanks);
                     hasRenderedCommitteeLeaderboard = true;
+                    lastCommitteeLeaderboardSignature = leaderboardSignature;
                 }
 
                 function animateCommitteeLeaderboardRows(previousPositions, previousRanks) {
