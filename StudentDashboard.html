@@ -789,6 +789,12 @@
                 }
 
                 studentAnnouncementsData = data || [];
+                const visibleAnnouncementIds = new Set(studentAnnouncementsData.map(item => String(item.id)));
+                [...studentAnnouncementChanges.entries()].forEach(([key, announcement]) => {
+                    if (!visibleAnnouncementIds.has(String(announcement.id))) {
+                        studentAnnouncementChanges.delete(key);
+                    }
+                });
 
                 updateAnnouncementBadge();
                 renderStudentNotifications();
@@ -836,6 +842,16 @@
                     && ["all", "students"].includes(String(announcement?.audience || ""));
             }
 
+            function clearStudentAnnouncementNotifications(announcementId) {
+                if (!announcementId) return;
+
+                [...studentAnnouncementChanges.entries()].forEach(([key, announcement]) => {
+                    if (String(announcement.id) === String(announcementId)) {
+                        studentAnnouncementChanges.delete(key);
+                    }
+                });
+            }
+
             function notifyStudentAnnouncementChange(payload) {
                 const previous = payload.old;
                 const next = payload.new;
@@ -843,11 +859,12 @@
                 const isVisible = isStudentAnnouncementVisible(next);
                 const contentChanged = Boolean(previous && next)
                     && (String(previous.title || "") !== String(next.title || "")
-                        || String(previous.message || "") !== String(next.message || ""));
+                            || String(previous.message || "") !== String(next.message || ""));
+
+                clearStudentAnnouncementNotifications(next?.id || previous?.id);
 
                 if (isVisible && (!wasVisible || contentChanged || payload.eventType === "INSERT")) {
                     studentAnnouncementChanges.set(getAnnouncementSeenKey(next), next);
-                    updateAnnouncementBadge();
                     openStudentAnnouncement(next);
                 }
 
@@ -855,6 +872,7 @@
                     lastShownAnnouncementKey = null;
                 }
 
+                updateAnnouncementBadge();
                 refreshStudentAnnouncements({ showPopup: false });
             }
 

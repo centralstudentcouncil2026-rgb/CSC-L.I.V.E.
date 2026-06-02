@@ -3634,6 +3634,12 @@
                         });
                     }
                     committeeAnnouncementsData = announcements;
+                    const visibleAnnouncementIds = new Set(announcements.map(item => String(item.id)));
+                    [...unreadCommitteeAnnouncements.entries()].forEach(([key, announcement]) => {
+                        if (!visibleAnnouncementIds.has(String(announcement.id))) {
+                            unreadCommitteeAnnouncements.delete(key);
+                        }
+                    });
                     hasLoadedCommitteeAnnouncements = true;
                     updateMessageNotification();
 
@@ -5716,6 +5722,16 @@
                     ].map(value => String(value ?? "")).join("|");
                 }
 
+                function clearCommitteeAnnouncementNotifications(announcementId) {
+                    if (!announcementId) return;
+
+                    [...unreadCommitteeAnnouncements.entries()].forEach(([key, announcement]) => {
+                        if (String(announcement.id) === String(announcementId)) {
+                            unreadCommitteeAnnouncements.delete(key);
+                        }
+                    });
+                }
+
                 function notifyCommitteeAnnouncementChange(payload) {
                     const previous = payload.old;
                     const next = payload.new;
@@ -5725,15 +5741,17 @@
                         && (String(previous.title || "") !== String(next.title || "")
                             || String(previous.message || "") !== String(next.message || ""));
 
+                    clearCommitteeAnnouncementNotifications(next?.id || previous?.id);
+
                     if (isVisible && (!wasVisible || contentChanged || payload.eventType === "INSERT")) {
                         const notificationItem = {
                             ...next,
                             notification_label: wasVisible ? "Announcement updated" : "New announcement"
                         };
                         unreadCommitteeAnnouncements.set(getCommitteeAnnouncementChangeKey(notificationItem), notificationItem);
-                        updateMessageNotification();
                     }
 
+                    updateMessageNotification();
                     loadCommitteeAnnouncements();
                 }
 
