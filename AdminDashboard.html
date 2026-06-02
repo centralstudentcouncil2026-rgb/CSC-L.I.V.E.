@@ -6650,6 +6650,41 @@
             attendanceForm.addEventListener("submit", checkAttendance);
             announcementForm.addEventListener("submit", saveAnnouncement);
 
+            let adminLastInteractionAt = 0;
+            const ADMIN_REFRESH_IDLE_DELAY = 1200;
+
+            function trackAdminInteraction(event) {
+                adminLastInteractionAt = Date.now();
+
+                if (event.type === "input" || event.type === "change") {
+                    event.target.closest("form")?.setAttribute("data-auto-refresh-dirty", "true");
+                }
+            }
+
+            function clearAdminDirtyForm(event) {
+                event.target.removeAttribute("data-auto-refresh-dirty");
+            }
+
+            function isAdminUserBusy() {
+                const activeElement = document.activeElement;
+                const isEditingField = activeElement?.matches("input, textarea, select, [contenteditable='true']");
+                const hasDirtyForm = Boolean(document.querySelector("form[data-auto-refresh-dirty='true']"));
+                const hasOpenModal = [...document.querySelectorAll("[id$='Modal']")]
+                    .some(modal => !modal.classList.contains("hidden"));
+
+                return Boolean(isEditingField)
+                    || hasDirtyForm
+                    || hasOpenModal
+                    || Date.now() - adminLastInteractionAt < ADMIN_REFRESH_IDLE_DELAY;
+            }
+
+            document.addEventListener("input", trackAdminInteraction, true);
+            document.addEventListener("change", trackAdminInteraction, true);
+            document.addEventListener("pointerdown", trackAdminInteraction, true);
+            document.addEventListener("keydown", trackAdminInteraction, true);
+            document.addEventListener("submit", clearAdminDirtyForm, true);
+            document.addEventListener("reset", clearAdminDirtyForm, true);
+
             let adminRealtimeReloadTimer = null;
             const pendingAdminReloads = {
                 teams: false,
@@ -6669,6 +6704,11 @@
                 window.clearTimeout(adminRealtimeReloadTimer);
 
                 adminRealtimeReloadTimer = window.setTimeout(async () => {
+                    if (isAdminUserBusy()) {
+                        scheduleAdminRealtimeReload({}, ADMIN_REFRESH_IDLE_DELAY);
+                        return;
+                    }
+
                     const reloads = [];
 
                     if (pendingAdminReloads.teams) reloads.push(loadTeams());
@@ -6738,9 +6778,9 @@
                 loadAdminConversations()
             ]);
 
-            setInterval(loadAdminOverviewCounts, 10000);
-            setInterval(loadStudentFeedback, 5000);
-            setInterval(loadAccountApprovals, 5000);
+            setInterval(() => scheduleAdminRealtimeReload({ overview: true }), 10000);
+            setInterval(() => scheduleAdminRealtimeReload({ feedback: true }), 5000);
+            setInterval(() => scheduleAdminRealtimeReload({ accounts: true }), 5000);
             function scheduleAdminFallbackSync() {
                 scheduleAdminRealtimeReload({
                     teams: true,
@@ -6764,7 +6804,7 @@
             });
             let adminMessagingSyncInProgress = false;
             setInterval(async () => {
-                if (adminMessagingSyncInProgress) return;
+                if (adminMessagingSyncInProgress || isAdminUserBusy()) return;
 
                 adminMessagingSyncInProgress = true;
                 try {

@@ -5486,6 +5486,41 @@
                 verifyAttendanceForm.addEventListener("submit", verifyWorshipAttendance);
                 clearVerificationResult.addEventListener("click", clearVerifyResult);
 
+                let committeeLastInteractionAt = 0;
+                const COMMITTEE_REFRESH_IDLE_DELAY = 1200;
+
+                function trackCommitteeInteraction(event) {
+                    committeeLastInteractionAt = Date.now();
+
+                    if (event.type === "input" || event.type === "change") {
+                        event.target.closest("form")?.setAttribute("data-auto-refresh-dirty", "true");
+                    }
+                }
+
+                function clearCommitteeDirtyForm(event) {
+                    event.target.removeAttribute("data-auto-refresh-dirty");
+                }
+
+                function isCommitteeUserBusy() {
+                    const activeElement = document.activeElement;
+                    const isEditingField = activeElement?.matches("input, textarea, select, [contenteditable='true']");
+                    const hasDirtyForm = Boolean(document.querySelector("form[data-auto-refresh-dirty='true']"));
+                    const hasOpenModal = [...document.querySelectorAll("[id$='Modal']")]
+                        .some(modal => !modal.classList.contains("hidden"));
+
+                    return Boolean(isEditingField)
+                        || hasDirtyForm
+                        || hasOpenModal
+                        || Date.now() - committeeLastInteractionAt < COMMITTEE_REFRESH_IDLE_DELAY;
+                }
+
+                document.addEventListener("input", trackCommitteeInteraction, true);
+                document.addEventListener("change", trackCommitteeInteraction, true);
+                document.addEventListener("pointerdown", trackCommitteeInteraction, true);
+                document.addEventListener("keydown", trackCommitteeInteraction, true);
+                document.addEventListener("submit", clearCommitteeDirtyForm, true);
+                document.addEventListener("reset", clearCommitteeDirtyForm, true);
+
                 let committeeRealtimeReloadTimer = null;
                 const pendingCommitteeReloads = {
                     overview: false,
@@ -5504,6 +5539,11 @@
                     window.clearTimeout(committeeRealtimeReloadTimer);
 
                     committeeRealtimeReloadTimer = window.setTimeout(async () => {
+                        if (isCommitteeUserBusy()) {
+                            scheduleCommitteeRealtimeReload({}, COMMITTEE_REFRESH_IDLE_DELAY);
+                            return;
+                        }
+
                         const reloads = [];
 
                         if (pendingCommitteeReloads.overview) reloads.push(loadOverviewCounts());
@@ -5559,8 +5599,8 @@
                     loadSavedMatches()
                 ]);
 
-                setInterval(loadOverviewCounts, 10000);
-                setInterval(loadCommitteeAnnouncements, 10000);
+                setInterval(() => scheduleCommitteeRealtimeReload({ overview: true }), 10000);
+                setInterval(() => scheduleCommitteeRealtimeReload({ announcements: true }), 10000);
                 setInterval(updateCountdownDisplays, 1000);
                 function scheduleCommitteeFallbackSync() {
                     scheduleCommitteeRealtimeReload({
@@ -5584,7 +5624,7 @@
                 });
                 let committeeMessagingSyncInProgress = false;
                 setInterval(async () => {
-                    if (committeeMessagingSyncInProgress) return;
+                    if (committeeMessagingSyncInProgress || isCommitteeUserBusy()) return;
 
                     committeeMessagingSyncInProgress = true;
                     try {

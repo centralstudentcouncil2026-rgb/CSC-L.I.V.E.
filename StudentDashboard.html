@@ -854,10 +854,56 @@
                 return match.sport?.sport_name || match.sport_name || "Unknown Sport";
             }
 
+            let studentLastInteractionAt = 0;
+            let studentSupplementalReloadTimer = null;
+            const STUDENT_REFRESH_IDLE_DELAY = 1200;
+            const pendingStudentSupplementalReloads = {
+                sports: false,
+                announcements: false,
+                showAnnouncementPopup: false
+            };
+
+            function trackStudentInteraction(event) {
+                studentLastInteractionAt = Date.now();
+
+                if (event.type === "input" || event.type === "change") {
+                    event.target.closest("form")?.setAttribute("data-auto-refresh-dirty", "true");
+                }
+            }
+
+            function clearStudentDirtyForm(event) {
+                event.target.removeAttribute("data-auto-refresh-dirty");
+            }
+
+            function isStudentUserBusy() {
+                const activeElement = document.activeElement;
+                const isEditingField = activeElement?.matches("input, textarea, select, [contenteditable='true']");
+                const hasDirtyForm = Boolean(document.querySelector("form[data-auto-refresh-dirty='true']"));
+                const hasOpenModal = [...document.querySelectorAll("[id$='Modal']")]
+                    .some(modal => !modal.classList.contains("hidden"));
+
+                return Boolean(isEditingField)
+                    || hasDirtyForm
+                    || hasOpenModal
+                    || Date.now() - studentLastInteractionAt < STUDENT_REFRESH_IDLE_DELAY;
+            }
+
+            document.addEventListener("input", trackStudentInteraction, true);
+            document.addEventListener("change", trackStudentInteraction, true);
+            document.addEventListener("pointerdown", trackStudentInteraction, true);
+            document.addEventListener("keydown", trackStudentInteraction, true);
+            document.addEventListener("submit", clearStudentDirtyForm, true);
+            document.addEventListener("reset", clearStudentDirtyForm, true);
+
             function scheduleLiveMatchReload(delay = 250) {
                 window.clearTimeout(matchReloadTimer);
 
                 matchReloadTimer = window.setTimeout(async () => {
+                    if (isStudentUserBusy()) {
+                        scheduleLiveMatchReload(STUDENT_REFRESH_IDLE_DELAY);
+                        return;
+                    }
+
                     await Promise.all([
                         loadStats(),
                         loadMatches({ showLoading: false })
@@ -869,10 +915,45 @@
                 window.clearTimeout(leaderboardReloadTimer);
 
                 leaderboardReloadTimer = window.setTimeout(async () => {
+                    if (isStudentUserBusy()) {
+                        scheduleLiveLeaderboardReload(STUDENT_REFRESH_IDLE_DELAY);
+                        return;
+                    }
+
                     await Promise.all([
                         loadStats(),
                         loadLeaderboard({ showLoading: false })
                     ]);
+                }, delay);
+            }
+
+            function scheduleStudentSupplementalReload(tasks, delay = 250) {
+                Object.assign(pendingStudentSupplementalReloads, {
+                    sports: pendingStudentSupplementalReloads.sports || Boolean(tasks.sports),
+                    announcements: pendingStudentSupplementalReloads.announcements || Boolean(tasks.announcements),
+                    showAnnouncementPopup: pendingStudentSupplementalReloads.showAnnouncementPopup || Boolean(tasks.showAnnouncementPopup)
+                });
+                window.clearTimeout(studentSupplementalReloadTimer);
+
+                studentSupplementalReloadTimer = window.setTimeout(async () => {
+                    if (isStudentUserBusy()) {
+                        scheduleStudentSupplementalReload({}, STUDENT_REFRESH_IDLE_DELAY);
+                        return;
+                    }
+
+                    const reloads = [];
+                    if (pendingStudentSupplementalReloads.sports) reloads.push(loadSportCategoryFilterOptions());
+                    if (pendingStudentSupplementalReloads.announcements) {
+                        reloads.push(refreshStudentAnnouncements({
+                            showPopup: pendingStudentSupplementalReloads.showAnnouncementPopup
+                        }));
+                    }
+
+                    pendingStudentSupplementalReloads.sports = false;
+                    pendingStudentSupplementalReloads.announcements = false;
+                    pendingStudentSupplementalReloads.showAnnouncementPopup = false;
+
+                    await Promise.all(reloads);
                 }, delay);
             }
 
@@ -1754,16 +1835,14 @@
             setInterval(() => {
                 scheduleLiveMatchReload(0);
                 scheduleLiveLeaderboardReload(0);
-                loadSportCategoryFilterOptions();
-                refreshStudentAnnouncements({ showPopup: false });
+                scheduleStudentSupplementalReload({ sports: true, announcements: true }, 0);
             }, 15000);
 
             document.addEventListener("visibilitychange", function () {
                 if (!document.hidden) {
                     scheduleLiveMatchReload(0);
                     scheduleLiveLeaderboardReload(0);
-                    loadSportCategoryFilterOptions();
-                    refreshStudentAnnouncements({ showPopup: false });
+                    scheduleStudentSupplementalReload({ sports: true, announcements: true }, 0);
                 }
             });
 
@@ -1783,12 +1862,12 @@
                     scheduleLiveMatchReload(150);
                 })
                 .on("postgres_changes", { event: "*", schema: "public", table: SPORTS_TABLE }, async () => {
-                    await loadSportCategoryFilterOptions();
+                    scheduleStudentSupplementalReload({ sports: true }, 150);
                     scheduleLiveLeaderboardReload(150);
                     scheduleLiveMatchReload(150);
                 })
                 .on("postgres_changes", { event: "*", schema: "public", table: ANNOUNCEMENTS_TABLE }, () => {
-                    refreshStudentAnnouncements({ showPopup: true });
+                    scheduleStudentSupplementalReload({ announcements: true, showAnnouncementPopup: true }, 150);
                 })
                 .subscribe((status) => {
                     if (status === "SUBSCRIBED") {
