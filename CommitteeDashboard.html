@@ -2052,7 +2052,7 @@
                 const latestUnreadMessages = new Map();
                 let committeeAnnouncementsData = [];
                 let hasLoadedCommitteeAnnouncements = false;
-                const unreadCommitteeAnnouncementIds = new Set();
+                const unreadCommitteeAnnouncements = new Map();
                 let committeeConversationListMarkup = "";
                 let activeContactSportId = "";
                 let activeContactSearchTerm = "";
@@ -2835,11 +2835,10 @@
                             </button>
                         `;
                     });
-                    const announcementItems = committeeAnnouncementsData
-                        .filter(announcement => unreadCommitteeAnnouncementIds.has(String(announcement.id)))
+                    const announcementItems = [...unreadCommitteeAnnouncements.values()]
                         .map(announcement => `
-                            <button type="button" data-announcement-notification-id="${escapeHTML(announcement.id || "")}" class="announcement-notification w-full rounded-xl px-3 py-3 text-left hover:bg-amber-50">
-                                <span class="block text-xs font-bold uppercase tracking-wide text-amber-700">New announcement</span>
+                            <button type="button" data-announcement-notification-key="${escapeHTML(getCommitteeAnnouncementChangeKey(announcement))}" class="announcement-notification w-full rounded-xl px-3 py-3 text-left hover:bg-amber-50">
+                                <span class="block text-xs font-bold uppercase tracking-wide text-amber-700">${announcement.is_active === false ? "Announcement hidden" : "Announcement updated"}</span>
                                 <span class="mt-1 block font-bold text-gray-900">${escapeHTML(announcement.title || "Announcement")}</span>
                                 <span class="mt-1 block whitespace-pre-wrap break-words text-sm text-gray-600">${escapeHTML(announcement.message || "")}</span>
                                 <span class="mt-1 block text-xs text-gray-400">${announcement.created_at ? escapeHTML(formatDateTime(announcement.created_at)) : ""}</span>
@@ -2862,7 +2861,7 @@
                     });
                     document.querySelectorAll(".announcement-notification").forEach(button => {
                         button.addEventListener("click", function () {
-                            unreadCommitteeAnnouncementIds.delete(String(this.dataset.announcementNotificationId || ""));
+                            unreadCommitteeAnnouncements.delete(String(this.dataset.announcementNotificationKey || ""));
                             setNotificationPanelVisible(false);
                             updateMessageNotification();
                             switchTab("overview");
@@ -2890,7 +2889,7 @@
                         ),
                         0
                     );
-                    const unreadCount = unreadMessageCount + unreadCommitteeAnnouncementIds.size;
+                    const unreadCount = unreadMessageCount + unreadCommitteeAnnouncements.size;
                     if (messageNotificationBadge) {
                         messageNotificationBadge.textContent = unreadCount > 99 ? "99+" : String(unreadCount);
                         messageNotificationBadge.classList.toggle("hidden", unreadCount === 0);
@@ -3624,17 +3623,14 @@
                     }
 
                     const announcements = data || [];
-                    const nextAnnouncementIds = new Set(announcements.map(item => String(item.id)));
                     if (hasLoadedCommitteeAnnouncements) {
                         announcements.forEach(item => {
-                            if (!committeeAnnouncementsData.some(existing => String(existing.id) === String(item.id))) {
-                                unreadCommitteeAnnouncementIds.add(String(item.id));
+                            const previous = committeeAnnouncementsData.find(existing => String(existing.id) === String(item.id));
+                            if (!previous || getCommitteeAnnouncementChangeKey(previous) !== getCommitteeAnnouncementChangeKey(item)) {
+                                unreadCommitteeAnnouncements.set(getCommitteeAnnouncementChangeKey(item), item);
                             }
                         });
                     }
-                    [...unreadCommitteeAnnouncementIds].forEach(id => {
-                        if (!nextAnnouncementIds.has(id)) unreadCommitteeAnnouncementIds.delete(id);
-                    });
                     committeeAnnouncementsData = announcements;
                     hasLoadedCommitteeAnnouncements = true;
                     updateMessageNotification();
@@ -5710,6 +5706,33 @@
                     }, delay);
                 }
 
+                function getCommitteeAnnouncementChangeKey(announcement) {
+                    return [
+                        announcement?.id,
+                        announcement?.updated_at || announcement?.created_at || "",
+                        announcement?.title || "",
+                        announcement?.message || "",
+                        announcement?.audience || "",
+                        announcement?.is_active ? "active" : "hidden"
+                    ].map(value => String(value ?? "")).join("|");
+                }
+
+                function notifyCommitteeAnnouncementChange(payload) {
+                    const announcement = payload.new || payload.old;
+                    if (!announcement) return;
+                    const isRelevant = [payload.new, payload.old].some(item =>
+                        ["all", "committee"].includes(String(item?.audience || ""))
+                    );
+                    if (!isRelevant) return;
+
+                    const notificationItem = payload.new?.is_active && ["all", "committee"].includes(String(payload.new?.audience || ""))
+                        ? payload.new
+                        : { ...announcement, is_active: false };
+                    unreadCommitteeAnnouncements.set(getCommitteeAnnouncementChangeKey(notificationItem), notificationItem);
+                    updateMessageNotification();
+                    loadCommitteeAnnouncements();
+                }
+
                 setInterval(async () => {
                     if (committeeMessagingSyncInProgress) return;
 
@@ -5805,7 +5828,7 @@
                             schema: "public",
                             table: ANNOUNCEMENTS_TABLE
                         },
-                        () => scheduleCommitteeRealtimeReload({ announcements: true })
+                        notifyCommitteeAnnouncementChange
                     )
                     .on(
                         "postgres_changes",
