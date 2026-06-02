@@ -4735,11 +4735,11 @@
                             ${deleteRequestNotice}
 
                             ${isNext ? `<div class="mb-2 rounded-lg border border-yellow-200 bg-yellow-50 p-2">
-                                <div class="grid grid-cols-1 items-end gap-2 sm:grid-cols-[auto_1fr]">
-                                    <div class="min-w-[7rem]">
+                                <div class="grid grid-cols-1 items-end gap-2 sm:grid-cols-[minmax(8rem,1fr)_auto]">
+                                    <div class="min-w-[8rem]">
                                         <p class="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-yellow-700">Timer</p>
                                         <p
-                                            class="match-countdown text-2xl font-extrabold leading-none text-yellow-900"
+                                            class="match-countdown text-4xl font-extrabold leading-none tracking-tight text-yellow-900"
                                             data-match-id="${match.id}"
                                             data-duration-seconds="${duration}"
                                             data-timer-enabled="${match.timer_enabled ? "true" : "false"}"
@@ -4751,7 +4751,7 @@
                                         </p>
                                     </div>
 
-                                    <div class="grid grid-cols-[1fr_1fr_auto] items-end gap-1.5">
+                                    <div class="grid grid-cols-[5rem_5rem_auto] items-end gap-1.5">
                                         <div>
                                             <label class="mb-0.5 block text-[10px] font-bold uppercase text-yellow-800">Min</label>
                                             <input
