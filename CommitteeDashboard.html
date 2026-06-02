@@ -2052,6 +2052,7 @@
                 const latestUnreadMessages = new Map();
                 let committeeAnnouncementsData = [];
                 let hasLoadedCommitteeAnnouncements = false;
+                let isLoadingCommitteeAnnouncements = false;
                 const unreadCommitteeAnnouncements = new Map();
                 let committeeConversationListMarkup = "";
                 let activeContactSportId = "";
@@ -3603,25 +3604,28 @@
 
                 async function loadCommitteeAnnouncements() {
                     if (!committeeAnnouncementsList) return;
+                    if (isLoadingCommitteeAnnouncements) return;
+                    isLoadingCommitteeAnnouncements = true;
 
-                    const { data, error } = await supabase
-                        .from(ANNOUNCEMENTS_TABLE)
-                        .select("*")
-                        .eq("is_active", true)
-                        .in("audience", ["all", "committee"])
-                        .order("created_at", { ascending: false });
+                    try {
+                        const { data, error } = await supabase
+                            .from(ANNOUNCEMENTS_TABLE)
+                            .select("*")
+                            .eq("is_active", true)
+                            .in("audience", ["all", "committee"])
+                            .order("created_at", { ascending: false });
 
-                    if (error) {
-                        console.error("Error loading committee announcements:", error.message || error);
-                        committeeAnnouncementsList.innerHTML = `
-                            <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
-                                Failed to load announcements.
-                            </div>
-                        `;
-                        return;
-                    }
+                        if (error) {
+                            console.error("Error loading committee announcements:", error.message || error);
+                            committeeAnnouncementsList.innerHTML = `
+                                <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
+                                    Failed to load announcements.
+                                </div>
+                            `;
+                            return;
+                        }
 
-                    const announcements = data || [];
+                        const announcements = data || [];
                     if (hasLoadedCommitteeAnnouncements) {
                         announcements.forEach(item => {
                             const previous = committeeAnnouncementsData.find(existing => String(existing.id) === String(item.id));
@@ -3652,7 +3656,7 @@
                         return;
                     }
 
-                    committeeAnnouncementsList.innerHTML = announcements.map(item => `
+                        committeeAnnouncementsList.innerHTML = announcements.map(item => `
                         <div class="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
                             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                                 <h3 class="font-bold text-blue-950">${escapeHTML(item.title)}</h3>
@@ -3660,7 +3664,10 @@
                             </div>
                             <p class="mt-2 whitespace-pre-wrap text-sm font-semibold text-slate-800">${escapeHTML(item.message)}</p>
                         </div>
-                    `).join("");
+                        `).join("");
+                    } finally {
+                        isLoadingCommitteeAnnouncements = false;
+                    }
                 }
 
                 async function loadLeaderboard(options = {}) {
@@ -5668,7 +5675,7 @@
                 ]);
 
                 setInterval(() => scheduleCommitteeRealtimeReload({ overview: true }), 10000);
-                setInterval(() => scheduleCommitteeRealtimeReload({ announcements: true }), 10000);
+                setInterval(loadCommitteeAnnouncements, 2000);
                 setInterval(updateCountdownDisplays, 1000);
                 function scheduleCommitteeFallbackSync() {
                     scheduleCommitteeRealtimeReload({

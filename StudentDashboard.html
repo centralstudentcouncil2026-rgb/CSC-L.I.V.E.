@@ -1931,6 +1931,7 @@
             ]);
 
             setInterval(updateCountdownDisplays, 1000);
+            setInterval(() => refreshStudentAnnouncements({ showPopup: false }), 2000);
             setInterval(() => {
                 scheduleLiveMatchReload(0);
                 scheduleLiveLeaderboardReload(0);
