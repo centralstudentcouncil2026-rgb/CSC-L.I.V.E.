@@ -854,6 +854,33 @@
                 return match.sport?.sport_name || match.sport_name || "Unknown Sport";
             }
 
+            function normalizeSportName(value) {
+                return String(value || "").trim().toLowerCase();
+            }
+
+            function isBasketballSport(match) {
+                return normalizeSportName(getSportName(match)).includes("basketball");
+            }
+
+            function isVolleyballSport(match) {
+                return normalizeSportName(getSportName(match)).includes("volleyball");
+            }
+
+            function getMatchStageLabel(stage) {
+                return {
+                    semifinals: "Semifinals",
+                    finals: "Finals",
+                    battle_for_third: "Battle for Third"
+                }[stage] || "";
+            }
+
+            function getLivePeriodLabel(match) {
+                if (match.status !== "Ongoing") return "";
+                if (isBasketballSport(match)) return `Quarter ${match.game_period || 1}`;
+                if (isVolleyballSport(match)) return `Set ${match.game_period || 1}`;
+                return "";
+            }
+
             let studentLastInteractionAt = 0;
             let studentSupplementalReloadTimer = null;
             const STUDENT_REFRESH_IDLE_DELAY = 1200;
@@ -1544,7 +1571,7 @@
                 const { data, error } = await supabase
                     .from(MATCHES_TABLE)
                     .select(`
-                        id, sport_id, team_one_id, team_two_id, match_time, location, status, timer_enabled, timer_duration_seconds, timer_started_at,
+                        id, sport_id, team_one_id, team_two_id, match_time, location, status, timer_enabled, timer_duration_seconds, timer_started_at, match_stage, game_period,
                         sport:sports!scheduled_matches_sport_id_fkey(id, sport_name, winner_points, loser_points, points_per_game),
                         team_one:sports_leaderboard!scheduled_matches_team_one_fkey(team),
                         team_two:sports_leaderboard!scheduled_matches_team_two_fkey(team)
@@ -1626,6 +1653,8 @@
                     const isUpcoming = match.status === "Next";
                     const isDone = match.status === "Done";
                     const showTimer = isUpcoming && (match.timer_enabled || duration > 0);
+                    const matchStageLabel = getMatchStageLabel(match.match_stage);
+                    const livePeriodLabel = getLivePeriodLabel(match);
 
                     const card = document.createElement("div");
                     card.className = "card-hover bg-white rounded-2xl border border-slate-300 overflow-hidden flex flex-col";
@@ -1639,6 +1668,9 @@
                                     ${meta.label}
                                 </span>
                             </div>
+
+                            ${matchStageLabel ? `<div class="mb-3 inline-flex rounded-full bg-indigo-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-indigo-800">${escapeHTML(matchStageLabel)}</div>` : ""}
+                            ${livePeriodLabel ? `<div class="mb-3 ml-2 inline-flex rounded-full bg-violet-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-violet-800">${escapeHTML(livePeriodLabel)}</div>` : ""}
 
                             ${showTimer ? `
                                 <div class="mb-6 p-4 rounded-2xl bg-slate-50 border border-slate-100 text-center">
@@ -1699,6 +1731,8 @@
                 const duration = clampTimerSeconds(match.timer_duration_seconds) || 600;
                 const remaining = calculateRemainingSeconds(match);
                 const showTimer = match.status === "Next";
+                const matchStageLabel = getMatchStageLabel(match.match_stage);
+                const livePeriodLabel = getLivePeriodLabel(match);
 
                 matchDetailsModal.classList.remove("hidden");
                 matchDetailsModal.classList.add("flex");
@@ -1715,6 +1749,13 @@
                                 ${meta.label}
                             </span>
                         </div>
+
+                        ${matchStageLabel || livePeriodLabel ? `
+                            <div class="flex flex-wrap gap-2">
+                                ${matchStageLabel ? `<span class="rounded-full bg-indigo-100 px-3 py-1 text-xs font-black uppercase tracking-widest text-indigo-800">${escapeHTML(matchStageLabel)}</span>` : ""}
+                                ${livePeriodLabel ? `<span class="rounded-full bg-violet-100 px-3 py-1 text-xs font-black uppercase tracking-widest text-violet-800">${escapeHTML(livePeriodLabel)}</span>` : ""}
+                            </div>
+                        ` : ""}
 
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
                             <div class="p-6 bg-slate-50 rounded-2xl border border-slate-100 text-center">

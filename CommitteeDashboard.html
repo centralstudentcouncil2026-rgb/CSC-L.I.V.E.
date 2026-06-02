@@ -1451,6 +1451,21 @@
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Match Type
+                        </label>
+
+                        <select
+                            id="matchStage"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                            <option value="regular">Regular Game</option>
+                            <option value="semifinals">Semifinals</option>
+                            <option value="finals">Finals</option>
+                            <option value="battle_for_third" id="battleForThirdOption" hidden>Battle for Third</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
                             Team 2
                         </label>
 
@@ -1960,6 +1975,8 @@
                 const editingMatchId = document.getElementById("editingMatchId");
                 const matchSubmitButton = document.getElementById("matchSubmitButton");
                 const matchSport = document.getElementById("matchSport");
+                const matchStage = document.getElementById("matchStage");
+                const battleForThirdOption = document.getElementById("battleForThirdOption");
                 const teamOne = document.getElementById("teamOne");
                 const teamTwo = document.getElementById("teamTwo");
                 const matchTime = document.getElementById("matchTime");
@@ -2467,6 +2484,38 @@
 
                 function getSportName(match) {
                     return match.sport?.sport_name || match.sport_name || "Unknown Sport";
+                }
+
+                function normalizeSportName(value) {
+                    return String(value || "").trim().toLowerCase();
+                }
+
+                function isBasketballSport(matchOrName) {
+                    const sportName = typeof matchOrName === "string" ? matchOrName : getSportName(matchOrName);
+                    return normalizeSportName(sportName).includes("basketball");
+                }
+
+                function isVolleyballSport(matchOrName) {
+                    const sportName = typeof matchOrName === "string" ? matchOrName : getSportName(matchOrName);
+                    return normalizeSportName(sportName).includes("volleyball");
+                }
+
+                function getMatchStageLabel(stage) {
+                    return {
+                        semifinals: "Semifinals",
+                        finals: "Finals",
+                        battle_for_third: "Battle for Third"
+                    }[stage] || "";
+                }
+
+                function updateMatchStageOptions() {
+                    const selectedSport = registeredSportsData.find(sport => String(sport.id) === String(matchSport.value));
+                    const showBattleForThird = isBasketballSport(selectedSport?.sport_name || "");
+                    battleForThirdOption.hidden = !showBattleForThird;
+
+                    if (!showBattleForThird && matchStage.value === "battle_for_third") {
+                        matchStage.value = "regular";
+                    }
                 }
 
                 function sortMatchesWithOwnFirst(matches) {
@@ -4233,6 +4282,7 @@
                     matchSubmitButton.textContent = "Save Match";
                     matchTimerMinutes.value = 10;
                     matchTimerSeconds.value = 0;
+                    updateMatchStageOptions();
 
                     matchModal.classList.remove("hidden");
                     matchModal.classList.add("flex");
@@ -4261,6 +4311,8 @@
                     matchSubmitButton.textContent = "Update Match";
 
                     matchSport.value = match.sport_id || "";
+                    matchStage.value = match.match_stage || "regular";
+                    updateMatchStageOptions();
                     teamOne.value = match.team_one_id || "";
                     teamTwo.value = match.team_two_id || "";
                     matchTime.value = formatForDateTimeLocal(match.match_time);
@@ -4380,6 +4432,8 @@
                             timer_enabled,
                             timer_duration_seconds,
                             timer_started_at,
+                            match_stage,
+                            game_period,
                             created_by,
                             created_by_role,
                             created_by_name,
@@ -4440,6 +4494,7 @@
                     renderMatchesIntoGrid(doneMatchesGrid, doneMatches, "Done");
 
                     addStatusListeners();
+                    addGamePeriodListeners();
                     addTimerListeners();
                     addTimerControlListeners();
                     addEditMatchListeners();
@@ -4498,6 +4553,13 @@
                             || (history
                                 ? `${history.winner_team_name || "Winner"} won against ${history.loser_team_name || "Loser"}`
                                 : "Result not recorded");
+                        const matchStageLabel = getMatchStageLabel(match.match_stage);
+                        const periodLabel = isBasketballSport(match)
+                            ? `Quarter ${match.game_period || 1}`
+                            : isVolleyballSport(match)
+                                ? `Set ${match.game_period || 1}`
+                                : "";
+                        const periodLimit = isBasketballSport(match) ? 4 : isVolleyballSport(match) ? 5 : 0;
 
                         if (isDone) {
                             const doneCard = document.createElement("div");
@@ -4510,6 +4572,8 @@
                                         🏅 ${escapeHTML(getSportName(match))}
                                     </p>
                                 </div>
+
+                                ${matchStageLabel ? `<div class="mb-3 inline-flex rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-indigo-800">${escapeHTML(matchStageLabel)}</div>` : ""}
 
                                 ${ownerNotice}
                                 ${deleteRequestNotice}
@@ -4591,6 +4655,26 @@
                         const saveTimerButtonClass = canManageCurrentMatch
                             ? "bg-yellow-500 hover:bg-yellow-600 text-white"
                             : lockedControlClasses;
+                        const periodControls = isOngoing && periodLimit ? `
+                            <div class="mb-2 rounded-lg border border-violet-200 bg-violet-50 p-2.5">
+                                <p class="mb-2 text-xs font-bold uppercase tracking-wide text-violet-700">${isBasketballSport(match) ? "Basketball Quarter" : "Volleyball Set"}</p>
+                                <div class="flex flex-wrap gap-2">
+                                    ${Array.from({ length: periodLimit }, (_, index) => {
+                                        const period = index + 1;
+                                        const isSelected = Number(match.game_period || 1) === period;
+                                        return `
+                                            <button
+                                                type="button"
+                                                data-match-id="${match.id}"
+                                                data-game-period="${period}"
+                                                class="game-period-btn rounded-lg px-3 py-1.5 text-xs font-bold ${isSelected ? "bg-violet-600 text-white" : "bg-white text-violet-700 hover:bg-violet-100"}">
+                                                ${period}
+                                            </button>
+                                        `;
+                                    }).join("")}
+                                </div>
+                            </div>
+                        ` : "";
 
                         const flowButtons = isNext ? `
                             <button
@@ -4647,6 +4731,9 @@
                                 </p>
                             </div>
 
+                            ${matchStageLabel ? `<div class="mb-2 inline-flex rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-indigo-800">${escapeHTML(matchStageLabel)}</div>` : ""}
+                            ${periodLabel && isOngoing ? `<div class="mb-2 ml-2 inline-flex rounded-full bg-violet-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-violet-800">${escapeHTML(periodLabel)}</div>` : ""}
+
                             ${ownerNotice}
                             ${deleteRequestNotice}
 
@@ -4700,6 +4787,8 @@
                                     </div>
                                 </div>
                             </div>` : ""}
+
+                            ${periodControls}
 
                             <div class="mb-2 flex items-center justify-between gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2.5">
                                 <div class="text-center flex-1">
@@ -4805,7 +4894,8 @@
                                         {
                                             status: "Ongoing",
                                             timer_enabled: false,
-                                            timer_started_at: null
+                                            timer_started_at: null,
+                                            game_period: isBasketballSport(selectedMatch) || isVolleyballSport(selectedMatch) ? 1 : null
                                         },
                                         { status: "Next" }
                                     );
@@ -4833,7 +4923,8 @@
                                         {
                                             status: "Next",
                                             timer_enabled: false,
-                                            timer_started_at: null
+                                            timer_started_at: null,
+                                            game_period: null
                                         },
                                         { status: "Ongoing" }
                                     );
@@ -4862,6 +4953,27 @@
                                 }
 
                                 openResultModalFunction(selectedMatch);
+                            }
+                        });
+                    });
+                }
+
+                function addGamePeriodListeners() {
+                    document.querySelectorAll(".game-period-btn").forEach(button => {
+                        button.addEventListener("click", async function () {
+                            const matchId = Number(this.dataset.matchId);
+                            const gamePeriod = Number(this.dataset.gamePeriod);
+                            const selectedMatch = matchesData.find(match => Number(match.id) === matchId);
+
+                            if (!selectedMatch || selectedMatch.status !== "Ongoing") return;
+                            if (!enforceMatchPermission(selectedMatch)) return;
+
+                            try {
+                                await updateMatchRecord(matchId, { game_period: gamePeriod }, { status: "Ongoing" });
+                                await loadSavedMatches();
+                            } catch (error) {
+                                console.error("Error updating game period:", error.message || error);
+                                alert(error.message === MATCH_PERMISSION_MESSAGE ? MATCH_PERMISSION_MESSAGE : "Unable to update the live game period.");
                             }
                         });
                     });
@@ -5232,6 +5344,7 @@
                         team_two_id: Number(teamTwo.value),
                         match_time: new Date(matchTime.value).toISOString(),
                         location: matchLocation.value.trim(),
+                        match_stage: matchStage.value || "regular",
                         timer_duration_seconds: timerDurationSeconds
                     };
 
@@ -5291,6 +5404,7 @@
                         status: "Next",
                         timer_enabled: false,
                         timer_started_at: null,
+                        game_period: null,
                         created_by: getCurrentUserCreatorKey(),
                         created_by_role: currentUser?.role || "committee",
                         created_by_name: getCurrentUserDisplayName()
@@ -5329,6 +5443,7 @@
                 });
 
                 openSportFilterModal.addEventListener("click", openSportFilterModalFunction);
+                matchSport.addEventListener("change", updateMatchStageOptions);
                 closeSportFilterModal.addEventListener("click", closeSportFilterModalFunction);
                 sportFilterModal.addEventListener("click", function (event) {
                     if (event.target === sportFilterModal) {
