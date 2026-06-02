@@ -2256,15 +2256,15 @@
                         Team
                     </label>
 
-                    <input 
-                        type="text"
+                    <select
                         id="participantTeam"
                         required
-                        placeholder="Enter team name"
                         class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="">Select a registered team</option>
+                    </select>
 
                     <p class="text-xs text-gray-500 mt-1">
-                        Use the exact team name so the overview and team member counts update correctly.
+                        Choose from the teams registered in Manage Teams.
                     </p>
                 </div>
 
@@ -4533,6 +4533,7 @@
 
                 renderTeams();
                 renderParticipantTeamFilter();
+                renderParticipantTeamOptions();
                 renderPrintTeamOptions();
             }
 
@@ -5522,6 +5523,7 @@
                 participantForm.reset();
                 participantId.value = "";
                 participantStatus.value = "Pending";
+                renderParticipantTeamOptions();
 
                 participantModal.classList.remove("hidden");
                 participantModal.classList.add("flex");
@@ -5532,7 +5534,7 @@
                 participantId.value = participant.id;
                 participantName.value = participant.name || "";
                 participantStudentId.value = participant.student_id || "";
-                participantTeam.value = participant.team || "";
+                renderParticipantTeamOptions(participant.team || "");
                 participantStatus.value = participant.status || "Pending";
 
                 participantModal.classList.remove("hidden");
@@ -5544,6 +5546,26 @@
                 participantModal.classList.remove("flex");
                 participantForm.reset();
                 participantId.value = "";
+            }
+
+            function renderParticipantTeamOptions(selectedTeam = participantTeam.value) {
+                const normalizedSelectedTeam = normalizeParticipantTeam(selectedTeam);
+                const registeredTeams = [...new Set(
+                    teamsData
+                        .map(team => normalizeParticipantTeam(team?.[TEAM_NAME_COLUMN] || team?.team || team?.name))
+                        .filter(Boolean)
+                )].sort((a, b) => a.localeCompare(b));
+
+                participantTeam.innerHTML = `
+                    <option value="">${registeredTeams.length ? "Select a registered team" : "No registered teams available"}</option>
+                    ${registeredTeams.map(teamName => `
+                        <option value="${escapeHTML(teamName)}">${escapeHTML(teamName)}</option>
+                    `).join("")}
+                `;
+
+                if (normalizedSelectedTeam && registeredTeams.includes(normalizedSelectedTeam)) {
+                    participantTeam.value = normalizedSelectedTeam;
+                }
             }
 
             async function loadParticipants() {
