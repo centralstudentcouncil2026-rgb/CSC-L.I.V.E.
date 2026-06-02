@@ -2109,7 +2109,7 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Winner Team Points
+                        Winner Team Points (Automatic)
                     </label>
 
                     <input 
@@ -2118,8 +2118,12 @@
                         min="0"
                         step="0.01"
                         required
-                        placeholder="Example: 3"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                        readonly
+                        placeholder="Uses points per game"
+                        class="w-full border border-gray-200 bg-gray-100 text-gray-600 rounded-lg px-3 py-2">
+                    <p class="mt-1 text-xs font-medium text-gray-500">
+                        Automatically matches Points Per Game.
+                    </p>
                 </div>
 
                 <div>
@@ -4705,12 +4709,16 @@
                 sportModal.classList.add("flex");
             }
 
+            function syncWinnerPointsFromGamePoints() {
+                winnerPointsInput.value = pointsPerGameInput.value;
+            }
+
             function openEditSportModal(sport) {
                 sportModalTitle.textContent = "Edit Sport";
                 sportId.value = sport.id;
                 sportNameInput.value = sport.sport_name;
                 pointsPerGameInput.value = sport.points_per_game;
-                winnerPointsInput.value = sport.winner_points;
+                winnerPointsInput.value = sport.points_per_game;
                 loserPointsInput.value = sport.loser_points;
 
                 sportModal.classList.remove("hidden");
@@ -4862,7 +4870,7 @@
 
                 const sportName = sportNameInput.value.trim();
                 const pointsPerGame = toNumber(pointsPerGameInput.value);
-                const winnerPoints = toNumber(winnerPointsInput.value);
+                const winnerPoints = pointsPerGame;
                 const loserPoints = toNumber(loserPointsInput.value);
 
                 if (!sportName) {
@@ -6540,6 +6548,7 @@
             cancelTeamModal.addEventListener("click", closeTeamModalFunction);
 
             sportForm.addEventListener("submit", saveSport);
+            pointsPerGameInput.addEventListener("input", syncWinnerPointsFromGamePoints);
             openSportModal.addEventListener("click", openAddSportModal);
             closeSportModal.addEventListener("click", closeSportModalFunction);
             cancelSportModal.addEventListener("click", closeSportModalFunction);

@@ -3869,7 +3869,7 @@
 
                     if (sport) {
                         return side === "winner"
-                            ? getPointValue(sport.winner_points, sport.points_per_game, sport.default_winner_points, 1)
+                            ? getPointValue(sport.points_per_game, sport.winner_points, sport.default_winner_points, 1)
                             : getPointValue(sport.loser_points, sport.default_loser_points, 0);
                     }
 
@@ -5376,7 +5376,7 @@
                     submitButton.textContent = "Saving...";
 
                     try {
-                        const winnerPointsAwarded = Number(pendingResultMatch.sport?.winner_points) || 0;
+                        const winnerPointsAwarded = Number(pendingResultMatch.sport?.points_per_game) || 0;
                         const loserPointsAwarded = Number(pendingResultMatch.sport?.loser_points) || 0;
 
                         const historyPayload = {
