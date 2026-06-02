@@ -81,6 +81,10 @@
         .leaderboard-team-cell { width: 40%; }
         .leaderboard-stat-cell { width: 16%; }
 
+        .leaderboard-moving-row {
+            transition: transform 650ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
         .card-hover {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -1465,6 +1469,10 @@
                     return;
                 }
 
+                const previousPositions = new Map(
+                    [...studentLeaderboardBody.querySelectorAll("tr[data-team-key]")]
+                        .map(row => [row.dataset.teamKey, row.getBoundingClientRect().top])
+                );
                 studentLeaderboardBody.innerHTML = "";
 
                 leaderboardRows.forEach((team, index) => {
@@ -1474,7 +1482,10 @@
                     let rowClass = "hover:bg-slate-50 transition-colors";
 
                     const row = document.createElement("tr");
-                    row.className = `cursor-pointer ${rowClass}`;
+                    row.className = `leaderboard-moving-row cursor-pointer ${rowClass}`;
+                    row.dataset.teamKey = team.id
+                        ? `id:${team.id}`
+                        : `name:${normalizeText(team.team)}`;
                     row.innerHTML = `
                         <td class="py-5 px-6">
                             <div class="flex items-center">
@@ -1495,6 +1506,29 @@
 
                     row.onclick = () => openTeamDetails(team, historyRows || []);
                     studentLeaderboardBody.appendChild(row);
+                });
+
+                animateLeaderboardRows(studentLeaderboardBody, previousPositions);
+            }
+
+            function animateLeaderboardRows(tableBody, previousPositions) {
+                if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+                [...tableBody.querySelectorAll("tr[data-team-key]")].forEach(row => {
+                    const previousTop = previousPositions.get(row.dataset.teamKey);
+                    if (previousTop === undefined) return;
+
+                    const offset = previousTop - row.getBoundingClientRect().top;
+                    if (!offset) return;
+
+                    row.style.transition = "none";
+                    row.style.transform = `translateY(${offset}px)`;
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            row.style.transition = "";
+                            row.style.transform = "";
+                        });
+                    });
                 });
             }
 
@@ -1932,6 +1966,7 @@
 
             setInterval(updateCountdownDisplays, 1000);
             setInterval(() => refreshStudentAnnouncements({ showPopup: false }), 2000);
+            setInterval(() => loadLeaderboard({ showLoading: false }), 2000);
             setInterval(() => {
                 scheduleLiveMatchReload(0);
                 scheduleLiveLeaderboardReload(0);
