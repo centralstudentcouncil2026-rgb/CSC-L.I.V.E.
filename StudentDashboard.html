@@ -772,15 +772,7 @@
                         <p class="mt-3 whitespace-pre-wrap text-sm font-semibold leading-relaxed text-slate-700">${escapeHTML(item.message || "")}</p>
                     </article>
                 `);
-                const hiddenChangeItems = [...studentAnnouncementChanges.values()]
-                    .filter(item => item.is_active === false)
-                    .map(item => `
-                        <article class="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
-                            <p class="mb-2 text-xs font-black uppercase tracking-widest text-amber-700">Announcement hidden</p>
-                            <h3 class="text-lg font-black text-slate-950">${escapeHTML(item.title || "Announcement")}</h3>
-                        </article>
-                    `);
-                studentNotificationsList.innerHTML = [...hiddenChangeItems, ...visibleItems].join("");
+                studentNotificationsList.innerHTML = visibleItems.join("");
             }
 
             async function loadStudentAnnouncements() {
@@ -845,22 +837,21 @@
             }
 
             function notifyStudentAnnouncementChange(payload) {
-                const announcement = payload.new || payload.old;
-                if (!announcement) return;
-                const isRelevant = [payload.new, payload.old].some(item =>
-                    ["all", "students"].includes(String(item?.audience || ""))
-                );
-                if (!isRelevant) return;
+                const previous = payload.old;
+                const next = payload.new;
+                const wasVisible = isStudentAnnouncementVisible(previous);
+                const isVisible = isStudentAnnouncementVisible(next);
+                const contentChanged = Boolean(previous && next)
+                    && (String(previous.title || "") !== String(next.title || "")
+                        || String(previous.message || "") !== String(next.message || ""));
 
-                const notificationItem = isStudentAnnouncementVisible(payload.new)
-                    ? payload.new
-                    : { ...announcement, is_active: false };
-                studentAnnouncementChanges.set(getAnnouncementSeenKey(notificationItem), notificationItem);
-                updateAnnouncementBadge();
+                if (isVisible && (!wasVisible || contentChanged || payload.eventType === "INSERT")) {
+                    studentAnnouncementChanges.set(getAnnouncementSeenKey(next), next);
+                    updateAnnouncementBadge();
+                    openStudentAnnouncement(next);
+                }
 
-                if (isStudentAnnouncementVisible(payload.new)) {
-                    openStudentAnnouncement(payload.new);
-                } else {
+                if (!isVisible) {
                     lastShownAnnouncementKey = null;
                 }
 

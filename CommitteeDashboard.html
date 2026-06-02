@@ -2838,7 +2838,7 @@
                     const announcementItems = [...unreadCommitteeAnnouncements.values()]
                         .map(announcement => `
                             <button type="button" data-announcement-notification-key="${escapeHTML(getCommitteeAnnouncementChangeKey(announcement))}" class="announcement-notification w-full rounded-xl px-3 py-3 text-left hover:bg-amber-50">
-                                <span class="block text-xs font-bold uppercase tracking-wide text-amber-700">${announcement.is_active === false ? "Announcement hidden" : "Announcement updated"}</span>
+                                <span class="block text-xs font-bold uppercase tracking-wide text-amber-700">${announcement.notification_label || "Announcement updated"}</span>
                                 <span class="mt-1 block font-bold text-gray-900">${escapeHTML(announcement.title || "Announcement")}</span>
                                 <span class="mt-1 block whitespace-pre-wrap break-words text-sm text-gray-600">${escapeHTML(announcement.message || "")}</span>
                                 <span class="mt-1 block text-xs text-gray-400">${announcement.created_at ? escapeHTML(formatDateTime(announcement.created_at)) : ""}</span>
@@ -3609,8 +3609,7 @@
                         .select("*")
                         .eq("is_active", true)
                         .in("audience", ["all", "committee"])
-                        .order("created_at", { ascending: false })
-                        .limit(5);
+                        .order("created_at", { ascending: false });
 
                     if (error) {
                         console.error("Error loading committee announcements:", error.message || error);
@@ -3627,7 +3626,10 @@
                         announcements.forEach(item => {
                             const previous = committeeAnnouncementsData.find(existing => String(existing.id) === String(item.id));
                             if (!previous || getCommitteeAnnouncementChangeKey(previous) !== getCommitteeAnnouncementChangeKey(item)) {
-                                unreadCommitteeAnnouncements.set(getCommitteeAnnouncementChangeKey(item), item);
+                                unreadCommitteeAnnouncements.set(getCommitteeAnnouncementChangeKey(item), {
+                                    ...item,
+                                    notification_label: previous ? "Announcement updated" : "New announcement"
+                                });
                             }
                         });
                     }
@@ -5709,27 +5711,29 @@
                 function getCommitteeAnnouncementChangeKey(announcement) {
                     return [
                         announcement?.id,
-                        announcement?.updated_at || announcement?.created_at || "",
                         announcement?.title || "",
                         announcement?.message || "",
-                        announcement?.audience || "",
-                        announcement?.is_active ? "active" : "hidden"
                     ].map(value => String(value ?? "")).join("|");
                 }
 
                 function notifyCommitteeAnnouncementChange(payload) {
-                    const announcement = payload.new || payload.old;
-                    if (!announcement) return;
-                    const isRelevant = [payload.new, payload.old].some(item =>
-                        ["all", "committee"].includes(String(item?.audience || ""))
-                    );
-                    if (!isRelevant) return;
+                    const previous = payload.old;
+                    const next = payload.new;
+                    const wasVisible = Boolean(previous?.is_active) && ["all", "committee"].includes(String(previous?.audience || ""));
+                    const isVisible = Boolean(next?.is_active) && ["all", "committee"].includes(String(next?.audience || ""));
+                    const contentChanged = Boolean(previous && next)
+                        && (String(previous.title || "") !== String(next.title || "")
+                            || String(previous.message || "") !== String(next.message || ""));
 
-                    const notificationItem = payload.new?.is_active && ["all", "committee"].includes(String(payload.new?.audience || ""))
-                        ? payload.new
-                        : { ...announcement, is_active: false };
-                    unreadCommitteeAnnouncements.set(getCommitteeAnnouncementChangeKey(notificationItem), notificationItem);
-                    updateMessageNotification();
+                    if (isVisible && (!wasVisible || contentChanged || payload.eventType === "INSERT")) {
+                        const notificationItem = {
+                            ...next,
+                            notification_label: wasVisible ? "Announcement updated" : "New announcement"
+                        };
+                        unreadCommitteeAnnouncements.set(getCommitteeAnnouncementChangeKey(notificationItem), notificationItem);
+                        updateMessageNotification();
+                    }
+
                     loadCommitteeAnnouncements();
                 }
 
