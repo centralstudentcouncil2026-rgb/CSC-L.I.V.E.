@@ -1288,9 +1288,6 @@
                             <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                 <div class="min-w-0">
                                     <p class="text-xs font-bold uppercase tracking-wide text-gray-700">View Matches</p>
-                                    <p id="matchFilterSummary" class="truncate text-xs text-gray-500">
-                                        My matches | Sport: All registered sports
-                                    </p>
                                 </div>
 
                                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
@@ -1630,7 +1627,7 @@
                     </button>
                 </div>
 
-                <form id="sportFilterForm" class="space-y-4">
+                <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">
                             Registered Sports
@@ -1641,27 +1638,17 @@
                             class="w-full border border-gray-300 rounded-lg px-3 py-2">
                             <option value="">All registered sports</option>
                         </select>
-
-                        <p class="text-xs text-gray-500 mt-2">
-                            Choose a specific sport to filter the match cards, or keep All registered sports to see every sport.
-                        </p>
                     </div>
 
-                    <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
+                    <div class="flex justify-end pt-2">
                         <button
                             type="button"
                             id="clearSportFilter"
                             class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
                             Show All Sports
                         </button>
-
-                        <button
-                            type="submit"
-                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                            Apply Filter
-                        </button>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
 
@@ -1983,10 +1970,8 @@
                 const openSportFilterModal = document.getElementById("openSportFilterModal");
                 const sportFilterModal = document.getElementById("sportFilterModal");
                 const closeSportFilterModal = document.getElementById("closeSportFilterModal");
-                const sportFilterForm = document.getElementById("sportFilterForm");
                 const sportFilterSelect = document.getElementById("sportFilterSelect");
                 const clearSportFilter = document.getElementById("clearSportFilter");
-                const matchFilterSummary = document.getElementById("matchFilterSummary");
 
                 const nextMatchesGrid = document.getElementById("nextMatchesGrid");
                 const ongoingMatchesGrid = document.getElementById("ongoingMatchesGrid");
@@ -2484,15 +2469,6 @@
                     return match.sport?.sport_name || match.sport_name || "Unknown Sport";
                 }
 
-                function getSelectedSportFilterName() {
-                    if (!activeSportFilterId) {
-                        return "All registered sports";
-                    }
-
-                    const selectedSport = registeredSportsData.find(sport => String(sport.id) === String(activeSportFilterId));
-                    return selectedSport?.sport_name || "Selected sport";
-                }
-
                 function sortMatchesWithOwnFirst(matches) {
                     return [...matches].sort((firstMatch, secondMatch) => {
                         const firstIsOwn = isMatchOwner(firstMatch) ? 1 : 0;
@@ -2520,22 +2496,6 @@
                     }
 
                     return sortMatchesWithOwnFirst(filteredMatches);
-                }
-
-                function updateMatchFilterSummary() {
-                    if (!matchFilterSummary) {
-                        return;
-                    }
-
-                    const scopeLabel = activeMatchScopeFilter === "mine"
-                        ? "My matches"
-                        : "All matches";
-
-                    const doneDateLabel = activeDoneMatchesDate
-                        ? ` | Match date: ${activeDoneMatchesDate}`
-                        : "";
-
-                    matchFilterSummary.textContent = `${scopeLabel} | Sport: ${getSelectedSportFilterName()}${doneDateLabel}`;
                 }
 
                 function updateSportFilterButtonVisibility() {
@@ -2567,7 +2527,6 @@
                     });
 
                     updateSportFilterButtonVisibility();
-                    updateMatchFilterSummary();
                     renderMatches(matchesData);
                 }
 
@@ -2611,7 +2570,6 @@
 
                     activeSportFilterId = selectedSportStillExists ? previousValue : "";
                     sportFilterSelect.value = activeSportFilterId;
-                    updateMatchFilterSummary();
                     populateContactsSportOptions(registeredSportsData);
                 }
 
@@ -4477,7 +4435,6 @@
                         return getMatchDateValue(match) === activeDoneMatchesDate;
                     });
 
-                    updateMatchFilterSummary();
                     renderMatchesIntoGrid(nextMatchesGrid, nextMatches, "Next");
                     renderMatchesIntoGrid(ongoingMatchesGrid, ongoingMatches, "Ongoing");
                     renderMatchesIntoGrid(doneMatchesGrid, doneMatches, "Done");
@@ -5378,9 +5335,8 @@
                         closeSportFilterModalFunction();
                     }
                 });
-                sportFilterForm.addEventListener("submit", function (event) {
-                    event.preventDefault();
-                    activeSportFilterId = sportFilterSelect.value || "";
+                sportFilterSelect.addEventListener("change", function () {
+                    activeSportFilterId = this.value || "";
                     closeSportFilterModalFunction();
                     renderMatches(matchesData);
                 });
@@ -5585,7 +5541,6 @@
                 resultForm.addEventListener("submit", saveMatchResult);
 
                 if (!await loadCurrentDashboardUser()) return;
-                updateMatchFilterSummary();
                 setActiveMatchScopeFilter("mine");
 
                 await Promise.all([
