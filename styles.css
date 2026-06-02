@@ -1,0 +1,551 @@
+/* Shared styles for CSC CUP pages */
+
+html {
+    min-height: 100%;
+}
+
+body {
+    min-height: 100%;
+    isolation: isolate;
+    background-color: #f8fafc;
+}
+
+body::before,
+body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-size: cover, var(--dashboard-photo-size, 300% 100%);
+    background-position: center, 0% center;
+    background-repeat: no-repeat;
+    animation: dashboardPhotoSlides 42s ease-in-out infinite;
+    transition: opacity 1.8s ease-in-out;
+    will-change: opacity;
+}
+
+body::before {
+    background-image:
+        linear-gradient(var(--dashboard-photo-overlay, rgba(248, 250, 252, 0.42)), var(--dashboard-photo-overlay, rgba(248, 250, 252, 0.42))),
+        var(--dashboard-photo-url-a, var(--dashboard-photo-url, url("./dashboard-backgrounds/dashboard-background-slides.png")));
+    opacity: 0.88;
+}
+
+body::after {
+    background-image:
+        linear-gradient(var(--dashboard-photo-overlay, rgba(248, 250, 252, 0.42)), var(--dashboard-photo-overlay, rgba(248, 250, 252, 0.42))),
+        var(--dashboard-photo-url-b, var(--dashboard-photo-url-a, var(--dashboard-photo-url, url("./dashboard-backgrounds/dashboard-background-slides.png"))));
+    opacity: 0;
+}
+
+body.dashboard-bg-show-b::before {
+    opacity: 0;
+}
+
+body.dashboard-bg-show-b::after {
+    opacity: 0.88;
+}
+
+@keyframes dashboardPhotoSlides {
+    0%, 27% {
+        background-position: center, 0% center;
+    }
+
+    33%, 60% {
+        background-position: center, 50% center;
+    }
+
+    66%, 94% {
+        background-position: center, 100% center;
+    }
+
+    100% {
+        background-position: center, 0% center;
+    }
+}
+
+.admin-shell,
+.committee-shell,
+body > header,
+body > main,
+body > footer {
+    position: relative;
+    z-index: 1;
+}
+
+.dashboard-header {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(to right, #facc15, #eab308, #ca8a04) !important;
+    border-bottom: 4px solid #1d4ed8 !important;
+}
+
+.dashboard-header::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.62);
+}
+
+.dashboard-header-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.25rem;
+    height: 3.25rem;
+    margin-left: 1rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 10px 20px rgba(30, 64, 175, 0.18);
+    flex: 0 0 auto;
+    align-self: center;
+}
+
+.dashboard-header-brand img {
+    width: 2.75rem;
+    height: 2.75rem;
+    object-fit: contain;
+    border-radius: 999px;
+}
+
+.sidebar-logo-badge {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 999px;
+    background: #ffffff;
+    padding: 0.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 18px rgba(30, 64, 175, 0.18);
+    flex: 0 0 auto;
+}
+
+.sidebar-logo-badge img,
+.admin-sidebar .sidebar-logo-badge img,
+.committee-sidebar .sidebar-logo-badge img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain;
+    border-radius: 999px;
+    display: block;
+}
+
+.dashboard-modal-overlay {
+    z-index: 1000 !important;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: rgba(15, 23, 42, 0.64) !important;
+    backdrop-filter: blur(5px);
+}
+
+.dashboard-modal-panel,
+.modal-panel {
+    width: min(100%, var(--modal-max-width, 42rem));
+    max-height: min(88vh, 760px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+#teamModal .dashboard-modal-panel,
+#sportModal .dashboard-modal-panel,
+#teamModal .modal-panel,
+#sportModal .modal-panel,
+#sportFilterModal .dashboard-modal-panel {
+    --modal-max-width: 30rem;
+}
+
+#participantModal .dashboard-modal-panel,
+#participantModal .modal-panel,
+#matchModal .dashboard-modal-panel,
+#resultModal .dashboard-modal-panel {
+    --modal-max-width: 34rem;
+}
+
+#historyModal .dashboard-modal-panel,
+#matchDetailsModal .dashboard-modal-panel {
+    --modal-max-width: 48rem;
+}
+
+.content-scroll,
+.content-scroll-area,
+main.max-w-7xl {
+    background: rgba(248, 250, 252, 0.36);
+}
+
+.content-scroll .bg-white,
+.content-scroll-area .bg-white,
+main.max-w-7xl .bg-white {
+    background-color: rgba(255, 255, 255, 0.68) !important;
+    border-color: rgba(100, 116, 139, 0.28) !important;
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12) !important;
+    backdrop-filter: blur(8px);
+}
+
+.content-scroll .bg-gray-50,
+.content-scroll .bg-slate-50,
+.content-scroll-area .bg-gray-50,
+.content-scroll-area .bg-slate-50,
+main.max-w-7xl .bg-gray-50,
+main.max-w-7xl .bg-slate-50 {
+    background-color: rgba(248, 250, 252, 0.54) !important;
+    border-color: rgba(100, 116, 139, 0.24) !important;
+    backdrop-filter: blur(6px);
+}
+
+.content-scroll .bg-blue-50,
+.content-scroll-area .bg-blue-50,
+main.max-w-7xl .bg-blue-50 {
+    background-color: rgba(219, 234, 254, 0.58) !important;
+}
+
+.content-scroll .bg-emerald-50,
+.content-scroll-area .bg-emerald-50,
+main.max-w-7xl .bg-emerald-50 {
+    background-color: rgba(209, 250, 229, 0.58) !important;
+}
+
+.content-scroll .bg-amber-50,
+.content-scroll .bg-yellow-50,
+.content-scroll-area .bg-amber-50,
+.content-scroll-area .bg-yellow-50,
+main.max-w-7xl .bg-amber-50,
+main.max-w-7xl .bg-yellow-50 {
+    background-color: rgba(254, 243, 199, 0.62) !important;
+}
+
+.content-scroll .bg-red-50,
+.content-scroll-area .bg-red-50,
+main.max-w-7xl .bg-red-50 {
+    background-color: rgba(254, 226, 226, 0.58) !important;
+}
+
+.content-scroll .text-gray-500,
+.content-scroll-area .text-gray-500,
+main.max-w-7xl .text-gray-500,
+.content-scroll .text-slate-500,
+.content-scroll-area .text-slate-500,
+main.max-w-7xl .text-slate-500 {
+    color: #334155 !important;
+}
+
+.content-scroll .text-gray-600,
+.content-scroll-area .text-gray-600,
+main.max-w-7xl .text-gray-600,
+.content-scroll .text-slate-600,
+.content-scroll-area .text-slate-600,
+main.max-w-7xl .text-slate-600 {
+    color: #1f2937 !important;
+}
+
+.content-scroll .text-gray-700,
+.content-scroll-area .text-gray-700,
+main.max-w-7xl .text-gray-700,
+.content-scroll .text-slate-700,
+.content-scroll-area .text-slate-700,
+main.max-w-7xl .text-slate-700,
+.content-scroll .text-slate-400,
+.content-scroll-area .text-slate-400,
+main.max-w-7xl .text-slate-400 {
+    color: #0f172a !important;
+}
+
+.dashboard-overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: 0.75rem;
+}
+
+.dashboard-overview-card {
+    min-height: 7rem;
+    border-radius: 0.75rem;
+}
+
+.dashboard-overview-card > div {
+    min-width: 0;
+}
+
+.dashboard-overview-label,
+.dashboard-overview-note {
+    overflow-wrap: anywhere;
+}
+
+.dashboard-overview-value {
+    line-height: 1;
+}
+
+/* Base typography */
+* {
+    font-family: 'Inter', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
+}
+
+/* Responsive root sizing and fluid media */
+html {
+    box-sizing: border-box;
+    font-size: clamp(14px, 1.6vw, 16px);
+}
+
+*, *::before, *::after {
+    box-sizing: inherit;
+}
+
+img, picture, video, svg {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Ensure main container doesn't overflow on very small screens */
+.max-w-7xl {
+    width: 100%;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+@media (max-width: 640px) {
+    html, body {
+        overflow-x: hidden;
+    }
+
+    body::before,
+    body::after {
+        background-size: cover, 360% 100%;
+    }
+
+    body::before {
+        opacity: 0.82;
+    }
+
+    body::after {
+        opacity: 0;
+    }
+
+    body.dashboard-bg-show-b::before {
+        opacity: 0;
+    }
+
+    body.dashboard-bg-show-b::after {
+        opacity: 0.82;
+    }
+
+    .dashboard-header-brand {
+        width: 2.75rem;
+        height: 2.75rem;
+        margin-left: 0.65rem;
+    }
+
+    .dashboard-header-brand img {
+        width: 2.35rem;
+        height: 2.35rem;
+    }
+
+    .sidebar-logo-badge {
+        width: 2.45rem;
+        height: 2.45rem;
+        padding: 0.18rem;
+    }
+
+    .dashboard-header .admin-header-text {
+        max-width: calc(100vw - 8.5rem) !important;
+        padding-left: 0.65rem !important;
+        padding-right: 0.65rem !important;
+    }
+
+    .dashboard-header .admin-header-row {
+        align-items: center !important;
+        flex-wrap: wrap !important;
+        gap: 0.55rem !important;
+    }
+
+    .dashboard-overview-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        gap: 0.45rem !important;
+        margin-bottom: 0.8rem !important;
+    }
+
+    .dashboard-overview-card {
+        aspect-ratio: 1 / 1;
+        min-height: 0;
+        padding: 0.45rem !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        overflow: hidden;
+    }
+
+    .dashboard-overview-card > div,
+    .dashboard-overview-card > div > div {
+        width: 100%;
+        display: flex !important;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.16rem !important;
+    }
+
+    .dashboard-overview-label {
+        font-size: 0.58rem !important;
+        line-height: 0.72rem !important;
+        font-weight: 700 !important;
+    }
+
+    .dashboard-overview-value {
+        font-size: 1.05rem !important;
+        line-height: 1.1rem !important;
+        margin-top: 0 !important;
+    }
+
+    .dashboard-overview-note,
+    .dashboard-overview-icon {
+        display: none !important;
+    }
+
+    .dashboard-modal-overlay {
+        align-items: flex-start !important;
+        justify-content: center !important;
+        padding: 0.75rem !important;
+    }
+
+    .dashboard-modal-panel,
+    .modal-panel {
+        width: 100% !important;
+        max-width: 100% !important;
+        max-height: calc(100dvh - 1.5rem) !important;
+        margin: 0 !important;
+        border-radius: 1rem !important;
+    }
+
+    /* Tailwind utility classes with bracket syntax need escaping when targeted in CSS */
+    .min-w-\[760px\],
+    .min-w-\[700px\],
+    .min-w-\[600px\],
+    .min-w-\[560px\],
+    .min-w-\[520px\],
+    .min-w-\[420px\] {
+        min-width: 0 !important;
+    }
+
+    .responsive-table-card,
+    .mobile-table-container,
+    .overflow-x-auto {
+        overflow-x: visible !important;
+    }
+
+    table,
+    .leaderboard-table {
+        min-width: 0 !important;
+        width: 100% !important;
+        table-layout: fixed !important;
+    }
+
+    th,
+    td {
+        padding: 0.45rem 0.35rem !important;
+        font-size: 0.68rem !important;
+        line-height: 0.9rem !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: anywhere !important;
+        vertical-align: top !important;
+    }
+
+    th {
+        letter-spacing: 0 !important;
+    }
+
+    td button,
+    td .inline-flex,
+    td span {
+        max-width: 100%;
+        white-space: normal !important;
+    }
+
+    td button {
+        padding: 0.3rem 0.4rem !important;
+        font-size: 0.65rem !important;
+        line-height: 0.8rem !important;
+    }
+
+    .leaderboard-rank-cell {
+        width: 14% !important;
+    }
+
+    .leaderboard-team-cell {
+        width: 34% !important;
+    }
+
+    .leaderboard-stat-cell {
+        width: 17.33% !important;
+    }
+
+    .w-80 {
+        width: 100% !important;
+    }
+}
+
+/* Page-specific mobile tweaks: collapse sidebar, stack content, adjust paddings */
+@media (max-width: 768px) {
+    /* Stack sidebar above main content */
+    .min-h-screen.flex {
+        flex-direction: column;
+    }
+
+    /* Sidebar becomes full-width and sits above the main area */
+    .w-80 {
+        width: 100% !important;
+        position: relative !important;
+        border-right: 0 !important;
+        box-shadow: none !important;
+    }
+
+    /* Main content fills width below sidebar */
+    .flex-1 {
+        width: 100% !important;
+    }
+
+    /* Make tables more flexible: allow horizontal scroll and wrap long words */
+    .overflow-x-auto {
+        -webkit-overflow-scrolling: touch;
+        overflow-x: visible;
+    }
+
+    table {
+        width: 100% !important;
+        table-layout: auto !important;
+        border-collapse: collapse;
+    }
+
+    th, td {
+        white-space: normal !important;
+        word-break: break-word !important;
+    }
+
+    /* Reduce padding on common card containers for small screens */
+    .p-6 {
+        padding: 0.75rem !important;
+    }
+
+    .p-8 {
+        padding: 1rem !important;
+    }
+
+    .text-3xl {
+        font-size: 1.4rem !important;
+    }
+
+    .text-4xl {
+        font-size: 1.6rem !important;
+    }
+}

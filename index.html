@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSC L.I.V.E. - Log In / Sign In</title>
+
+    <link rel="icon" href="data:,">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        :root {
+            --primary: #1e40af;
+            --primary-dark: #1e3a8a;
+            --accent: #fbbf24;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            min-height: 100%;
+            overflow-x: hidden;
+            font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background:
+                linear-gradient(rgba(248, 250, 252, 0.9), rgba(248, 250, 252, 0.9)),
+                url("dashboard-backgrounds/dashboard-background-slides.png") center / cover no-repeat fixed;
+        }
+
+        h1,
+        h2,
+        h3,
+        .font-display {
+            font-family: "Poppins", "Inter", system-ui, sans-serif;
+        }
+
+        .auth-shell {
+            min-height: 100vh;
+            min-height: 100dvh;
+        }
+
+        .auth-panel {
+            width: min(100%, 28rem);
+        }
+
+        .auth-hero {
+            background-image:
+                linear-gradient(90deg, rgba(30, 58, 138, 0.92), rgba(29, 78, 216, 0.72)),
+                url("https://d2xsxph8kpxj0f.cloudfront.net/310519663079004813/HRScgrtMjfFKKgfh8EJfQz/hero-sports-banner-ZUVcr9VSPDhW6ei7AebP8T.webp");
+            background-size: cover;
+            background-position: center;
+        }
+
+        .mode-btn.active,
+        .role-btn.active,
+        .signin-role-btn.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 8px 18px rgba(30, 64, 175, 0.24);
+        }
+
+        .mode-btn:not(.active),
+        .role-btn:not(.active),
+        .signin-role-btn:not(.active) {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .auth-input {
+            width: 100%;
+            border: 1px solid #e5e7eb;
+            background: #f9fafb;
+            border-radius: 0.75rem;
+            padding: 0.7rem 0.9rem 0.7rem 2.65rem;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+        }
+
+        .auth-input:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+            background: white;
+        }
+
+        .field-icon {
+            position: absolute;
+            left: 0.9rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            pointer-events: none;
+        }
+
+        @media (max-width: 640px) {
+            body {
+                background:
+                    linear-gradient(rgba(248, 250, 252, 0.82), rgba(248, 250, 252, 0.9)),
+                    url("dashboard-backgrounds/dashboard-background-slides.png") center / cover no-repeat fixed;
+            }
+
+            .auth-shell {
+                display: block !important;
+                min-height: 100dvh;
+            }
+
+            .auth-panel {
+                width: 100%;
+                max-width: 25rem;
+                margin: 0 auto;
+            }
+
+            .auth-hero {
+                display: flex !important;
+                min-height: 72dvh;
+                padding: 2rem 1.25rem !important;
+            }
+
+            .auth-hero > div {
+                max-width: 22rem;
+            }
+
+            .auth-hero h1 {
+                font-size: 2rem !important;
+                line-height: 2.35rem !important;
+            }
+
+            .auth-hero p {
+                font-size: 0.9rem;
+            }
+
+            .auth-hero .space-y-4 {
+                margin-top: 1.25rem;
+            }
+
+            .hero-auth-actions {
+                display: grid !important;
+            }
+
+            .auth-card {
+                border-radius: 1rem;
+                padding: 1.1rem !important;
+                box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+                background: rgba(255, 255, 255, 0.94);
+                backdrop-filter: blur(10px);
+            }
+
+            .form-wrap {
+                min-height: 100dvh !important;
+                padding: 1rem !important;
+                justify-content: flex-start !important;
+                align-items: center !important;
+            }
+
+            .mobile-brand {
+                display: none !important;
+            }
+
+            .auth-title {
+                font-size: 1.45rem !important;
+                line-height: 1.8rem !important;
+                margin-bottom: 0.3rem !important;
+            }
+
+            .auth-subtitle {
+                font-size: 0.88rem !important;
+                line-height: 1.35rem !important;
+            }
+
+            #formTitle,
+            #formSubtitle {
+                text-align: left;
+            }
+
+            #signInForm,
+            #registerForm {
+                gap: 0.75rem;
+            }
+
+            .auth-input {
+                font-size: 0.88rem;
+                padding-top: 0.62rem;
+                padding-bottom: 0.62rem;
+            }
+
+            .mode-btn,
+            .role-btn,
+            .signin-role-btn,
+            .submit-btn {
+                font-size: 0.86rem !important;
+                padding-top: 0.68rem !important;
+                padding-bottom: 0.68rem !important;
+            }
+
+            .small-text {
+                font-size: 0.78rem !important;
+                line-height: 1.15rem !important;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .auth-card {
+                padding: 0.9rem !important;
+            }
+
+            .mode-btn,
+            .role-btn,
+            .signin-role-btn {
+                padding-left: 0.55rem !important;
+                padding-right: 0.55rem !important;
+            }
+
+            .mobile-brand p:first-child {
+                font-size: 0.78rem !important;
+                line-height: 1.1rem;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50">
+    <main class="auth-shell grid grid-cols-1 lg:grid-cols-2 bg-gray-50">
+
+        <!-- Hero Section -->
+        <section class="auth-hero flex relative overflow-hidden items-center justify-center px-8 py-12">
+            <div class="relative z-10 max-w-md text-center">
+                <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-yellow-400 mb-6 shadow-lg">
+                    <img
+                        src="Adventist_University_of_the_Philippines_logo.png"
+                        alt="School Logo"
+                        class="w-16 h-16 object-contain">
+                </div>
+
+                <h1 class="font-display text-4xl font-bold text-white mb-4">
+                    Adventist University of the Philippines
+                </h1>
+
+                <p class="text-blue-100 text-lg mb-8">
+                    Central Student Council - Physical Development Web App
+                </p>
+
+                <div class="space-y-4 text-left">
+                    <div class="flex items-start gap-3">
+                        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-yellow-400 text-blue-900 font-bold">✓</div>
+                        <div>
+                            <p class="text-white font-semibold">Real-time Leaderboard</p>
+                            <p class="text-blue-100 text-sm">Track team performance instantly.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3">
+                        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-yellow-400 text-blue-900 font-bold">✓</div>
+                        <div>
+                            <p class="text-white font-semibold">Game Scheduling</p>
+                            <p class="text-blue-100 text-sm">Organize matches and manage attendance.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3">
+                        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-yellow-400 text-blue-900 font-bold">✓</div>
+                        <div>
+                            <p class="text-white font-semibold">Team Management</p>
+                            <p class="text-blue-100 text-sm">Manage participants and teams efficiently.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hero-auth-actions mt-8 hidden grid-cols-2 gap-3">
+                    <button
+                        type="button"
+                        data-hero-auth-mode="signin"
+                        class="rounded-xl bg-yellow-400 px-4 py-3 text-sm font-bold text-blue-950 shadow-lg transition hover:bg-yellow-300">
+                        Log In
+                    </button>
+                    <button
+                        type="button"
+                        data-hero-auth-mode="register"
+                        class="rounded-xl border border-white/70 bg-white/15 px-4 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-white/25">
+                        Sign In
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Log In / Sign In Section -->
+        <section id="authForms" class="form-wrap flex min-h-screen min-h-dvh items-center justify-center px-6 py-8 sm:px-8 lg:px-12">
+            <div class="auth-panel">
+
+                <!-- Mobile Brand -->
+                <div class="mobile-brand hidden items-center gap-3 mb-6">
+                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-600">
+                        <img
+                            src="Adventist_University_of_the_Philippines_logo.png"
+                            alt="School Logo"
+                            class="h-10 w-10 object-contain">
+                    </div>
+                    <div>
+                        <p class="font-display text-sm font-bold text-blue-900">
+                            Adventist University of the Philippines
+                        </p>
+                        <p class="text-xs text-gray-500">
+                            CSC- L.I.V.E.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <h2 id="formTitle" class="auth-title font-display text-3xl font-bold text-gray-900 mb-2">
+                        Welcome Back
+                    </h2>
+                    <p id="formSubtitle" class="auth-subtitle text-gray-600">
+                        Log in to access CSC-L.I.V.E.
+                    </p>
+                </div>
+
+                <div class="auth-card rounded-2xl bg-white p-6 sm:p-8 shadow-xl border border-gray-100">
+
+                    <!-- Mode Switch -->
+                    <div class="grid grid-cols-2 gap-3 mb-6">
+                        <button
+                            type="button"
+                            class="mode-btn active rounded-xl px-4 py-3 font-semibold transition"
+                            data-mode="signin">
+                            Log In
+                        </button>
+
+                        <button
+                            type="button"
+                            class="mode-btn rounded-xl px-4 py-3 font-semibold transition"
+                            data-mode="register">
+                            Sign In
+                        </button>
+                    </div>
+
+                    <!-- Log In Form -->
+                    <form id="signInForm" class="space-y-5">
+                        <div class="space-y-2">
+                            <label for="signInEmail" class="block text-sm font-medium text-gray-700">
+                                Email Address
+                            </label>
+                            <div class="relative">
+                                <input
+                                    id="signInEmail"
+                                    type="email"
+                                    required
+                                    autocomplete="email"
+                                    placeholder="your.email@school.edu"
+                                    class="auth-input">
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="signInPassword" class="block text-sm font-medium text-gray-700">
+                                Password
+                            </label>
+                            <div class="relative">
+                                <input
+                                    id="signInPassword"
+                                    type="password"
+                                    required
+                                    autocomplete="current-password"
+                                    placeholder="••••••••"
+                                    class="auth-input">
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">
+                                Log in as
+                            </label>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <button
+                                    type="button"
+                                    class="signin-role-btn active rounded-xl px-4 py-3 font-semibold transition"
+                                    data-signin-role="admin">
+                                    Admin
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="signin-role-btn rounded-xl px-4 py-3 font-semibold transition"
+                                    data-signin-role="committee">
+                                    Committee
+                                </button>
+                            </div>
+
+                            <p class="small-text text-xs text-gray-500">
+                                Choose the same role assigned to your account.
+                            </p>
+                        </div>
+
+                        <button
+                            id="signInSubmit"
+                            type="submit"
+                            class="submit-btn w-full rounded-xl bg-blue-600 py-3 font-semibold text-white shadow-md transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">
+                            Log In
+                        </button>
+                    </form>
+
+                    <!-- Sign In Form -->
+                    <form id="registerForm" class="hidden space-y-5">
+                        <div class="space-y-2">
+                            <label for="registerName" class="block text-sm font-medium text-gray-700">
+                                Full Name
+                            </label>
+                            <div class="relative">
+                                <input
+                                    id="registerName"
+                                    type="text"
+                                    required
+                                    autocomplete="name"
+                                    placeholder="Enter your full name"
+                                    class="auth-input">
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="registerEmail" class="block text-sm font-medium text-gray-700">
+                                Email Address
+                            </label>
+                            <div class="relative">
+                                <input
+                                    id="registerEmail"
+                                    type="email"
+                                    required
+                                    autocomplete="email"
+                                    placeholder="your.email@school.edu"
+                                    class="auth-input">
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="registerMobile" class="block text-sm font-medium text-gray-700">
+                                Mobile Number
+                            </label>
+                            <div class="relative">
+                                <input
+                                    id="registerMobile"
+                                    type="tel"
+                                    required
+                                    autocomplete="tel"
+                                    inputmode="tel"
+                                    placeholder="Enter mobile number"
+                                    class="auth-input">
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="registerPassword" class="block text-sm font-medium text-gray-700">
+                                Password
+                            </label>
+                            <div class="relative">
+                                <input
+                                    id="registerPassword"
+                                    type="password"
+                                    required
+                                    minlength="6"
+                                    autocomplete="new-password"
+                                    placeholder="Minimum 6 characters"
+                                    class="auth-input">
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="confirmPassword" class="block text-sm font-medium text-gray-700">
+                                Confirm Password
+                            </label>
+                            <div class="relative">
+                                <input
+                                    id="confirmPassword"
+                                    type="password"
+                                    required
+                                    minlength="6"
+                                    autocomplete="new-password"
+                                    placeholder="Repeat password"
+                                    class="auth-input">
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">
+                                Account Role
+                            </label>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <button
+                                    type="button"
+                                    class="role-btn active rounded-xl px-4 py-3 font-semibold transition"
+                                    data-role="committee">
+                                    Committee
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="role-btn rounded-xl px-4 py-3 font-semibold transition"
+                                    data-role="admin">
+                                    Admin
+                                </button>
+                            </div>
+
+                            <p class="small-text text-xs text-gray-500">
+                                New accounts must be approved by an admin before dashboard access is allowed.
+                            </p>
+                        </div>
+
+                        <div id="registerSportAssignmentGroup" class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">
+                                Sport Assignment
+                            </label>
+                            <button
+                                id="openRegisterSportModal"
+                                type="button"
+                                class="auth-input flex w-full items-center justify-between text-left">
+                                <span id="selectedRegisterSportLabel">Choose the sport you will handle</span>
+                                <span aria-hidden="true">Select</span>
+                            </button>
+                            <p class="small-text text-xs text-gray-500">
+                                Choose one registered sport. An admin can edit this assignment later.
+                            </p>
+                        </div>
+
+                        <button
+                            id="registerSubmit"
+                            type="submit"
+                            class="submit-btn w-full rounded-xl bg-blue-600 py-3 font-semibold text-white shadow-md transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">
+                            Create Account
+                        </button>
+                    </form>
+
+                    <!-- Alert -->
+                    <div id="alertBox" class="hidden mt-5 rounded-xl border p-4">
+                        <p id="alertMessage" class="text-sm"></p>
+                    </div>
+
+                    <div class="mt-6 border-t border-gray-200 pt-4">
+                        <p id="helperText" class="small-text text-center text-sm text-gray-600">
+                            No account yet?
+                            <button type="button" id="goRegister" class="font-semibold text-blue-600 hover:text-blue-700">
+                                Sign in here.
+                            </button>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="registerSportModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+        <div class="max-h-[80vh] w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+                <h2 class="text-lg font-bold text-gray-900">Choose Your Sport</h2>
+                <button id="closeRegisterSportModal" type="button" class="text-2xl leading-none text-gray-500 hover:text-gray-800">&times;</button>
+            </div>
+            <div id="registerSportList" class="max-h-[62vh] space-y-2 overflow-y-auto p-4">
+                <p class="text-sm font-semibold text-gray-500">Loading registered sports...</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+        const SUPABASE_URL = "https://unveyndaaznxgqojwjki.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVudmV5bmRhYXpueGdxb2p3amtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MzQyNzUsImV4cCI6MjA5NDIxMDI3NX0.2RUriqqq9kITnl8uPZSdiSrXuo8BhD9nrzqHFUwl2yU";
+
+        // Remove shared credentials created by older builds. Authenticated
+        // sessions now live in sessionStorage so separate tabs can use
+        // different accounts without overwriting each other.
+        localStorage.removeItem("user");
+        localStorage.removeItem("sb-unveyndaaznxgqojwjki-auth-token");
+
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: {
+                storage: sessionStorage,
+                storageKey: "csc-live-auth-session",
+                persistSession: true,
+                autoRefreshToken: true,
+                detectSessionInUrl: true
+            }
+        });
+
+        const signInForm = document.getElementById("signInForm");
+        const registerForm = document.getElementById("registerForm");
+        const formTitle = document.getElementById("formTitle");
+        const formSubtitle = document.getElementById("formSubtitle");
+        const helperText = document.getElementById("helperText");
+        const alertBox = document.getElementById("alertBox");
+        const alertMessage = document.getElementById("alertMessage");
+
+        const signInSubmit = document.getElementById("signInSubmit");
+        const registerSubmit = document.getElementById("registerSubmit");
+        const openRegisterSportModal = document.getElementById("openRegisterSportModal");
+        const closeRegisterSportModal = document.getElementById("closeRegisterSportModal");
+        const registerSportModal = document.getElementById("registerSportModal");
+        const registerSportList = document.getElementById("registerSportList");
+        const selectedRegisterSportLabel = document.getElementById("selectedRegisterSportLabel");
+        const registerSportAssignmentGroup = document.getElementById("registerSportAssignmentGroup");
+
+        let currentMode = "signin";
+        let selectedSignInRole = "admin";
+        let selectedRegisterRole = "committee";
+        let registeredSports = [];
+        let selectedRegisterSport = null;
+
+        function escapeHTML(value) {
+            return String(value ?? "")
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;");
+        }
+
+        function showAlert(type, message) {
+            alertBox.classList.remove("hidden", "bg-red-50", "border-red-200", "bg-green-50", "border-green-200", "bg-yellow-50", "border-yellow-200");
+            alertMessage.className = "text-sm";
+
+            if (type === "success") {
+                alertBox.classList.add("bg-green-50", "border-green-200");
+                alertMessage.classList.add("text-green-800");
+            } else if (type === "warning") {
+                alertBox.classList.add("bg-yellow-50", "border-yellow-200");
+                alertMessage.classList.add("text-yellow-800");
+            } else {
+                alertBox.classList.add("bg-red-50", "border-red-200");
+                alertMessage.classList.add("text-red-800");
+            }
+
+            alertMessage.textContent = message;
+        }
+
+        function hideAlert() {
+            alertBox.classList.add("hidden");
+            alertMessage.textContent = "";
+        }
+
+        function setLoading(button, isLoading, loadingText, normalText) {
+            button.disabled = isLoading;
+            button.textContent = isLoading ? loadingText : normalText;
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            hideAlert();
+
+            document.querySelectorAll(".mode-btn").forEach(button => {
+                button.classList.toggle("active", button.dataset.mode === mode);
+            });
+
+            if (mode === "signin") {
+                signInForm.classList.remove("hidden");
+                registerForm.classList.add("hidden");
+                formTitle.textContent = "Welcome Back";
+                formSubtitle.textContent = "Log in to access CSC-L.I.V.E.";
+                helperText.innerHTML = `
+                    No account yet?
+                    <button type="button" id="goRegister" class="font-semibold text-blue-600 hover:text-blue-700">
+                        Sign in here.
+                    </button>
+                `;
+                document.getElementById("goRegister").addEventListener("click", () => setMode("register"));
+            } else {
+                signInForm.classList.add("hidden");
+                registerForm.classList.remove("hidden");
+                formTitle.textContent = "Create Account";
+                helperText.innerHTML = `
+                    Already have an account?
+                    <button type="button" id="goSignIn" class="font-semibold text-blue-600 hover:text-blue-700">
+                        Log in here.
+                    </button>
+                `;
+                document.getElementById("goSignIn").addEventListener("click", () => setMode("signin"));
+            }
+        }
+
+        function openAuthMode(mode) {
+            setMode(mode);
+            document.getElementById("authForms")?.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+            });
+        }
+
+        function setSignInRole(role) {
+            selectedSignInRole = role;
+
+            document.querySelectorAll(".signin-role-btn").forEach(button => {
+                button.classList.toggle("active", button.dataset.signinRole === role);
+            });
+        }
+
+        function setRegisterRole(role) {
+            selectedRegisterRole = role;
+
+            document.querySelectorAll(".role-btn").forEach(button => {
+                button.classList.toggle("active", button.dataset.role === role);
+            });
+
+            const isAdmin = role === "admin";
+            registerSportAssignmentGroup.classList.toggle("hidden", isAdmin);
+            selectedRegisterSportLabel.textContent = isAdmin
+                ? "Admin"
+                : selectedRegisterSport?.sport_name || "Choose the sport you will handle";
+        }
+
+        function renderRegisterSports() {
+            if (!registerSportList) return;
+            if (registeredSports.length === 0) {
+                registerSportList.innerHTML = `<p class="rounded-xl bg-gray-50 p-4 text-sm font-semibold text-gray-500">No registered sports are available yet.</p>`;
+                return;
+            }
+
+            registerSportList.innerHTML = registeredSports.map(sport => `
+                <button
+                    type="button"
+                    data-register-sport-id="${sport.id}"
+                    class="register-sport-option w-full rounded-xl border px-4 py-3 text-left text-sm font-bold transition ${String(selectedRegisterSport?.id || "") === String(sport.id) ? "border-blue-600 bg-blue-50 text-blue-800" : "border-gray-200 bg-white text-gray-800 hover:bg-gray-50"}">
+                    ${escapeHTML(sport.sport_name || "Unnamed sport")}
+                </button>
+            `).join("");
+
+            document.querySelectorAll(".register-sport-option").forEach(button => {
+                button.addEventListener("click", function () {
+                    selectedRegisterSport = registeredSports.find(sport => String(sport.id) === String(this.dataset.registerSportId)) || null;
+                    selectedRegisterSportLabel.textContent = selectedRegisterSport?.sport_name || "Choose the sport you will handle";
+                    closeRegisterSportModalFunction();
+                });
+            });
+        }
+
+        async function loadRegisterSports() {
+            const { data, error } = await supabase
+                .from("sports")
+                .select("id, sport_name")
+                .order("sport_name", { ascending: true });
+
+            if (error) {
+                console.error("Registration sports load error:", error.message || error);
+                registerSportList.innerHTML = `<p class="rounded-xl bg-red-50 p-4 text-sm font-semibold text-red-700">Unable to load registered sports.</p>`;
+                return;
+            }
+
+            registeredSports = data || [];
+            renderRegisterSports();
+        }
+
+        function openRegisterSportModalFunction() {
+            renderRegisterSports();
+            registerSportModal.classList.remove("hidden");
+            registerSportModal.classList.add("flex");
+        }
+
+        function closeRegisterSportModalFunction() {
+            registerSportModal.classList.add("hidden");
+            registerSportModal.classList.remove("flex");
+        }
+
+        function redirectByRole(role) {
+            sessionStorage.removeItem("adminDashboardSessionStarted");
+            sessionStorage.removeItem("committeeDashboardSessionStarted");
+
+            if (role === "admin") {
+                window.location.href = "AdminDashboard.html";
+                return;
+            }
+
+            window.location.href = "CommitteeDashboard.html";
+        }
+
+        async function getUserProfile(user) {
+            const { data, error } = await supabase
+                .from("user_profiles")
+                .select("*")
+                .eq("id", user.id)
+                .maybeSingle();
+
+            if (error) {
+                throw error;
+            }
+
+            return data;
+        }
+
+        function normalizeApprovalStatus(status) {
+            return String(status || "").trim().toLowerCase();
+        }
+
+        function isApprovedProfile(profile) {
+            return normalizeApprovalStatus(profile?.approval_status) === "approved";
+        }
+
+        function normalizeAccountRole(role) {
+            return String(role || "").trim().toLowerCase();
+        }
+
+        function validateAuthenticatedProfile(user, profile) {
+            if (!user?.id || !profile?.id) {
+                throw new Error("No registered database profile was found for this account.");
+            }
+
+            if (String(profile.id) !== String(user.id)) {
+                throw new Error("The authenticated account does not match the registered database profile.");
+            }
+
+            const authEmail = String(user.email || "").trim().toLowerCase();
+            const profileEmail = String(profile.email || "").trim().toLowerCase();
+            if (!authEmail || !profileEmail || authEmail !== profileEmail) {
+                throw new Error("The authenticated email does not match the registered account.");
+            }
+
+            const role = normalizeAccountRole(profile.role);
+            if (!["admin", "committee"].includes(role)) {
+                throw new Error("This account does not have a valid dashboard role.");
+            }
+
+            return role;
+        }
+
+        function getApprovalBlockMessage(status) {
+            const normalizedStatus = normalizeApprovalStatus(status);
+            const statusMessages = {
+                hold: "Your account is on hold. Please contact an admin before logging in.",
+                suspended: "Your account is suspended. Please contact an admin before logging in.",
+                rejected: "Your account is rejected. Please contact an admin before logging in.",
+                pending: "Your account is pending admin approval. Please wait for an admin to accept it before logging in."
+            };
+
+            return statusMessages[normalizedStatus] || `Your account status is ${normalizedStatus}. Please contact an admin before logging in.`;
+        }
+
+        async function ensurePendingProfile(user, fullName, mobileNumber, role, sport) {
+            if (!user?.id) {
+                throw new Error("Account was created, but the user profile could not be identified.");
+            }
+
+            const { error } = await supabase.rpc("save_pending_user_profile", {
+                p_email: user.email,
+                p_full_name: fullName,
+                p_mobile_number: mobileNumber,
+                p_role: role,
+                p_assigned_sport_id: sport?.id || null,
+                p_assigned_sport_name: sport?.sport_name || null
+            });
+
+            if (error) {
+                throw error;
+            }
+        }
+
+        async function saveLocalSession(user, profile) {
+            const finalRole = validateAuthenticatedProfile(user, profile);
+
+            const userData = {
+                id: user.id,
+                email: profile?.email || user.email,
+                fullName: profile?.full_name || user.user_metadata?.full_name || "",
+                mobileNumber: profile?.mobile_number || user.user_metadata?.mobile_number || "",
+                role: finalRole,
+                approvalStatus: normalizeApprovalStatus(profile.approval_status),
+                loginTime: new Date().toISOString(),
+                authProvider: "supabase"
+            };
+
+            sessionStorage.setItem("user", JSON.stringify(userData));
+            return userData;
+        }
+
+        document.querySelectorAll(".mode-btn").forEach(button => {
+            button.addEventListener("click", () => setMode(button.dataset.mode));
+        });
+
+        document.querySelectorAll("[data-hero-auth-mode]").forEach(button => {
+            button.addEventListener("click", () => openAuthMode(button.dataset.heroAuthMode));
+        });
+
+        document.querySelectorAll(".signin-role-btn").forEach(button => {
+            button.addEventListener("click", () => setSignInRole(button.dataset.signinRole));
+        });
+
+        document.querySelectorAll(".role-btn").forEach(button => {
+            button.addEventListener("click", () => setRegisterRole(button.dataset.role));
+        });
+
+        document.getElementById("goRegister").addEventListener("click", () => setMode("register"));
+        openRegisterSportModal.addEventListener("click", openRegisterSportModalFunction);
+        closeRegisterSportModal.addEventListener("click", closeRegisterSportModalFunction);
+        registerSportModal.addEventListener("click", event => {
+            if (event.target === registerSportModal) closeRegisterSportModalFunction();
+        });
+        loadRegisterSports();
+
+        signInForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
+            hideAlert();
+            let authenticated = false;
+
+            const email = document.getElementById("signInEmail").value.trim();
+            const password = document.getElementById("signInPassword").value;
+
+            if (!email || !password) {
+                showAlert("error", "Please enter your email and password.");
+                return;
+            }
+
+            setLoading(signInSubmit, true, "Logging in...", "Log In");
+
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email,
+                    password
+                });
+
+                if (error) {
+                    throw error;
+                }
+                authenticated = true;
+
+                const profile = await getUserProfile(data.user);
+                const actualRole = validateAuthenticatedProfile(data.user, profile);
+
+                if (!isApprovedProfile(profile)) {
+                    await supabase.auth.signOut();
+                    sessionStorage.removeItem("user");
+
+                    showAlert("warning", getApprovalBlockMessage(profile?.approval_status));
+                    return;
+                }
+
+                if (actualRole !== selectedSignInRole) {
+                    await supabase.auth.signOut();
+                    sessionStorage.removeItem("user");
+                    const correctRoleLabel = actualRole === "admin" ? "Admin" : "Committee";
+                    const selectedRoleLabel = selectedSignInRole === "admin" ? "Admin" : "Committee";
+                    showAlert(
+                        "error",
+                        `This account is registered as ${correctRoleLabel}, but you selected ${selectedRoleLabel}. Please choose the correct log-in role.`
+                    );
+                    return;
+                }
+
+                const userData = await saveLocalSession(data.user, profile);
+
+                redirectByRole(userData.role);
+
+            } catch (error) {
+                console.error("Log in error:", error);
+                if (authenticated) {
+                    await supabase.auth.signOut();
+                    sessionStorage.removeItem("user");
+                }
+                showAlert("error", error.message || "Failed to log in. Check your account and password.");
+            } finally {
+                setLoading(signInSubmit, false, "Logging in...", "Log In");
+            }
+        });
+
+        registerForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
+            hideAlert();
+
+            const fullName = document.getElementById("registerName").value.trim();
+            const email = document.getElementById("registerEmail").value.trim();
+            const mobileNumber = document.getElementById("registerMobile").value.trim();
+            const password = document.getElementById("registerPassword").value;
+            const confirmPassword = document.getElementById("confirmPassword").value;
+
+            if (!fullName || !email || !mobileNumber || !password || !confirmPassword) {
+                showAlert("error", "Please complete all registration fields.");
+                return;
+            }
+
+            if (selectedRegisterRole === "committee" && !selectedRegisterSport) {
+                showAlert("error", "Please choose the sport you will handle.");
+                openRegisterSportModalFunction();
+                return;
+            }
+
+            if (password.length < 6) {
+                showAlert("error", "Password must be at least 6 characters.");
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showAlert("error", "Passwords do not match.");
+                return;
+            }
+
+            setLoading(registerSubmit, true, "Creating account...", "Create Account");
+
+            try {
+                const { data, error } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: {
+                        data: {
+                            full_name: fullName,
+                            mobile_number: mobileNumber,
+                            role: selectedRegisterRole
+                        }
+                    }
+                });
+
+                if (error) {
+                    throw error;
+                }
+
+                const registeredRole = selectedRegisterRole;
+
+                const registeredSport = registeredRole === "admin"
+                    ? { id: null, sport_name: "Admin" }
+                    : selectedRegisterSport;
+
+                await ensurePendingProfile(data.user, fullName, mobileNumber, registeredRole, registeredSport);
+
+                /*
+                    IMPORTANT FLOW UPDATE:
+                    Supabase can automatically create an active session after sign-up
+                    when email confirmation is disabled. The system must NOT redirect
+                    the user immediately after registration. The new user must sign in
+                    again so the dashboard always opens under the account they chose.
+                */
+                try {
+                    const { error: signOutError } = await supabase.auth.signOut();
+
+                    if (signOutError) {
+                        console.warn("Account was created, but automatic post-registration sign-out returned:", signOutError.message || signOutError);
+                    }
+                } catch (signOutCatchError) {
+                    console.warn("Account was created, but automatic post-registration sign-out could not complete:", signOutCatchError.message || signOutCatchError);
+                }
+
+                sessionStorage.removeItem("user");
+                registerForm.reset();
+                setRegisterRole("committee");
+                selectedRegisterSport = null;
+                selectedRegisterSportLabel.textContent = "Choose the sport you will handle";
+                setMode("signin");
+                setSignInRole(registeredRole);
+
+                document.getElementById("signInEmail").value = email;
+                document.getElementById("signInPassword").value = "";
+
+                showAlert("success", "Account created successfully. Please wait for admin approval before logging in.");
+
+            } catch (error) {
+                console.error("Register error:", error);
+                showAlert("error", error.message || "Failed to create account. Please check your Supabase setup.");
+            } finally {
+                setLoading(registerSubmit, false, "Creating account...", "Create Account");
+            }
+        });
+
+        // If this tab already has a valid Supabase session, refresh its cached dashboard profile.
+        const { data: sessionData } = await supabase.auth.getSession();
+
+        if (sessionData?.session?.user) {
+            try {
+                const profile = await getUserProfile(sessionData.session.user);
+                if (isApprovedProfile(profile)) {
+                    await saveLocalSession(sessionData.session.user, profile);
+                } else {
+                    await supabase.auth.signOut();
+                    sessionStorage.removeItem("user");
+                }
+            } catch (error) {
+                console.warn("Existing session found, but profile could not be loaded:", error.message || error);
+                await supabase.auth.signOut();
+                sessionStorage.removeItem("user");
+            }
+        }
+    </script>
+</body>
+</html>
