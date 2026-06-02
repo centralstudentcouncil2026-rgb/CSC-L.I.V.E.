@@ -922,11 +922,11 @@
             document.addEventListener("submit", clearStudentDirtyForm, true);
             document.addEventListener("reset", clearStudentDirtyForm, true);
 
-            function scheduleLiveMatchReload(delay = 250) {
+            function scheduleLiveMatchReload(delay = 250, { force = false } = {}) {
                 window.clearTimeout(matchReloadTimer);
 
                 matchReloadTimer = window.setTimeout(async () => {
-                    if (isStudentUserBusy()) {
+                    if (!force && isStudentUserBusy()) {
                         scheduleLiveMatchReload(STUDENT_REFRESH_IDLE_DELAY);
                         return;
                     }
@@ -1669,8 +1669,12 @@
                                 </span>
                             </div>
 
-                            ${matchStageLabel ? `<div class="mb-3 w-full rounded-2xl border border-red-300 bg-red-100 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-red-800">${escapeHTML(matchStageLabel)}</div>` : ""}
-                            ${livePeriodLabel ? `<div class="mb-3 w-full rounded-2xl border border-red-300 bg-red-100 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-red-800">${escapeHTML(livePeriodLabel)}</div>` : ""}
+                            ${matchStageLabel || livePeriodLabel ? `
+                                <div class="mb-3 grid w-full ${matchStageLabel && livePeriodLabel ? "grid-cols-2" : "grid-cols-1"} gap-2">
+                                    ${matchStageLabel ? `<div class="rounded-2xl border border-red-300 bg-red-100 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-red-800">${escapeHTML(matchStageLabel)}</div>` : ""}
+                                    ${livePeriodLabel ? `<div class="rounded-2xl border border-red-300 bg-red-100 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-red-800">${escapeHTML(livePeriodLabel)}</div>` : ""}
+                                </div>
+                            ` : ""}
 
                             ${showTimer ? `
                                 <div class="mb-6 p-4 rounded-2xl bg-slate-50 border border-slate-100 text-center">
@@ -1751,7 +1755,7 @@
                         </div>
 
                         ${matchStageLabel || livePeriodLabel ? `
-                            <div class="space-y-2">
+                            <div class="grid w-full ${matchStageLabel && livePeriodLabel ? "grid-cols-2" : "grid-cols-1"} gap-2">
                                 ${matchStageLabel ? `<div class="w-full rounded-2xl border border-red-300 bg-red-100 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-red-800">${escapeHTML(matchStageLabel)}</div>` : ""}
                                 ${livePeriodLabel ? `<div class="w-full rounded-2xl border border-red-300 bg-red-100 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-red-800">${escapeHTML(livePeriodLabel)}</div>` : ""}
                             </div>
@@ -1896,7 +1900,7 @@
                     await loadStats();
                 })
                 .on("postgres_changes", { event: "*", schema: "public", table: MATCHES_TABLE }, () => {
-                    scheduleLiveMatchReload(150);
+                    scheduleLiveMatchReload(0, { force: true });
                 })
                 .on("postgres_changes", { event: "*", schema: "public", table: GAME_HISTORY_TABLE }, () => {
                     scheduleLiveLeaderboardReload(150);
