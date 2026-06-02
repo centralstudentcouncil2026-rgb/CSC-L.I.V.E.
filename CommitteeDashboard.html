@@ -1276,29 +1276,36 @@
                 <!-- Matches Tab -->
                 <div id="matches" class="tab-content hidden mt-8 ml-5 mr-5">
 
-                    <div class="mb-6 flex flex-col gap-3 lg:flex-row lg:items-stretch">
-                        <div class="bg-white border border-gray-200 shadow-sm rounded-xl p-3 w-full lg:flex-1">
-                            <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                                <div>
-                                    <p class="text-sm font-semibold text-gray-900">Match View Filter</p>
-                                    <p id="matchFilterSummary" class="text-xs text-gray-500">
-                                        Showing your created matches first.
+                    <div class="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center">
+                        <button
+                            type="button"
+                            id="openMatchModal"
+                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium w-full lg:w-auto lg:self-stretch">
+                            + Schedule Match
+                        </button>
+
+                        <div class="bg-white border border-gray-200 shadow-sm rounded-xl p-2.5 w-full lg:max-w-3xl">
+                            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <div class="min-w-0">
+                                    <p class="text-xs font-bold uppercase tracking-wide text-gray-700">View Matches</p>
+                                    <p id="matchFilterSummary" class="truncate text-xs text-gray-500">
+                                        My matches | Sport: All registered sports
                                     </p>
                                 </div>
 
-                                <div class="flex flex-col gap-2 sm:flex-row sm:items-center xl:justify-end">
-                                    <div class="grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1 w-full sm:w-auto">
+                                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                                    <div class="grid grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1 w-full sm:w-auto">
                                     <button
                                         type="button"
                                         data-match-scope-tab="mine"
-                                        class="match-scope-tab px-3 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white">
-                                        My Created Matches
+                                        class="match-scope-tab px-3 py-1.5 rounded-md text-xs font-semibold bg-blue-600 text-white">
+                                        My Matches
                                     </button>
 
                                     <button
                                         type="button"
                                         data-match-scope-tab="all"
-                                        class="match-scope-tab px-3 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:bg-white">
+                                        class="match-scope-tab px-3 py-1.5 rounded-md text-xs font-semibold text-gray-700 hover:bg-white">
                                         All Matches
                                     </button>
                                     </div>
@@ -1306,19 +1313,12 @@
                                     <button
                                         type="button"
                                         id="openSportFilterModal"
-                                        class="hidden px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-blue-900 rounded-lg text-sm font-semibold w-full sm:w-auto">
-                                        Filter Sport
+                                        class="hidden px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-blue-900 rounded-md text-xs font-semibold w-full sm:w-auto">
+                                        Sport
                                     </button>
                                 </div>
                             </div>
                         </div>
-
-                        <button
-                            type="button"
-                            id="openMatchModal"
-                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium w-full lg:w-auto lg:self-stretch">
-                            + Schedule Match
-                        </button>
                     </div>
 
                     <!-- Status Filter Tabs -->
@@ -2528,8 +2528,8 @@
                     }
 
                     const scopeLabel = activeMatchScopeFilter === "mine"
-                        ? "My created matches"
-                        : "All matches, with your created matches shown first";
+                        ? "My matches"
+                        : "All matches";
 
                     const doneDateLabel = activeDoneMatchesDate
                         ? ` | Match date: ${activeDoneMatchesDate}`
@@ -2562,8 +2562,8 @@
                         const isActive = button.dataset.matchScopeTab === activeMatchScopeFilter;
 
                         button.className = isActive
-                            ? "match-scope-tab px-3 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white"
-                            : "match-scope-tab px-3 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:bg-white";
+                            ? "match-scope-tab px-3 py-1.5 rounded-md text-xs font-semibold bg-blue-600 text-white"
+                            : "match-scope-tab px-3 py-1.5 rounded-md text-xs font-semibold text-gray-700 hover:bg-white";
                     });
 
                     updateSportFilterButtonVisibility();
