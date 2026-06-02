@@ -4734,37 +4734,37 @@
 
                             ${deleteRequestNotice}
 
-                            ${isNext ? `<div class="mb-2 bg-yellow-50 border border-yellow-200 rounded-lg p-2.5">
-                                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-                                    <div>
-                                        <p class="text-xs text-yellow-700 uppercase tracking-wide mb-1">Match Timer</p>
+                            ${isNext ? `<div class="mb-2 rounded-lg border border-yellow-200 bg-yellow-50 p-2">
+                                <div class="grid grid-cols-1 items-end gap-2 sm:grid-cols-[auto_1fr]">
+                                    <div class="min-w-[7rem]">
+                                        <p class="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-yellow-700">Timer</p>
                                         <p
-                                            class="match-countdown text-3xl font-extrabold text-yellow-900"
+                                            class="match-countdown text-2xl font-extrabold leading-none text-yellow-900"
                                             data-match-id="${match.id}"
                                             data-duration-seconds="${duration}"
                                             data-timer-enabled="${match.timer_enabled ? "true" : "false"}"
                                             data-started-at="${match.timer_started_at || ""}">
                                             ${formatTimerDisplay(remainingSeconds)}
                                         </p>
-                                        <p class="text-xs text-yellow-700 mt-1">
-                                            ${match.timer_enabled ? "Timer signal is ON and visible to other dashboards." : "Timer signal is OFF."}
+                                        <p class="mt-1 text-[10px] font-semibold text-yellow-700">
+                                            ${match.timer_enabled ? "Live" : "Off"}
                                         </p>
                                     </div>
 
-                                    <div class="grid grid-cols-2 md:grid-cols-3 gap-2 items-end">
+                                    <div class="grid grid-cols-[1fr_1fr_auto] items-end gap-1.5">
                                         <div>
-                                            <label class="block text-xs font-medium text-yellow-800 mb-1">Minutes</label>
+                                            <label class="mb-0.5 block text-[10px] font-bold uppercase text-yellow-800">Min</label>
                                             <input
                                                 type="number"
                                                 min="0"
                                                 value="${durationParts.minutes}"
                                                 data-match-id="${match.id}"
                                                 ${timerFieldState}
-                                                class="timer-minutes-input w-full border border-yellow-300 rounded-lg px-3 py-2 text-sm">
+                                                class="timer-minutes-input w-full rounded-md border border-yellow-300 px-2 py-1.5 text-sm">
                                         </div>
 
                                         <div>
-                                            <label class="block text-xs font-medium text-yellow-800 mb-1">Seconds</label>
+                                            <label class="mb-0.5 block text-[10px] font-bold uppercase text-yellow-800">Sec</label>
                                             <input
                                                 type="number"
                                                 min="0"
@@ -4772,14 +4772,14 @@
                                                 value="${durationParts.seconds}"
                                                 data-match-id="${match.id}"
                                                 ${timerFieldState}
-                                                class="timer-seconds-input w-full border border-yellow-300 rounded-lg px-3 py-2 text-sm">
+                                                class="timer-seconds-input w-full rounded-md border border-yellow-300 px-2 py-1.5 text-sm">
                                         </div>
 
                                         <button
                                             type="button"
                                             data-match-id="${match.id}"
-                                            class="save-timer-duration-btn px-3 py-2 ${saveTimerButtonClass} rounded-lg text-sm font-semibold">
-                                            Save Timer
+                                            class="save-timer-duration-btn rounded-md px-2.5 py-1.5 text-xs font-bold ${saveTimerButtonClass}">
+                                            Save
                                         </button>
                                     </div>
                                 </div>
@@ -4817,15 +4817,12 @@
                                         </div>
                                     </div>
 
-                                    ${isNext ? `<div class="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:col-span-2">
+                                    ${isNext ? `<div class="rounded-lg border border-gray-200 bg-gray-50 p-2 sm:col-span-2">
                                         <div class="flex items-center justify-between">
                                             <div>
-                                                <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Timer Signal</p>
-                                                <p class="timer-label text-sm font-medium text-gray-900">
+                                                <p class="text-[10px] font-bold uppercase tracking-wide text-gray-500">Timer Signal</p>
+                                                <p class="timer-label text-xs font-bold text-gray-900">
                                                     ${match.timer_enabled ? "Enabled" : "Disabled"}
-                                                </p>
-                                                <p class="text-xs text-gray-500 mt-1">
-                                                    Turning this on sends the countdown signal to other dashboards.
                                                 </p>
                                             </div>
 

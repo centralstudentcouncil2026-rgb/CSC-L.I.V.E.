@@ -1677,9 +1677,9 @@
                             ` : ""}
 
                             ${showTimer ? `
-                                <div class="mb-6 p-4 rounded-2xl bg-slate-50 border border-slate-100 text-center">
-                                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Pre-game Countdown</p>
-                                    <p class="student-match-countdown text-4xl font-black text-slate-900 tracking-tighter" 
+                                <div class="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center">
+                                    <p class="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-500">Pre-game Timer</p>
+                                    <p class="student-match-countdown text-3xl font-black leading-none tracking-tighter text-slate-900"
                                        data-match-id="${match.id}" data-duration-seconds="${duration}" 
                                        data-timer-enabled="${match.timer_enabled}" data-started-at="${match.timer_started_at || ''}">
                                         ${formatTimerDisplay(remaining)}
@@ -1791,9 +1791,9 @@
                         </div>
 
                         ${showTimer ? `
-                            <div class="p-8 bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl text-center text-white shadow-xl shadow-slate-200">
-                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Pre-game Countdown</p>
-                                <p class="student-match-countdown text-6xl font-black tracking-tighter mb-4" 
+                            <div class="rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 px-5 py-4 text-center text-white shadow-lg shadow-slate-200">
+                                <p class="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">Pre-game Timer</p>
+                                <p class="student-match-countdown mb-2 text-5xl font-black leading-none tracking-tighter"
                                    data-match-id="${match.id}" data-duration-seconds="${duration}" 
                                    data-timer-enabled="${match.timer_enabled}" data-started-at="${match.timer_started_at || ''}">
                                     ${formatTimerDisplay(remaining)}
