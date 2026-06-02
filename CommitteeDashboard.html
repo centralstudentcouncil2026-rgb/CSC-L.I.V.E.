@@ -278,19 +278,15 @@
                 position: relative;
                 z-index: 1;
                 will-change: transform;
-                transition: transform 2500ms cubic-bezier(0.16, 1, 0.3, 1);
+                transition: transform 5000ms linear;
             }
 
             .leaderboard-rank-up td {
-                animation: leaderboard-up-highlight 3200ms ease-out;
+                animation: leaderboard-up-highlight 5400ms ease-out;
             }
 
             .leaderboard-rank-down td {
-                animation: leaderboard-down-highlight 3000ms ease-out;
-            }
-
-            .leaderboard-rank-change {
-                animation: leaderboard-rank-badge 3200ms ease-out forwards;
+                animation: leaderboard-down-highlight 5400ms ease-out;
             }
 
             @keyframes leaderboard-up-highlight {
@@ -301,11 +297,6 @@
             @keyframes leaderboard-down-highlight {
                 0%, 35% { background-color: rgba(245, 158, 11, 0.15); }
                 100% { background-color: transparent; }
-            }
-
-            @keyframes leaderboard-rank-badge {
-                0%, 60% { opacity: 1; transform: translateY(0); }
-                100% { opacity: 0; transform: translateY(-8px); }
             }
 
             .leaderboard-table thead th {
@@ -4007,11 +3998,6 @@
                             ? `id:${team.id}`
                             : `name:${String(team.team || "").trim().toLowerCase()}`;
                         row.dataset.rank = String(index + 1);
-                        const previousRank = previousRanks.get(row.dataset.teamKey);
-                        const rankChange = Number.isFinite(previousRank) ? previousRank - (index + 1) : 0;
-                        const rankChangeBadge = rankChange
-                            ? `<span class="leaderboard-rank-change ml-2 inline-flex rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide ${rankChange > 0 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}">${rankChange > 0 ? `UP ${rankChange}` : `DOWN ${Math.abs(rankChange)}`}</span>`
-                            : "";
 
                         row.innerHTML = `
                             <td class="py-5 px-6">
@@ -4021,7 +4007,7 @@
                             </td>
 
                             <td class="py-5 px-6">
-                                <span class="font-bold text-slate-900">${escapeHTML(team.team)}</span>${rankChangeBadge}
+                                <span class="font-bold text-slate-900">${escapeHTML(team.team)}</span>
                             </td>
 
                             <td class="py-5 px-6 text-center">
