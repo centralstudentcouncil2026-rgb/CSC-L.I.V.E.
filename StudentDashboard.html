@@ -85,15 +85,17 @@
             position: relative;
             z-index: 1;
             will-change: transform;
-            transition: transform 5000ms linear;
         }
 
+        .leaderboard-rank-up { z-index: 3; }
+        .leaderboard-rank-down { z-index: 2; }
+
         .leaderboard-rank-up td {
-            animation: leaderboard-up-highlight 5400ms ease-out;
+            animation: leaderboard-up-highlight 6400ms ease-out;
         }
 
         .leaderboard-rank-down td {
-            animation: leaderboard-down-highlight 5400ms ease-out;
+            animation: leaderboard-down-highlight 6400ms ease-out;
         }
 
         @keyframes leaderboard-up-highlight {
@@ -1549,14 +1551,13 @@
                     const previousRank = previousRanks.get(row.dataset.teamKey);
                     const currentRank = Number(row.dataset.rank);
 
-                    row.style.transition = "none";
-                    row.style.transform = `translateY(${offset}px)`;
                     row.classList.add(previousRank > currentRank ? "leaderboard-rank-up" : "leaderboard-rank-down");
-                    requestAnimationFrame(() => {
-                        requestAnimationFrame(() => {
-                            row.style.transition = "";
-                            row.style.transform = "";
-                        });
+                    row.animate([
+                        { transform: `translateY(${offset}px)` },
+                        { transform: "translateY(0)" }
+                    ], {
+                        duration: 6000,
+                        easing: "linear"
                     });
                 });
             }
