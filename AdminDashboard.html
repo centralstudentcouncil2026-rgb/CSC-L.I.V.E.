@@ -5885,13 +5885,19 @@
                             </span>
                         </td>
                         <td class="py-3 px-4 text-sm text-gray-600">${formatDateTime(item.created_at)}</td>
-                        <td class="py-3 px-4">
+                        <td class="py-3 px-4 space-y-2">
                             <button
                                 type="button"
                                 data-feedback-id="${item.id}"
                                 class="mark-feedback-reviewed px-3 py-2 rounded-lg text-sm font-semibold ${isReviewed ? "bg-gray-200 text-gray-500 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 text-white"}"
                                 ${isReviewed ? "disabled" : ""}>
                                 ${isReviewed ? "Reviewed" : "Mark Reviewed"}
+                            </button>
+                            <button
+                                type="button"
+                                data-feedback-id="${item.id}"
+                                class="delete-student-feedback block px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700">
+                                Delete
                             </button>
                         </td>
                     `;
@@ -5903,6 +5909,9 @@
                 });
                 document.querySelectorAll(".view-feedback-message").forEach(button => {
                     button.addEventListener("click", () => openStudentFeedbackMessageModal(button.dataset.feedbackMessageId));
+                });
+                document.querySelectorAll(".delete-student-feedback").forEach(button => {
+                    button.addEventListener("click", () => deleteStudentFeedback(button.dataset.feedbackId));
                 });
             }
 
@@ -5931,6 +5940,25 @@
                 if (error) {
                     console.error("Error reviewing feedback:", error.message || error);
                     alert("Failed to mark feedback as reviewed.");
+                    return;
+                }
+
+                await loadStudentFeedback();
+            }
+
+            async function deleteStudentFeedback(id) {
+                if (!confirm("Are you sure you want to permanently delete this student feedback?")) {
+                    return;
+                }
+
+                const { error } = await supabase
+                    .from(STUDENT_FEEDBACK_TABLE)
+                    .delete()
+                    .eq("id", id);
+
+                if (error) {
+                    console.error("Error deleting student feedback:", error.message || error);
+                    alert(`Failed to delete feedback: ${error.message || "Unknown database error."}`);
                     return;
                 }
 
