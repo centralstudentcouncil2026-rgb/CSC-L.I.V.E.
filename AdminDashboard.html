@@ -6803,8 +6803,31 @@
                 }
             });
             let adminMessagingSyncInProgress = false;
+            let adminRealtimeMessagingTimer = null;
+
+            function scheduleAdminMessagingReload({ contactMessages = false, conversations = true } = {}, delay = 100) {
+                window.clearTimeout(adminRealtimeMessagingTimer);
+
+                adminRealtimeMessagingTimer = window.setTimeout(async () => {
+                    if (adminMessagingSyncInProgress) {
+                        scheduleAdminMessagingReload({ contactMessages, conversations }, delay);
+                        return;
+                    }
+
+                    adminMessagingSyncInProgress = true;
+                    try {
+                        const reloads = [];
+                        if (conversations) reloads.push(loadAdminConversations());
+                        if (contactMessages && activeAdminContactConversationId) reloads.push(loadAdminContactMessages());
+                        await Promise.all(reloads);
+                    } finally {
+                        adminMessagingSyncInProgress = false;
+                    }
+                }, delay);
+            }
+
             setInterval(async () => {
-                if (adminMessagingSyncInProgress || isAdminUserBusy()) return;
+                if (adminMessagingSyncInProgress) return;
 
                 adminMessagingSyncInProgress = true;
                 try {
@@ -6908,7 +6931,7 @@
                             updateAdminMessageNotification();
                         }
 
-                        scheduleAdminRealtimeReload({
+                        scheduleAdminMessagingReload({
                             contactMessages: Boolean(shouldReloadOpenThread),
                             conversations: true
                         }, 100);
@@ -6922,7 +6945,7 @@
                         table: CONVERSATIONS_TABLE
                     },
                     () => {
-                        scheduleAdminRealtimeReload({ conversations: true }, 100);
+                        scheduleAdminMessagingReload({ conversations: true }, 100);
                     }
                 )
                 .subscribe();

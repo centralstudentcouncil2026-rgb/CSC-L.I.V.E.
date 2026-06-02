@@ -5690,8 +5690,31 @@
                     }
                 });
                 let committeeMessagingSyncInProgress = false;
+                let committeeRealtimeMessagingTimer = null;
+
+                function scheduleCommitteeMessagingReload({ contactMessages = false, conversations = true } = {}, delay = 100) {
+                    window.clearTimeout(committeeRealtimeMessagingTimer);
+
+                    committeeRealtimeMessagingTimer = window.setTimeout(async () => {
+                        if (committeeMessagingSyncInProgress) {
+                            scheduleCommitteeMessagingReload({ contactMessages, conversations }, delay);
+                            return;
+                        }
+
+                        committeeMessagingSyncInProgress = true;
+                        try {
+                            const reloads = [];
+                            if (conversations) reloads.push(loadCommitteeConversations());
+                            if (contactMessages && activeContactConversationId) reloads.push(loadContactMessages());
+                            await Promise.all(reloads);
+                        } finally {
+                            committeeMessagingSyncInProgress = false;
+                        }
+                    }, delay);
+                }
+
                 setInterval(async () => {
-                    if (committeeMessagingSyncInProgress || isCommitteeUserBusy()) return;
+                    if (committeeMessagingSyncInProgress) return;
 
                     committeeMessagingSyncInProgress = true;
                     try {
@@ -5813,7 +5836,7 @@
                                 updateMessageNotification();
                             }
 
-                            scheduleCommitteeRealtimeReload({
+                            scheduleCommitteeMessagingReload({
                                 contactMessages: Boolean(shouldReloadOpenThread),
                                 conversations: true
                             }, 100);
@@ -5827,7 +5850,7 @@
                             table: CONVERSATIONS_TABLE
                         },
                         () => {
-                            scheduleCommitteeRealtimeReload({ conversations: true }, 100);
+                            scheduleCommitteeMessagingReload({ conversations: true }, 100);
                         }
                     )
                     .subscribe();
