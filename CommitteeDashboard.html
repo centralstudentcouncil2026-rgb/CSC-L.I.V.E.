@@ -4573,7 +4573,7 @@
                                     </p>
                                 </div>
 
-                                ${matchStageLabel ? `<div class="mb-3 inline-flex rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-indigo-800">${escapeHTML(matchStageLabel)}</div>` : ""}
+                                ${matchStageLabel ? `<div class="mb-3 w-full rounded-lg border border-red-300 bg-red-100 px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-red-800">${escapeHTML(matchStageLabel)}</div>` : ""}
 
                                 ${ownerNotice}
                                 ${deleteRequestNotice}
@@ -4656,8 +4656,8 @@
                             ? "bg-yellow-500 hover:bg-yellow-600 text-white"
                             : lockedControlClasses;
                         const periodControls = isOngoing && periodLimit ? `
-                            <div class="mb-2 rounded-lg border border-violet-200 bg-violet-50 p-2.5">
-                                <p class="mb-2 text-xs font-bold uppercase tracking-wide text-violet-700">${isBasketballSport(match) ? "Basketball Quarter" : "Volleyball Set"}</p>
+                            <div class="mb-2 w-full rounded-lg border border-red-300 bg-red-100 p-2.5">
+                                <p class="mb-2 text-xs font-bold uppercase tracking-wide text-red-800">${isBasketballSport(match) ? "Basketball Quarter" : "Volleyball Set"}</p>
                                 <div class="flex flex-wrap gap-2">
                                     ${Array.from({ length: periodLimit }, (_, index) => {
                                         const period = index + 1;
@@ -4667,7 +4667,7 @@
                                                 type="button"
                                                 data-match-id="${match.id}"
                                                 data-game-period="${period}"
-                                                class="game-period-btn rounded-lg px-3 py-1.5 text-xs font-bold ${isSelected ? "bg-violet-600 text-white" : "bg-white text-violet-700 hover:bg-violet-100"}">
+                                                class="game-period-btn rounded-lg px-3 py-1.5 text-xs font-bold ${isSelected ? "bg-red-700 text-white" : "bg-white text-red-700 hover:bg-red-200"}">
                                                 ${period}
                                             </button>
                                         `;
@@ -4731,8 +4731,8 @@
                                 </p>
                             </div>
 
-                            ${matchStageLabel ? `<div class="mb-2 inline-flex rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-indigo-800">${escapeHTML(matchStageLabel)}</div>` : ""}
-                            ${periodLabel && isOngoing ? `<div class="mb-2 ml-2 inline-flex rounded-full bg-violet-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-violet-800">${escapeHTML(periodLabel)}</div>` : ""}
+                            ${matchStageLabel ? `<div class="mb-2 w-full rounded-lg border border-red-300 bg-red-100 px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-red-800">${escapeHTML(matchStageLabel)}</div>` : ""}
+                            ${periodLabel && isOngoing ? `<div class="mb-2 w-full rounded-lg border border-red-300 bg-red-100 px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-red-800">${escapeHTML(periodLabel)}</div>` : ""}
 
                             ${ownerNotice}
                             ${deleteRequestNotice}

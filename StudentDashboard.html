@@ -1669,8 +1669,8 @@
                                 </span>
                             </div>
 
-                            ${matchStageLabel ? `<div class="mb-3 inline-flex rounded-full bg-indigo-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-indigo-800">${escapeHTML(matchStageLabel)}</div>` : ""}
-                            ${livePeriodLabel ? `<div class="mb-3 ml-2 inline-flex rounded-full bg-violet-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-violet-800">${escapeHTML(livePeriodLabel)}</div>` : ""}
+                            ${matchStageLabel ? `<div class="mb-3 w-full rounded-2xl border border-red-300 bg-red-100 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-red-800">${escapeHTML(matchStageLabel)}</div>` : ""}
+                            ${livePeriodLabel ? `<div class="mb-3 w-full rounded-2xl border border-red-300 bg-red-100 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-red-800">${escapeHTML(livePeriodLabel)}</div>` : ""}
 
                             ${showTimer ? `
                                 <div class="mb-6 p-4 rounded-2xl bg-slate-50 border border-slate-100 text-center">
@@ -1751,9 +1751,9 @@
                         </div>
 
                         ${matchStageLabel || livePeriodLabel ? `
-                            <div class="flex flex-wrap gap-2">
-                                ${matchStageLabel ? `<span class="rounded-full bg-indigo-100 px-3 py-1 text-xs font-black uppercase tracking-widest text-indigo-800">${escapeHTML(matchStageLabel)}</span>` : ""}
-                                ${livePeriodLabel ? `<span class="rounded-full bg-violet-100 px-3 py-1 text-xs font-black uppercase tracking-widest text-violet-800">${escapeHTML(livePeriodLabel)}</span>` : ""}
+                            <div class="space-y-2">
+                                ${matchStageLabel ? `<div class="w-full rounded-2xl border border-red-300 bg-red-100 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-red-800">${escapeHTML(matchStageLabel)}</div>` : ""}
+                                ${livePeriodLabel ? `<div class="w-full rounded-2xl border border-red-300 bg-red-100 px-4 py-3 text-center text-xs font-black uppercase tracking-widest text-red-800">${escapeHTML(livePeriodLabel)}</div>` : ""}
                             </div>
                         ` : ""}
 
