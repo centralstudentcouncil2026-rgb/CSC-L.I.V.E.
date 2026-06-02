@@ -5715,6 +5715,25 @@
                     return;
                 }
 
+                const { data: existingParticipant, error: duplicateCheckError } = await supabase
+                    .from(PARTICIPANTS_TABLE)
+                    .select("id, name, student_id")
+                    .eq("student_id", participantData.student_id)
+                    .limit(1)
+                    .maybeSingle();
+
+                if (duplicateCheckError) {
+                    console.error("Error checking participant Student ID:", duplicateCheckError.message || duplicateCheckError);
+                    alert(`Unable to verify the Student ID before saving: ${duplicateCheckError.message || "Unknown database error."}`);
+                    return;
+                }
+
+                if (existingParticipant && String(existingParticipant.id) !== String(participantId.value || "")) {
+                    alert(`Student ID ${participantData.student_id} is already assigned to ${existingParticipant.name || "another participant"}.`);
+                    participantStudentId.focus();
+                    return;
+                }
+
                 let result;
 
                 if (participantId.value) {
@@ -5730,7 +5749,20 @@
 
                 if (result.error) {
                     console.error("Error saving participant:", result.error.message || result.error);
-                    alert("Error saving participant. Check if the Student ID already exists or if RLS allows insert/update.");
+                    const databaseMessage = result.error.message || "Unknown database error.";
+                    const isDuplicateStudentId = result.error.code === "23505"
+                        || databaseMessage.toLowerCase().includes("duplicate");
+                    const isPermissionError = result.error.code === "42501"
+                        || databaseMessage.toLowerCase().includes("row-level security")
+                        || databaseMessage.toLowerCase().includes("permission denied");
+
+                    if (isDuplicateStudentId) {
+                        alert(`Student ID ${participantData.student_id} already exists. Please use a different Student ID.`);
+                    } else if (isPermissionError) {
+                        alert("Your admin account is not permitted to save participants. Please check the participants table RLS insert/update policy.");
+                    } else {
+                        alert(`Error saving participant: ${databaseMessage}`);
+                    }
                     return;
                 }
 
