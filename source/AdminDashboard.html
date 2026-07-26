@@ -1,0 +1,2566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - School Sports System</title>
+
+    <link rel="icon" href="data:,">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link 
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" 
+        rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css">
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            object-fit: contain;
+        }
+
+        .admin-shell {
+            min-height: 100vh;
+            display: flex;
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .admin-sidebar {
+            width: 20rem;
+            flex: 0 0 20rem;
+            max-width: 20rem;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .main-content {
+            min-width: 0;
+            width: 100%;
+        }
+
+        .admin-header {
+            position: sticky;
+            top: 0;
+            z-index: 70;
+            padding: 0 !important;
+            box-shadow: 0 1px 0 rgba(15, 23, 42, 0.08);
+        }
+
+        .admin-header-row {
+            min-height: 5.5rem;
+            align-items: stretch;
+        }
+
+        .admin-header-text {
+            min-width: 0;
+            padding: 1.75rem;
+        }
+
+        .notification-overlay-panel {
+            position: fixed !important;
+            top: max(0.75rem, env(safe-area-inset-top)) !important;
+            right: max(0.75rem, env(safe-area-inset-right)) !important;
+            z-index: 2147483000 !important;
+            max-height: calc(100dvh - 1.5rem) !important;
+            overscroll-behavior: contain;
+            isolation: isolate;
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+            contain: layout paint;
+            pointer-events: auto;
+        }
+
+        .notification-overlay-panel.is-body-overlay {
+            position: fixed !important;
+            inset: auto max(0.75rem, env(safe-area-inset-right)) auto auto !important;
+            top: max(0.75rem, env(safe-area-inset-top)) !important;
+        }
+
+        #adminNotificationList {
+            max-height: calc(100dvh - 7rem) !important;
+        }
+
+        @media (max-width: 480px) {
+            .notification-overlay-panel {
+                left: max(0.75rem, env(safe-area-inset-left)) !important;
+                right: max(0.75rem, env(safe-area-inset-right)) !important;
+                width: auto !important;
+                max-width: none !important;
+            }
+        }
+
+        #sidebarToggle {
+            align-self: stretch;
+            min-height: 100%;
+            border-radius: 0;
+        }
+
+        .responsive-table-card {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .responsive-table-card table {
+            width: 100%;
+        }
+
+        .break-safe {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        #sidebarBackdrop {
+            display: none;
+        }
+
+        /* ===== MODAL IMPROVEMENTS ===== */
+        .modal-overlay {
+            z-index: 1000 !important;
+            backdrop-filter: blur(2px);
+            animation: fadeIn 0.2s ease-in-out;
+        }
+
+        .modal-panel {
+            animation: slideUp 0.3s ease-out;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* ===== VISUAL ENHANCEMENTS ===== */
+        .admin-header {
+            background: linear-gradient(to right, #facc15, #eab308, #ca8a04) !important;
+            border-bottom: 4px solid #1d4ed8 !important;
+        }
+
+        .admin-sidebar {
+            background: linear-gradient(180deg, #FFFFFF 0%, #F9FAFB 100%);
+            border-right: 1.5px solid rgba(229, 231, 235, 0.8);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%) !important;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .tab-btn:hover {
+            background: #F3F4F6 !important;
+        }
+
+        .p-6.bg-white {
+            border: 1.5px solid rgba(229, 231, 235, 0.8);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .p-6.bg-white:hover {
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .responsive-table-card {
+            border: 1.5px solid rgba(229, 231, 235, 0.8);
+            border-radius: 12px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+        }
+
+        .responsive-table-card table thead {
+            background: linear-gradient(90deg, #F9FAFB 0%, #F3F4F6 100%);
+            border-bottom: 2px solid rgba(229, 231, 235, 0.8);
+        }
+
+        .responsive-table-card table th {
+            font-weight: 700;
+            color: #374151;
+        }
+
+        .responsive-table-card table tbody tr:hover {
+            background-color: #F9FAFB;
+        }
+
+        .chat-shell {
+            min-height: min(72vh, 760px);
+            height: calc(100dvh - 11.5rem);
+        }
+
+        .chat-thread {
+            min-height: 0;
+        }
+
+        @media (max-width: 767px) {
+            .chat-shell {
+                height: calc(100dvh - 7rem);
+            }
+
+            .chat-shell.chat-open .chat-sidebar {
+                display: none;
+            }
+
+            .chat-shell:not(.chat-open) .chat-thread {
+                display: none;
+            }
+        }
+
+        @media (max-width: 1023px) {
+            .admin-shell {
+                display: block;
+            }
+
+            .admin-sidebar {
+                position: fixed;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                right: auto;
+                z-index: 90;
+                width: min(82vw, 300px);
+                max-width: 300px;
+                flex-basis: auto;
+                transform: translateX(-105%);
+                transition: transform 180ms ease;
+                box-shadow: 0 20px 45px rgba(15, 23, 42, 0.24);
+            }
+
+            body.sidebar-open .admin-sidebar {
+                transform: translateX(0);
+            }
+
+            body.sidebar-open #sidebarBackdrop {
+                display: block;
+            }
+
+            #sidebarBackdrop {
+                position: fixed;
+                inset: 0;
+                z-index: 80;
+                background: rgba(15, 23, 42, 0.48);
+            }
+
+            .sidebar-footer {
+                position: static !important;
+                margin-top: 1rem;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .admin-header {
+                padding: 0 !important;
+            }
+
+            .admin-header-row {
+                align-items: stretch !important;
+                gap: 0 !important;
+                min-height: 5.35rem;
+            }
+
+            .admin-header-text {
+                padding: 0.9rem 0.95rem !important;
+            }
+
+            .admin-header h2 {
+                font-size: 1.25rem !important;
+                line-height: 1.55rem !important;
+                margin-bottom: 0.25rem !important;
+            }
+
+            .admin-header p {
+                font-size: 0.78rem !important;
+                line-height: 1.15rem !important;
+            }
+
+            #sidebarToggle {
+                flex: 0 0 auto;
+                align-self: stretch;
+                padding: 0 0.85rem !important;
+                font-size: 0.78rem !important;
+                white-space: nowrap;
+                border-radius: 0 !important;
+            }
+
+            .admin-sidebar .p-8 {
+                padding: 1rem !important;
+            }
+
+            .admin-sidebar nav {
+                padding: 0.75rem !important;
+            }
+
+            .admin-sidebar .tab-btn {
+                padding: 0.7rem 0.75rem !important;
+                gap: 0.55rem !important;
+                font-size: 0.85rem !important;
+            }
+
+            .admin-sidebar img {
+                width: 2rem !important;
+                height: 2rem !important;
+            }
+
+            .admin-sidebar h1 {
+                font-size: 0.82rem !important;
+                line-height: 1.1rem !important;
+            }
+
+            .admin-sidebar .sidebar-footer {
+                padding: 0.75rem !important;
+            }
+
+            .admin-sidebar .sidebar-footer > div {
+                gap: 0.45rem !important;
+            }
+
+            .admin-sidebar .sidebar-footer button {
+                padding: 0.55rem 0.7rem !important;
+                font-size: 0.78rem !important;
+            }
+
+            .tab-content {
+                margin: 1rem 0.65rem 0 0.65rem !important;
+            }
+
+            .tab-content h3,
+            .tab-content h2 {
+                font-size: 1rem !important;
+                line-height: 1.35rem !important;
+            }
+
+            .tab-content p,
+            .tab-content label,
+            .tab-content input,
+            .tab-content select,
+            .tab-content button {
+                max-width: 100%;
+            }
+
+            .tab-content .p-6 {
+                padding: 0.85rem !important;
+            }
+
+            .tab-content .gap-6 {
+                gap: 0.75rem !important;
+            }
+
+            .tab-content .gap-5,
+            .tab-content .gap-4,
+            .tab-content .gap-3 {
+                gap: 0.65rem !important;
+            }
+
+            .tab-content .text-4xl {
+                font-size: 1.55rem !important;
+                line-height: 1.9rem !important;
+            }
+
+            .tab-content .text-3xl {
+                font-size: 1.35rem !important;
+                line-height: 1.7rem !important;
+            }
+
+            .tab-content .text-xl {
+                font-size: 1rem !important;
+                line-height: 1.35rem !important;
+            }
+
+            .tab-content .text-sm {
+                font-size: 0.75rem !important;
+                line-height: 1.05rem !important;
+            }
+
+            .tab-content .text-xs {
+                font-size: 0.68rem !important;
+                line-height: 0.95rem !important;
+            }
+
+            .tab-content .grid {
+                min-width: 0;
+            }
+
+            .tab-content .flex {
+                min-width: 0;
+            }
+
+            .tab-content input,
+            .tab-content select {
+                font-size: 0.8rem !important;
+                padding: 0.52rem 0.55rem !important;
+            }
+
+            .tab-content button {
+                font-size: 0.75rem !important;
+                padding: 0.5rem 0.65rem !important;
+                white-space: normal;
+                line-height: 1.05rem;
+            }
+
+            .tab-content table {
+                table-layout: fixed;
+                min-width: 0 !important;
+                width: 100% !important;
+                font-size: 0.68rem !important;
+            }
+
+            .tab-content th,
+            .tab-content td {
+                padding: 0.45rem 0.28rem !important;
+                line-height: 1.05rem !important;
+                white-space: normal !important;
+                overflow-wrap: anywhere;
+                word-break: break-word;
+                vertical-align: top;
+            }
+
+            .tab-content th {
+                font-size: 0.64rem !important;
+            }
+
+            .tab-content td button {
+                display: inline-flex;
+                margin: 0.1rem 0.08rem !important;
+                padding: 0.2rem 0.25rem !important;
+                font-size: 0.65rem !important;
+            }
+
+            .tab-content .space-x-2 > :not([hidden]) ~ :not([hidden]) {
+                margin-left: 0.2rem !important;
+            }
+
+            .responsive-table-card {
+                padding: 0.65rem !important;
+                border-radius: 0.85rem !important;
+            }
+
+            .modal-panel {
+                width: 96vw !important;
+                max-width: 96vw !important;
+                max-height: 88vh;
+                overflow-y: auto;
+                padding: 1rem !important;
+            }
+
+            .modal-panel h2 {
+                font-size: 1rem !important;
+                line-height: 1.3rem !important;
+                padding-right: 1.75rem;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .tab-content table {
+                font-size: 0.62rem !important;
+            }
+
+            .tab-content th,
+            .tab-content td {
+                padding: 0.38rem 0.2rem !important;
+            }
+
+            .tab-content button {
+                font-size: 0.68rem !important;
+                padding: 0.42rem 0.5rem !important;
+            }
+
+            .admin-header h2 {
+                font-size: 1.1rem !important;
+            }
+        }
+    
+
+        /* ===== Fixed mobile/desktop layout patch ===== */
+        :root {
+            --admin-header-height: 5.5rem;
+        }
+
+        html,
+        body {
+            height: 100%;
+            min-height: 100%;
+            overflow: hidden !important;
+        }
+
+        body {
+            margin: 0;
+        }
+
+        .admin-shell {
+            height: 100vh;
+            height: 100dvh;
+            min-height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .admin-sidebar {
+            height: 100vh;
+            height: 100dvh;
+            flex-shrink: 0;
+            overscroll-behavior: contain;
+        }
+
+        .main-content {
+            height: 100vh;
+            height: 100dvh;
+            min-width: 0;
+            flex: 1 1 auto;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            padding-bottom: 0 !important;
+        }
+
+        .admin-header {
+            position: sticky;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 70;
+            flex-shrink: 0;
+        }
+
+        .content-scroll-area {
+            width: 100%;
+            padding-bottom: 1.5rem;
+        }
+
+        .tab-content {
+            margin-top: 1rem !important;
+        }
+
+        .tab-content.hidden {
+            display: none !important;
+        }
+
+        .sidebar-footer {
+            position: sticky !important;
+            bottom: 0;
+            left: auto !important;
+            width: 100% !important;
+            margin-top: auto;
+            z-index: 2;
+        }
+
+        @media (max-width: 1023px) {
+            :root {
+                --admin-header-height: 5.35rem;
+            }
+
+            .admin-shell {
+                display: block;
+                height: 100vh;
+                height: 100dvh;
+                overflow: hidden;
+            }
+
+            .main-content {
+                width: 100%;
+                height: 100vh;
+                height: 100dvh;
+                overflow-y: auto;
+                overflow-x: hidden;
+            }
+
+            .admin-sidebar {
+                position: fixed;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                z-index: 90;
+                width: min(86vw, 320px);
+                max-width: 320px;
+                height: 100vh;
+                height: 100dvh;
+                transform: translateX(-105%);
+                transition: transform 180ms ease;
+                box-shadow: 0 20px 45px rgba(15, 23, 42, 0.24);
+                overflow-y: auto;
+                overflow-x: hidden;
+            }
+
+            body.sidebar-open .admin-sidebar {
+                transform: translateX(0);
+            }
+
+            #sidebarBackdrop {
+                position: fixed;
+                inset: 0;
+                z-index: 80;
+                background: rgba(15, 23, 42, 0.48);
+                display: none;
+            }
+
+            body.sidebar-open #sidebarBackdrop {
+                display: block;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .admin-header-row {
+                min-height: var(--admin-header-height) !important;
+            }
+
+            .content-scroll-area {
+                padding-bottom: 1rem;
+            }
+
+            .tab-content {
+                margin: 0.75rem 0.65rem 0 0.65rem !important;
+            }
+        }
+
+
+
+        /* ===== Mobile resize + fixed header/sidebar final patch ===== */
+        :root {
+            --admin-header-height: 5.35rem;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            min-height: 100%;
+            margin: 0;
+            overflow: hidden !important;
+        }
+
+        body {
+            background: #f9fafb;
+        }
+
+        .admin-shell {
+            width: 100%;
+            height: 100vh;
+            height: 100dvh;
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .admin-sidebar {
+            width: 20rem;
+            flex: 0 0 20rem;
+            height: 100vh;
+            height: 100dvh;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden !important;
+        }
+
+        .admin-sidebar nav {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .sidebar-footer {
+            position: static !important;
+            left: auto !important;
+            bottom: auto !important;
+            width: 100% !important;
+            flex: 0 0 auto;
+            margin-top: auto;
+        }
+
+        .main-content {
+            flex: 1 1 auto;
+            min-width: 0;
+            height: 100vh;
+            height: 100dvh;
+            min-height: 0;
+            display: flex !important;
+            flex-direction: column;
+            overflow: hidden !important;
+            padding-bottom: 0 !important;
+        }
+
+        .admin-header {
+            position: relative !important;
+            top: auto !important;
+            left: auto !important;
+            right: auto !important;
+            z-index: 70;
+            flex: 0 0 auto;
+            width: 100%;
+        }
+
+        .admin-header-row {
+            min-height: var(--admin-header-height);
+        }
+
+        .content-scroll-area {
+            flex: 1 1 auto;
+            min-height: 0;
+            width: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            padding: 1rem 1rem 1.25rem;
+        }
+
+        .tab-content {
+            margin: 0 !important;
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .tab-content + .tab-content {
+            margin-top: 0 !important;
+        }
+
+        .tab-content.hidden {
+            display: none !important;
+        }
+
+        .responsive-table-card {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .responsive-table-card table {
+            width: 100%;
+        }
+
+        @media (max-width: 1023px) {
+            .admin-shell {
+                display: block;
+                height: 100vh;
+                height: 100dvh;
+                overflow: hidden;
+            }
+
+            .main-content {
+                width: 100%;
+                height: 100vh;
+                height: 100dvh;
+            }
+
+            .admin-sidebar {
+                position: fixed !important;
+                inset: 0 auto 0 0 !important;
+                z-index: 90;
+                width: min(86vw, 320px);
+                max-width: 320px;
+                height: 100vh;
+                height: 100dvh;
+                flex-basis: auto;
+                transform: translateX(-105%);
+                transition: transform 180ms ease;
+                box-shadow: 0 20px 45px rgba(15, 23, 42, 0.24);
+            }
+
+            body.sidebar-open .admin-sidebar {
+                transform: translateX(0);
+            }
+
+            #sidebarBackdrop {
+                position: fixed;
+                inset: 0;
+                z-index: 80;
+                background: rgba(15, 23, 42, 0.48);
+                display: none;
+            }
+
+            body.sidebar-open #sidebarBackdrop {
+                display: block;
+            }
+        }
+
+        @media (max-width: 640px) {
+            :root {
+                --admin-header-height: 4.85rem;
+            }
+
+            .admin-header-row {
+                min-height: var(--admin-header-height) !important;
+                align-items: stretch !important;
+                gap: 0 !important;
+            }
+
+            .admin-header-text {
+                padding: 0.75rem 0.85rem !important;
+            }
+
+            .admin-header h2 {
+                font-size: 1.08rem !important;
+                line-height: 1.32rem !important;
+                margin-bottom: 0.15rem !important;
+            }
+
+            .admin-header p {
+                font-size: 0.72rem !important;
+                line-height: 1rem !important;
+            }
+
+            #sidebarToggle {
+                align-self: stretch;
+                min-height: 100%;
+                padding: 0 0.75rem !important;
+                font-size: 0.72rem !important;
+                border-radius: 0 !important;
+                white-space: nowrap;
+            }
+
+            .content-scroll-area {
+                padding: 0.75rem 0.6rem 1rem;
+            }
+
+            .tab-content .grid {
+                grid-template-columns: minmax(0, 1fr) !important;
+            }
+
+            .tab-content .p-6 {
+                padding: 0.8rem !important;
+            }
+
+            .tab-content .text-4xl {
+                font-size: 1.5rem !important;
+                line-height: 1.75rem !important;
+            }
+
+            .tab-content .text-3xl {
+                font-size: 1.25rem !important;
+                line-height: 1.55rem !important;
+            }
+
+            .tab-content table {
+                table-layout: auto !important;
+                min-width: 560px !important;
+                width: max-content !important;
+                font-size: 0.72rem !important;
+            }
+
+            #teams table {
+                min-width: 420px !important;
+            }
+
+            .tab-content th,
+            .tab-content td {
+                padding: 0.45rem 0.45rem !important;
+                line-height: 1.05rem !important;
+                white-space: normal !important;
+                overflow-wrap: anywhere;
+                word-break: break-word;
+                vertical-align: top;
+            }
+
+            .tab-content td button {
+                padding: 0.25rem 0.3rem !important;
+                font-size: 0.65rem !important;
+                margin: 0.08rem !important;
+            }
+
+            .responsive-table-card {
+                padding: 0.65rem !important;
+                border-radius: 0.85rem !important;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .admin-header h2 {
+                font-size: 1rem !important;
+            }
+
+            .admin-header p {
+                font-size: 0.68rem !important;
+            }
+
+            #sidebarToggle {
+                padding: 0 0.6rem !important;
+            }
+
+            .content-scroll-area {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .dashboard-header .admin-header-text {
+                max-width: calc(100vw - 195px) !important;
+            }
+
+            .responsive-table-card,
+            .overflow-x-auto {
+                overflow-x: visible !important;
+            }
+
+            .tab-content table {
+                table-layout: fixed !important;
+                min-width: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                font-size: 0.66rem !important;
+            }
+
+            .tab-content th,
+            .tab-content td {
+                padding: 0.42rem 0.32rem !important;
+                white-space: normal !important;
+                word-break: break-word !important;
+                overflow-wrap: anywhere !important;
+            }
+
+            #feedback .responsive-table-card {
+                overflow-x: auto !important;
+            }
+
+            #feedback table {
+                table-layout: fixed !important;
+                min-width: 760px !important;
+                width: 760px !important;
+                max-width: none !important;
+            }
+
+            #feedback th,
+            #feedback td {
+                word-break: normal !important;
+                overflow-wrap: break-word !important;
+            }
+
+            #feedback .feedback-type-badge {
+                padding: 0.2rem 0.35rem !important;
+                font-size: 0.58rem !important;
+                line-height: 0.8rem !important;
+                white-space: nowrap !important;
+            }
+
+            #overview .dashboard-overview-grid {
+                grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+                gap: 0.45rem !important;
+            }
+
+            #overview .dashboard-overview-card {
+                aspect-ratio: 1 / 1;
+                min-height: 0 !important;
+                padding: 0.45rem !important;
+            }
+        }
+
+        /* Final sidebar behavior: off-canvas on every screen size */
+        .admin-shell {
+            display: block !important;
+            overflow: hidden !important;
+        }
+
+        .admin-sidebar {
+            position: fixed !important;
+            inset: 0 auto 0 0 !important;
+            z-index: 90 !important;
+            width: min(86vw, 320px) !important;
+            max-width: 320px !important;
+            transform: translateX(-105%) !important;
+            transition: transform 0.25s ease !important;
+        }
+
+        body.sidebar-open .admin-sidebar {
+            transform: translateX(0) !important;
+        }
+
+        .main-content {
+            width: 100vw !important;
+            max-width: 100vw !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+        }
+
+        #sidebarToggle {
+            display: inline-flex !important;
+            order: -1 !important;
+            align-self: stretch !important;
+            border-radius: 0 !important;
+        }
+
+        #sidebarBackdrop {
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 80 !important;
+            background: rgba(15, 23, 42, 0.48) !important;
+            display: none;
+        }
+
+        body.sidebar-open #sidebarBackdrop {
+            display: block !important;
+        }
+
+        .admin-header {
+            border-bottom: 4px solid #1d4ed8 !important;
+        }
+
+        /* Final mobile readability patch: keep text compact without vertical word distortion. */
+        @media (max-width: 640px) {
+            .admin-header-text {
+                min-width: 0 !important;
+                max-width: calc(100vw - 182px) !important;
+                padding: 0.55rem 0.7rem !important;
+            }
+
+            .admin-header h2 {
+                font-size: clamp(0.8rem, 3.45vw, 1rem) !important;
+                line-height: 1.05 !important;
+                margin-bottom: 0.12rem !important;
+                overflow-wrap: normal !important;
+                word-break: normal !important;
+                hyphens: auto;
+            }
+
+            .admin-header p {
+                font-size: clamp(0.55rem, 2.55vw, 0.68rem) !important;
+                line-height: 1.18 !important;
+                overflow-wrap: normal !important;
+                word-break: normal !important;
+            }
+
+            #overview .dashboard-overview-grid {
+                grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+                gap: clamp(0.35rem, 1.8vw, 0.55rem) !important;
+            }
+
+            #overview .dashboard-overview-card {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                justify-content: center !important;
+                min-height: clamp(5rem, 21vw, 6.5rem) !important;
+                padding: clamp(0.38rem, 2.1vw, 0.65rem) !important;
+                overflow: hidden;
+            }
+
+            #overview .dashboard-overview-card > div {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                justify-content: center !important;
+                width: 100%;
+                gap: 0 !important;
+            }
+
+            #overview .dashboard-overview-label {
+                display: block !important;
+                width: 100% !important;
+                font-size: clamp(0.54rem, 2.6vw, 0.72rem) !important;
+                line-height: 1.12 !important;
+                text-align: center;
+                overflow-wrap: normal !important;
+                word-break: normal !important;
+                hyphens: auto;
+            }
+
+            #overview .dashboard-overview-value {
+                display: block !important;
+                width: 100% !important;
+                font-size: clamp(1.05rem, 7vw, 1.75rem) !important;
+                line-height: 1 !important;
+                margin-top: 0.35rem !important;
+                text-align: center;
+            }
+
+            #overview .dashboard-overview-note {
+                display: none !important;
+            }
+
+            .responsive-table-card,
+            .overflow-x-auto,
+            #participants .responsive-table-card,
+            #accounts .responsive-table-card,
+            #adminDeleteRequestsArea,
+            #overview .responsive-table-card {
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .tab-content table,
+            #participants table,
+            #accounts table,
+            #adminDeleteRequestsArea table,
+            #overview .responsive-table-card table {
+                table-layout: auto !important;
+                width: max-content !important;
+                max-width: none !important;
+                font-size: clamp(0.62rem, 2.85vw, 0.76rem) !important;
+            }
+
+            #overview .responsive-table-card table {
+                min-width: 430px !important;
+            }
+
+            #participants table {
+                min-width: 720px !important;
+            }
+
+            #accounts table {
+                min-width: 980px !important;
+            }
+
+            #adminDeleteRequestsArea table {
+                min-width: 760px !important;
+            }
+
+            .tab-content th,
+            .tab-content td {
+                padding: 0.45rem 0.5rem !important;
+                line-height: 1.25 !important;
+                white-space: normal !important;
+                word-break: normal !important;
+                overflow-wrap: break-word !important;
+                vertical-align: top;
+            }
+
+            #participants th,
+            #participants td,
+            #accounts th,
+            #accounts td {
+                white-space: normal !important;
+                word-break: normal !important;
+                overflow-wrap: break-word !important;
+            }
+
+            #participants .inline-flex,
+            #accounts .inline-flex {
+                white-space: nowrap !important;
+                word-break: normal !important;
+                overflow-wrap: normal !important;
+                font-size: clamp(0.58rem, 2.7vw, 0.72rem) !important;
+                padding: 0.25rem 0.45rem !important;
+            }
+
+            #participants td:last-child {
+                white-space: nowrap !important;
+            }
+
+            #accounts td:last-child > div {
+                min-width: 7.5rem;
+            }
+
+            #accounts .account-approval-btn,
+            #accounts .delete-account-btn,
+            #accounts .edit-account-sport,
+            #accounts td:last-child a,
+            #accounts td:last-child span {
+                white-space: nowrap !important;
+                font-size: clamp(0.58rem, 2.65vw, 0.72rem) !important;
+                line-height: 1.1 !important;
+                padding: 0.42rem 0.55rem !important;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 overflow-hidden">
+    <div class="admin-shell">
+        <!-- Sidebar -->
+        <div id="pageSidebar" class="admin-sidebar bg-white border-r border-gray-200 shadow-sm relative flex flex-col">
+            <div class="p-8 border-b border-gray-200">
+                <div class="flex items-center space-x-3">
+                    <div class="sidebar-logo-badge">
+                        <img 
+                            src="L1.png" 
+                            alt="School Logo" 
+                            class="w-9 h-9" />
+                    </div>
+
+                    <div>
+                        <h1 class="font-bold text-gray-900 break-safe">
+                            Adventist University Of the Philippines
+                        </h1>
+                        <p class="text-xs text-gray-500">Admin Panel</p>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="p-4 space-y-2 flex-1 overflow-y-auto">
+                <button 
+                    onclick="switchTab('overview')" 
+                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 bg-blue-600 text-white shadow-md" 
+                    data-tab="overview">
+                    <span class="font-medium">Overview</span>
+                </button>
+
+                <button 
+                    onclick="switchTab('teams')" 
+                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100" 
+                    data-tab="teams">
+                    <span class="font-medium">Manage Teams</span>
+                </button>
+
+                <button 
+                    onclick="switchTab('games')" 
+                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100" 
+                    data-tab="games">
+                    <span class="font-medium">Manage Games</span>
+                </button>
+
+                <button 
+                    onclick="switchTab('participants')" 
+                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100" 
+                    data-tab="participants">
+                    <span class="font-medium">Participants</span>
+                </button>
+
+                <button 
+                    onclick="switchTab('attendance')" 
+                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100" 
+                    data-tab="attendance">
+                    <span class="font-medium">Attendance Checker</span>
+                </button>
+
+                <button 
+                    onclick="switchTab('announcements')" 
+                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100" 
+                    data-tab="announcements">
+                    <span class="font-medium">Announcements</span>
+                </button>
+
+                <button 
+                    onclick="switchTab('feedback')" 
+                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100" 
+                    data-tab="feedback">
+                    <span class="font-medium">Student Feedback</span>
+                </button>
+
+                <button 
+                    onclick="switchTab('accounts')" 
+                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100" 
+                    data-tab="accounts">
+                    <span class="font-medium">Account Approvals</span>
+                </button>
+
+                <button
+                    onclick="switchTab('communications')"
+                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100"
+                    data-tab="communications">
+                    <span class="font-medium">Communications</span>
+                </button>
+
+                <button
+                    onclick="switchTab('prints')"
+                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100"
+                    data-tab="prints">
+                    <span class="font-medium">Prints</span>
+                </button>
+
+                <button 
+                    onclick="switchTab('about')" 
+                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100" 
+                    data-tab="about">
+                    <span class="font-medium">About</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer p-4 border-t border-gray-200 bg-white">
+                <div class="flex items-center gap-3">
+                    <div
+                        id="adminAccountInitialBadge"
+                        class="w-11 h-11 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-lg shadow-sm shrink-0"
+                        title="Current account">
+                        ?
+                    </div>
+
+                    <div class="min-w-0 flex-1">
+                        <p id="adminAccountDisplayName" class="text-sm font-semibold text-gray-900 truncate">
+                            Account
+                        </p>
+                        <p id="adminAccountDisplayRole" class="text-xs text-gray-500 truncate">
+                            Signed in
+                        </p>
+                    </div>
+
+                    <button
+                        onclick="logout()"
+                        class="shrink-0 bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-1 px-3 py-2 rounded-lg font-medium"
+                        title="Logout">
+                        <span>Logout</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="sidebarBackdrop" onclick="closeSidebar()" aria-hidden="true"></div>
+
+        <main class="main-content flex-1 overflow-y-auto overflow-x-hidden">
+            <!-- Header -->
+            <div class="admin-header dashboard-header bg-yellow-400">
+                <div class="admin-header-row mb-0 flex justify-between">
+                    <div class="dashboard-header-brand" aria-hidden="true">
+                        <img src="L1.png" alt="">
+                    </div>
+
+                    <div class="admin-header-text flex-1">
+                        <h2 id="pageTitle" class="text-xl sm:text-3xl font-bold text-blue-900 mb-2">
+                            Dashboard Overview
+                        </h2>
+
+                        <p id="pageDesc" class="text-blue-800 text-sm sm:text-base break-safe">
+                            Welcome to the admin dashboard. Manage all aspects of the sports system.
+                        </p>
+                    </div>
+
+                    <div id="adminNotificationContainer" class="relative z-50 mr-3 self-center shrink-0">
+                        <button
+                            id="adminMessageNotificationBell"
+                            type="button"
+                            aria-label="Open notifications"
+                            aria-expanded="false"
+                            title="Notifications"
+                            class="relative inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/80 text-blue-900 shadow-sm transition hover:bg-white">
+                            <svg aria-hidden="true" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0a3 3 0 0 1-6 0m6 0H9" />
+                            </svg>
+                            <span id="adminMessageNotificationBadge" class="hidden absolute -right-1 -top-1 min-w-5 rounded-full bg-red-600 px-1.5 py-0.5 text-center text-xs font-bold leading-4 text-white">0</span>
+                        </button>
+                        <div id="adminNotificationPanel" class="notification-overlay-panel hidden w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+                            <div class="border-b border-gray-100 px-4 py-3">
+                                <p class="font-bold text-gray-900">Notifications</p>
+                                <p class="text-xs text-gray-500">Messages and pending delete requests</p>
+                            </div>
+                            <div id="adminNotificationList" class="max-h-96 divide-y divide-gray-100 overflow-y-auto p-2"></div>
+                        </div>
+                    </div>
+
+                    <button
+                        id="sidebarToggle"
+                        type="button"
+                        aria-expanded="false"
+                        aria-controls="pageSidebar"
+                        onclick="toggleSidebar()"
+                        class="inline-flex items-center justify-center gap-2 bg-blue-600 px-4 text-sm font-medium text-white shrink-0">
+                        ☰ Menu
+                    </button>
+                </div>
+                
+            </div>
+
+            <div class="content-scroll-area">
+                <!-- Overview Tab -->
+            <div id="overview" class="tab-content mt-8 ml-3 mr-5">
+                <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3 mb-6">
+                   
+
+                    <div class="flex flex-wrap items-center gap-3">
+                        <p id="adminOverviewLastUpdated" class="text-xs text-gray-500">
+                            Last updated: ...
+                        </p>
+                    </div>
+                </div>
+
+                <div class="dashboard-overview-grid grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
+
+                    <!-- Total Teams -->
+                    <div class="dashboard-overview-card p-6 bg-white border-0 shadow-md hover:shadow-lg transition-shadow rounded-lg">
+                        <div class="flex items-center justify-between gap-4">
+                            <div>
+                                <p class="dashboard-overview-label text-gray-600 text-sm font-medium">Total Teams</p>
+                                <p id="adminTotalTeams" class="dashboard-overview-value text-3xl font-bold text-gray-900 mt-2">...</p>
+                                <p class="dashboard-overview-note text-xs text-gray-500 mt-1">Registered team records</p>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Total Sports -->
+                    <div class="dashboard-overview-card p-6 bg-white border-0 shadow-md hover:shadow-lg transition-shadow rounded-lg">
+                        <div class="flex items-center justify-between gap-4">
+                            <div>
+                                <p class="dashboard-overview-label text-gray-600 text-sm font-medium">Registered Sports</p>
+                                <p id="adminTotalSports" class="dashboard-overview-value text-3xl font-bold text-gray-900 mt-2">...</p>
+                                <p class="dashboard-overview-note text-xs text-gray-500 mt-1">Sports/game categories</p>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Total Participants -->
+                    <div class="dashboard-overview-card p-6 bg-white border-0 shadow-md hover:shadow-lg transition-shadow rounded-lg">
+                        <div class="flex items-center justify-between gap-4">
+                            <div>
+                                <p class="dashboard-overview-label text-gray-600 text-sm font-medium">Total Participants</p>
+                                <p id="adminTotalParticipants" class="dashboard-overview-value text-3xl font-bold text-gray-900 mt-2">...</p>
+                                <p class="dashboard-overview-note text-xs text-gray-500 mt-1">All participant records</p>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Total Matches -->
+                    <div class="dashboard-overview-card p-6 bg-white border-0 shadow-md hover:shadow-lg transition-shadow rounded-lg">
+                        <div class="flex items-center justify-between gap-4">
+                            <div>
+                                <p class="dashboard-overview-label text-gray-600 text-sm font-medium">Scheduled Matches</p>
+                                <p id="adminTotalMatches" class="dashboard-overview-value text-3xl font-bold text-gray-900 mt-2">...</p>
+                                <p class="dashboard-overview-note text-xs text-gray-500 mt-1">All match records</p>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Upcoming Matches -->
+                    <div class="dashboard-overview-card p-6 bg-white border-0 shadow-md hover:shadow-lg transition-shadow rounded-lg">
+                        <div class="flex items-center justify-between gap-4">
+                            <div>
+                                <p class="dashboard-overview-label text-gray-600 text-sm font-medium">Upcoming Matches</p>
+                                <p id="adminUpcomingMatches" class="dashboard-overview-value text-3xl font-bold text-blue-700 mt-2">...</p>
+                                <p class="dashboard-overview-note text-xs text-gray-500 mt-1">Status: Next</p>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Active Games -->
+                    <div class="dashboard-overview-card p-6 bg-white border-0 shadow-md hover:shadow-lg transition-shadow rounded-lg">
+                        <div class="flex items-center justify-between gap-4">
+                            <div>
+                                <p class="dashboard-overview-label text-gray-600 text-sm font-medium">Active Games</p>
+                                <p id="adminActiveGames" class="dashboard-overview-value text-3xl font-bold text-red-700 mt-2">...</p>
+                                <p class="dashboard-overview-note text-xs text-gray-500 mt-1">Status: Ongoing</p>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Completed Matches -->
+                    <div class="dashboard-overview-card p-6 bg-white border-0 shadow-md hover:shadow-lg transition-shadow rounded-lg">
+                        <div class="flex items-center justify-between gap-4">
+                            <div>
+                                <p class="dashboard-overview-label text-gray-600 text-sm font-medium">Completed Matches</p>
+                                <p id="adminCompletedMatches" class="dashboard-overview-value text-3xl font-bold text-green-700 mt-2">...</p>
+                                <p class="dashboard-overview-note text-xs text-gray-500 mt-1">Status: Done</p>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Day -->
+                    <div class="dashboard-overview-card p-6 bg-white border-0 shadow-md hover:shadow-lg transition-shadow rounded-lg">
+                        <div class="flex items-center justify-between gap-4">
+                            <div>
+                                <p class="dashboard-overview-label text-gray-600 text-sm font-medium">Match Days</p>
+                                <p id="adminTotalDays" class="dashboard-overview-value text-3xl font-bold text-gray-900 mt-2">...</p>
+                                <p class="dashboard-overview-note text-xs text-gray-500 mt-1">Unique scheduled dates</p>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="dashboard-overview-grid grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
+                    <div class="dashboard-overview-card p-6 bg-white border-0 shadow-md rounded-lg">
+                        <p class="dashboard-overview-label text-gray-600 text-sm font-medium">Approved Participants</p>
+                        <p id="adminApprovedParticipants" class="dashboard-overview-value text-3xl font-bold text-green-700 mt-2">...</p>
+                        <p class="dashboard-overview-note text-xs text-gray-500 mt-1">Status: Approved</p>
+                    </div>
+
+                    <div class="dashboard-overview-card p-6 bg-white border-0 shadow-md rounded-lg">
+                        <p class="dashboard-overview-label text-gray-600 text-sm font-medium">Pending Participants</p>
+                        <p id="adminPendingParticipants" class="dashboard-overview-value text-3xl font-bold text-yellow-700 mt-2">...</p>
+                        <p class="dashboard-overview-note text-xs text-gray-500 mt-1">Status: Pending</p>
+                    </div>
+
+                    <div class="dashboard-overview-card p-6 bg-white border-0 shadow-md rounded-lg">
+                        <p class="dashboard-overview-label text-gray-600 text-sm font-medium">Rejected Participants</p>
+                        <p id="adminRejectedParticipants" class="dashboard-overview-value text-3xl font-bold text-red-700 mt-2">...</p>
+                        <p class="dashboard-overview-note text-xs text-gray-500 mt-1">Status: Rejected</p>
+                    </div>
+
+                    <div class="dashboard-overview-card p-6 bg-white border-0 shadow-md rounded-lg">
+                        <p class="dashboard-overview-label text-gray-600 text-sm font-medium">Today's Attendance</p>
+                        <p id="adminTodayAttendance" class="dashboard-overview-value text-3xl font-bold text-blue-700 mt-2">...</p>
+                        <p class="dashboard-overview-note text-xs text-gray-500 mt-1">Participant attendance checked today</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-6">
+                    <div class="responsive-table-card p-6 bg-white border-0 shadow-md rounded-lg overflow-x-auto">
+                        <div class="flex items-center justify-between gap-3 mb-4">
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-900">Match Status Summary</h3>
+                                <p class="text-xs text-gray-500">Quick count of all scheduled match statuses.</p>
+                            </div>
+                        </div>
+
+                        <table class="w-full min-w-[420px]">
+                            <thead>
+                                <tr class="border-b border-gray-200">
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Category</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+                                    <th class="text-right py-3 px-4 font-semibold text-gray-700">Count</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="overviewMatchStatusBody">
+                                <tr>
+                                    <td colspan="3" class="py-4 px-4 text-gray-600">Loading match status summary...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="responsive-table-card p-6 bg-white border-0 shadow-md rounded-lg overflow-x-auto">
+                        <div class="flex items-center justify-between gap-3 mb-4">
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-900">Today's Attendance Records</h3>
+                                <p class="text-xs text-gray-500">Latest participant attendance checks for today.</p>
+                            </div>
+                        </div>
+
+                        <table class="w-full min-w-[520px]">
+                            <thead>
+                                <tr class="border-b border-gray-200">
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Name</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Student ID</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Team</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Checked</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="overviewAttendanceBody">
+                                <tr>
+                                    <td colspan="4" class="py-4 px-4 text-gray-600">Loading attendance records...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="adminDeleteRequestsArea" class="responsive-table-card p-6 bg-white border-0 shadow-md rounded-lg overflow-x-auto mb-6 transition-shadow">
+                    <div class="flex items-center justify-between gap-3 mb-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900">Latest Scheduled Matches</h3>
+                            <p class="text-xs text-gray-500">Recent and upcoming match records from the scheduled_matches table.</p>
+                        </div>
+                    </div>
+
+                    <table class="w-full min-w-[760px]">
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Game / Sport</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Teams</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Schedule</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Location</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Delete Request</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="overviewRecentMatchesBody">
+                            <tr>
+                                <td colspan="6" class="py-4 px-4 text-gray-600">Loading latest matches...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                    <div class="responsive-table-card p-6 bg-white border-0 shadow-md rounded-lg overflow-x-auto">
+                        <div class="mb-4">
+                            <h3 class="text-xl font-bold text-gray-900">Team Member Summary</h3>
+                            <p class="text-xs text-gray-500">Participant count per registered team.</p>
+                        </div>
+
+                        <table class="w-full min-w-[420px]">
+                            <thead>
+                                <tr class="border-b border-gray-200">
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Team</th>
+                                    <th class="text-right py-3 px-4 font-semibold text-gray-700">Members</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="overviewTeamSummaryBody">
+                                <tr>
+                                    <td colspan="2" class="py-4 px-4 text-gray-600">Loading team summary...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="responsive-table-card p-6 bg-white border-0 shadow-md rounded-lg overflow-x-auto">
+                        <div class="mb-4">
+                            <h3 class="text-xl font-bold text-gray-900">Sports / Game Categories</h3>
+                            <p class="text-xs text-gray-500">Major and minor game setup from registered sports.</p>
+                        </div>
+
+                        <table class="w-full min-w-[360px]">
+                            <thead>
+                                <tr class="border-b border-gray-200">
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Sport</th>
+                                    <th class="text-right py-3 px-4 font-semibold text-gray-700">Type</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="overviewSportsSummaryBody">
+                                <tr>
+                                    <td colspan="2" class="py-4 px-4 text-gray-600">Loading sports summary...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Teams Tab -->
+            <div id="teams" class="tab-content hidden mt-5 ml-5 mr-5">
+
+                <button 
+                    type="button"
+                    id="openTeamModal"
+                    class="mb-6 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium">
+                    + Add New Team
+                </button>
+
+                <div class="responsive-table-card p-6 bg-white border-0 shadow-md rounded-lg overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Team Name</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Members</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="teamsTableBody">
+                            <tr>
+                                <td colspan="3" class="py-4 px-4 text-gray-600">
+                                    Loading teams...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Games / Sports Tab -->
+            <div id="games" class="tab-content hidden mt-5 ml-5 mr-5">
+                <button 
+                    type="button"
+                    id="openSportModal"
+                    class="mb-6 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium">
+                    + Add New Sports
+                </button>
+
+                <div class="responsive-table-card p-6 bg-white border-0 shadow-md rounded-lg overflow-x-auto">
+                    <div class="mb-4">
+                        <h3 class="text-xl font-bold text-gray-900">Sports and Game Categories</h3>
+                    </div>
+
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Sport</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Type</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Players / Team</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Slots Available</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Updated</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="sportsTableBody">
+                            <tr>
+                                <td colspan="6" class="py-4 px-4 text-gray-600">
+                                    Loading sports...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Participants Tab -->
+            <div id="participants" class="tab-content hidden mt-5 ml-5 mr-5">
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-6">
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-900">Manage Participants</h3>
+                        <p class="text-sm text-gray-500">
+                            Add, edit, remove, and monitor registered participants.
+                        </p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="flex items-center gap-2">
+                            <label for="participantTeamFilter" class="text-sm font-semibold text-gray-700">
+                                Team
+                            </label>
+                            <select
+                                id="participantTeamFilter"
+                                class="min-w-[180px] rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                                <option value="">All Teams</option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <label for="participantSportFilter" class="text-sm font-semibold text-gray-700">
+                                Sports
+                            </label>
+                            <select
+                                id="participantSportFilter"
+                                class="min-w-[200px] rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                                <option value="">All Sports</option>
+                            </select>
+                        </div>
+
+                        <button
+                            type="button"
+                            id="printParticipantsButton"
+                            class="px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg font-medium transition">
+                            Print List
+                        </button>
+
+                        <button 
+                            type="button"
+                            id="openParticipantModal"
+                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition">
+                            + Add Participant
+                        </button>
+                    </div>
+                </div>
+
+                <div class="responsive-table-card p-6 bg-white border-0 shadow-md rounded-lg overflow-x-auto">
+                    <table class="w-full min-w-[1280px]">
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Name</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Course</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Age</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">ID Number</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Team</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Playing In</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Major Sport</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Minor Sport</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Date Registered</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="participantsTableBody">
+                            <tr>
+                                <td colspan="11" class="py-4 px-4 text-gray-600">
+                                    Loading participants...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Attendance Checker Tab -->
+            <div id="attendance" class="tab-content hidden mt-5 ml-5 mr-5">
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+                    <div class="xl:col-span-1">
+                        <div class="p-6 bg-white border-0 shadow-md rounded-lg">
+                            <h3 class="text-xl font-bold text-gray-900 mb-2">
+                                Participant Attendance Checker
+                            </h3>
+
+                            <form id="attendanceForm" class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        Student ID
+                                    </label>
+
+                                    <input 
+                                        type="text"
+                                        id="attendanceStudentId"
+                                        required
+                                        autocomplete="off"
+                                        placeholder="Enter or scan student ID"
+                                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 outline-none">
+                                </div>
+
+                                <button 
+                                    type="submit"
+                                    class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed">
+                                    Check Attendance
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="xl:col-span-2">
+                        <div class="p-6 bg-white border-0 shadow-md rounded-lg min-h-[260px]">
+                            <div class="flex items-center justify-between gap-3 mb-4">
+                                <div>
+                                    <h3 class="text-xl font-bold text-gray-900">Attendance Result</h3>
+                                </div>
+                            </div>
+
+                            <div id="attendanceResult" class="hidden rounded-lg border p-4 text-sm"></div>
+
+                            <div id="attendanceEmptyState" class="rounded-lg border border-dashed border-gray-300 p-8 text-center text-gray-500">
+                                No attendance checked yet. Enter a Student ID to begin.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Announcements Tab -->
+            <div id="announcements" class="tab-content hidden mt-5 ml-5 mr-5">
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+                    <div class="xl:col-span-1">
+                        <div class="p-6 bg-white border-0 shadow-md rounded-lg">
+                            <h3 class="text-xl font-bold text-gray-900 mb-2">Create Announcement</h3>
+                            <p class="text-sm text-gray-500 mb-5">Post an announcement for committee overview and student popup notices.</p>
+
+                            <form id="announcementForm" class="space-y-4">
+                                <div>
+                                    <label for="announcementTitle" class="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                                    <input id="announcementTitle" type="text" required maxlength="160" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                                </div>
+
+                                <div>
+                                    <label for="announcementMessage" class="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                                    <textarea id="announcementMessage" required rows="6" maxlength="1600" class="w-full border border-gray-300 rounded-lg px-3 py-2"></textarea>
+                                </div>
+
+                                <div>
+                                    <label for="announcementAudience" class="block text-sm font-medium text-gray-700 mb-1">Visible To</label>
+                                    <select id="announcementAudience" required class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                                        <option value="all">Students and Committee</option>
+                                        <option value="students">Students only</option>
+                                        <option value="committee">Committee only</option>
+                                    </select>
+                                </div>
+
+                                <label class="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                                    <input id="announcementActive" type="checkbox" checked class="w-4 h-4">
+                                    Show this announcement
+                                </label>
+
+                                <button type="submit" id="saveAnnouncementButton" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition">
+                                    Publish Announcement
+                                </button>
+
+                                <p id="announcementStatus" class="text-sm font-semibold"></p>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="xl:col-span-2">
+                        <div class="p-6 bg-white border-0 shadow-md rounded-lg">
+                            <h3 class="text-xl font-bold text-gray-900 mb-4">Posted Announcements</h3>
+                            <div id="adminAnnouncementsList" class="space-y-4">
+                                <div class="rounded-lg border border-gray-200 bg-gray-50 p-6 text-gray-600">Loading announcements...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Student Feedback Tab -->
+            <div id="feedback" class="tab-content hidden mt-5 ml-5 mr-5">
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-6">
+            
+                <div class="responsive-table-card p-4 sm:p-6 bg-white border-0 shadow-md rounded-lg overflow-x-auto">
+                    <table class="w-full min-w-[920px] table-fixed">
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <th class="w-[12%] text-left py-3 px-4 font-semibold text-gray-700">Type</th>
+                                <th class="w-[18%] text-left py-3 px-4 font-semibold text-gray-700">Student</th>
+                                <th class="w-[35%] text-left py-3 px-4 font-semibold text-gray-700">Message</th>
+                                <th class="w-[11%] text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+                                <th class="w-[14%] text-left py-3 px-4 font-semibold text-gray-700">Submitted</th>
+                                <th class="w-[10%] text-left py-3 px-4 font-semibold text-gray-700">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentFeedbackTableBody">
+                            <tr>
+                                <td colspan="6" class="py-6 px-4 text-center text-gray-500">Loading student feedback...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            </div>
+
+            <div
+                id="studentFeedbackMessageModal"
+                class="dashboard-modal-overlay fixed inset-0 z-[70] hidden items-center justify-center bg-black bg-opacity-50 p-4">
+                <div class="dashboard-modal-panel modal-panel max-h-[85vh] w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+                    <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+                        <h3 class="text-lg font-bold text-gray-900">Student Feedback Message</h3>
+                        <button type="button" id="closeStudentFeedbackMessageModal" class="text-2xl leading-none text-gray-500 hover:text-gray-800">&times;</button>
+                    </div>
+                    <p id="studentFeedbackMessageModalText" class="max-h-[65vh] overflow-y-auto whitespace-pre-wrap break-words px-5 py-4 text-sm leading-relaxed text-gray-700"></p>
+                </div>
+            </div>
+
+            <!-- Account Approvals Tab -->
+            <div id="accounts" class="tab-content hidden mt-5 ml-5 mr-5">
+                <div class="p-6 bg-white border-0 shadow-md rounded-lg">
+                    <div class="mb-5">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900">Account Approvals</h3>
+                            <p class="text-sm text-gray-500">Review every registered admin and committee account from the database.</p>
+                        </div>
+                    </div>
+
+                    <div class="responsive-table-card overflow-x-auto">
+                        <table class="w-full min-w-[1040px]">
+                            <thead>
+                                <tr class="border-b border-gray-200">
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Account</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Mobile</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Role</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Assigned Game</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Registered</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Reviewed</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="accountApprovalsTableBody">
+                                <tr>
+                                    <td colspan="7" class="py-6 px-4 text-center text-gray-500">Loading account approvals...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="accountSportEditModal" class="dashboard-modal-overlay fixed inset-0 z-[70] hidden items-center justify-center bg-black bg-opacity-50 p-4">
+                <div class="dashboard-modal-panel modal-panel w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+                    <div class="mb-4 flex items-center justify-between">
+                        <h3 class="text-lg font-bold text-gray-900">Edit Sport Assignment</h3>
+                        <button type="button" id="closeAccountSportEditModal" class="text-2xl leading-none text-gray-500 hover:text-gray-800">&times;</button>
+                    </div>
+                    <p id="accountSportEditAccountName" class="mb-3 text-sm font-semibold text-gray-600"></p>
+                    <select id="accountSportEditSelect" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm font-semibold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"></select>
+                    <div class="mt-5 flex justify-end gap-2">
+                        <button type="button" id="cancelAccountSportEditModal" class="rounded-lg bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-300">Cancel</button>
+                        <button type="button" id="saveAccountSportEdit" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Save Assignment</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Communications Tab -->
+            <div id="communications" class="tab-content hidden mt-5 ml-5 mr-5">
+                <div id="adminChatShell" class="chat-shell grid grid-cols-1 md:grid-cols-[360px_minmax(0,1fr)] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
+                    <aside class="chat-sidebar flex min-h-0 flex-col border-r border-gray-200 bg-slate-50/80">
+                        <div class="border-b border-gray-200 bg-white p-4">
+                            <h3 class="text-xl font-bold text-gray-900">Messages</h3>
+                            <p id="adminContactsSummary" class="mt-1 text-sm text-gray-500">Choose who to contact first.</p>
+                            <input
+                                id="adminContactSearchInput"
+                                type="search"
+                                placeholder="Search contacts"
+                                class="mt-4 w-full rounded-xl border border-gray-300 bg-gray-50 px-4 py-2.5 text-sm font-semibold text-gray-800 outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100">
+                            <select id="adminContactGroupSelect" class="mt-3 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-semibold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                                <option value="">Choose group</option>
+                                <option value="__committee__">All Committee</option>
+                                <option value="__admin__">Admin</option>
+                            </select>
+                        </div>
+
+                        <div class="min-h-0 flex-1 overflow-y-auto p-3">
+                            <div id="adminContactsSection">
+                                <p class="px-2 pb-2 text-xs font-bold uppercase tracking-wide text-gray-500">Contacts</p>
+                                <div id="adminContactsTableBody" class="space-y-2">
+                                    <div class="rounded-xl bg-white p-4 text-sm font-semibold text-gray-500 shadow-sm">
+                                        Choose a group first to see who you can contact.
+                                    </div>
+                                </div>
+                            </div>
+                            <p id="adminRecentHeading" class="px-2 pb-2 pt-4 text-xs font-bold uppercase tracking-wide text-gray-500">Recent</p>
+                            <div id="adminConversationList" class="space-y-2"></div>
+                        </div>
+                    </aside>
+
+                    <section class="chat-thread flex min-h-0 flex-col bg-white">
+                        <div class="relative z-30 flex items-center gap-3 overflow-visible border-b border-gray-200 bg-white px-4 py-3">
+                            <button
+                                type="button"
+                                id="adminChatBack"
+                                class="rounded-lg bg-gray-100 px-3 py-2 text-sm font-bold text-gray-700 md:hidden">
+                                Back
+                            </button>
+                            <div id="adminActiveChatAvatar" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white">?</div>
+                            <div class="min-w-0 flex-1">
+                                <h3 id="adminActiveChatTitle" class="truncate text-lg font-bold text-gray-900">Select a conversation</h3>
+                                <p id="adminActiveChatSubtitle" class="truncate text-sm font-semibold text-gray-500">Select one account to start messaging.</p>
+                            </div>
+                            <span id="adminActiveChatStatus" class="hidden rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700">Live</span>
+                            <a
+                                id="adminActiveChatCall"
+                                href="#"
+                                class="hidden rounded-full bg-green-600 px-3 py-2 text-sm font-bold text-white hover:bg-green-700">
+                                Call
+                            </a>
+                            <div id="adminConversationMenuContainer" class="relative z-40">
+                                <button
+                                    id="adminConversationMenuButton"
+                                    type="button"
+                                    aria-label="Conversation settings"
+                                    aria-expanded="false"
+                                    disabled
+                                    class="inline-flex h-10 w-10 items-center justify-center rounded-full text-xl font-bold text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40">
+                                    &#8942;
+                                </button>
+                                <div id="adminConversationMenu" class="hidden absolute right-0 top-11 z-50 w-48 rounded-xl border border-gray-200 bg-white p-1 shadow-xl">
+                                    <button id="adminDeleteConversation" type="button" class="w-full rounded-lg px-3 py-2 text-left text-sm font-bold text-red-600 hover:bg-red-50">
+                                        Delete conversation
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="adminContactMessagesList" class="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-4">
+                            <div class="flex h-full items-center justify-center text-center text-sm font-semibold text-gray-500">
+                                Select a conversation to start messaging.
+                            </div>
+                        </div>
+
+                        <form id="adminContactMessageForm" autocomplete="off" class="border-t border-gray-200 bg-white p-3">
+                            <div id="adminCameraPreview" class="mb-2 hidden items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-2">
+                                <img id="adminCameraPreviewImage" alt="Captured image preview" class="h-16 w-16 rounded-lg object-cover">
+                                <span class="min-w-0 flex-1 text-xs font-semibold text-gray-600">Camera photo selected</span>
+                                <button type="button" id="adminRemoveCameraPhoto" class="rounded-full bg-gray-200 px-3 py-1 text-xs font-bold text-gray-700 hover:bg-gray-300">Remove</button>
+                            </div>
+                            <div class="flex items-center gap-2 rounded-2xl border border-gray-200 bg-gray-50 p-2">
+                                <button type="button" id="adminOpenCamera" class="rounded-full px-3 py-2 text-lg font-bold text-blue-600 hover:bg-blue-100" title="Open camera">+</button>
+                                <input id="adminCameraInput" type="file" accept="image/*" capture="environment" class="hidden">
+                                <input
+                                    type="text"
+                                    id="adminContactMessageInput"
+                                    name="admin-chat-message"
+                                    autocomplete="off"
+                                    autocorrect="off"
+                                    autocapitalize="off"
+                                    spellcheck="false"
+                                    maxlength="2000"
+                                    disabled
+                                    placeholder="Write a message"
+                                    class="min-w-0 flex-1 bg-transparent px-2 py-2 text-sm font-semibold text-gray-900 outline-none disabled:text-gray-400">
+                                <button
+                                    type="submit"
+                                    id="adminSendContactMessage"
+                                    disabled
+                                    class="rounded-full bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    Send
+                                </button>
+                            </div>
+                        </form>
+                    </section>
+                </div>
+            </div>
+
+            <!-- Prints Tab -->
+            <div id="prints" class="tab-content hidden mt-5 ml-5 mr-5">
+                <div class="mb-6">
+                    <h3 class="text-xl font-bold text-gray-900">Prints</h3>
+                    <p class="text-sm text-gray-500">Generate printable reports from saved tournament records.</p>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                    <div class="p-6 bg-white border-0 shadow-md rounded-lg">
+                        <h4 class="text-lg font-bold text-gray-900 mb-2">Best Player List</h4>
+                        <p class="text-sm text-gray-500 mb-4">Select a date to print best players grouped per game.</p>
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <input id="printBestPlayersDate" type="date" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                            <button type="button" id="printBestPlayersButton" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold">
+                                Print
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="p-6 bg-white border-0 shadow-md rounded-lg">
+                        <h4 class="text-lg font-bold text-gray-900 mb-2">History of Games per College</h4>
+                        <p class="text-sm text-gray-500 mb-4">Select a college/team to print game history with date and time.</p>
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <select id="printCollegeHistoryTeam" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                                <option value="">Select college/team</option>
+                            </select>
+                            <button type="button" id="printCollegeHistoryButton" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold">
+                                Print
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="p-6 bg-white border-0 shadow-md rounded-lg">
+                        <h4 class="text-lg font-bold text-gray-900 mb-2">Points per College</h4>
+                        <p class="text-sm text-gray-500 mb-4">Print total points and the full point history.</p>
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <select id="printCollegePointsTeam" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                                <option value="">Select college/team</option>
+                            </select>
+                            <button type="button" id="printCollegePointsButton" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold">
+                                Print
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="p-6 bg-white border-0 shadow-md rounded-lg">
+                        <h4 class="text-lg font-bold text-gray-900 mb-2">Attendance List</h4>
+                        <p class="text-sm text-gray-500 mb-4">Print attendance checked on a specific date.</p>
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <input id="printAttendanceDate" type="date" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                            <button type="button" id="printAttendanceByDateButton" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold">
+                                Print
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="p-6 bg-white border-0 shadow-md rounded-lg xl:col-span-2">
+                        <h4 class="text-lg font-bold text-gray-900 mb-2">Matches Created by Committee Account</h4>
+                        <p class="text-sm text-gray-500 mb-4">Select a committee/admin account to print matches they created.</p>
+                        <div class="flex flex-col lg:flex-row gap-3">
+                            <select id="printCommitteeAccount" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                                <option value="">Select committee account</option>
+                            </select>
+                            <input id="printCommitteeMatchesDate" type="date" class="w-full lg:w-56 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                            <button type="button" id="printCommitteeMatchesButton" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold">
+                                Print
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- About Tab -->
+            <div id="about" class="tab-content hidden mt-5 ml-5 mr-5">
+                <div class="p-6 bg-white border-0 shadow-md rounded-lg max-w-4xl">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">About L.I.V.E.</h2>
+                    <div class="space-y-4 text-sm sm:text-base font-semibold leading-relaxed text-gray-700">
+                        <p>L.I.V.E., which stands for <strong>League Information &amp; Viewing Engine</strong>, is a gaming information and viewing platform developed to help players, organizers, and viewers access important details about gaming events at Adventist University of the Philippines.</p>
+                        <p>The system was published on July 26, 2026 and was initiated by Rex Dominic F. Perico, CSC President for S.Y. 2026-2027, as a project intended to support the university's sport community. L.I.V.E. provides a centralized space where users can check league information, game schedules, team details, match updates, standings, and other tournament-related announcements.</p>
+                        <p>The platform was created to help make sports events more organized and easier to follow. Instead of depending on separate announcements and manual updates, users can refer to one system for relevant and updated information about ongoing and upcoming games.</p>
+                        <p>Through L.I.V.E., the CSC hopes to contribute to the gradual improvement of sports and gaming-related activities in AUP by offering a more accessible and efficient way of sharing information. The system may also help strengthen communication between organizers and participants while providing students and viewers with a more convenient way to stay connected with gaming events.</p>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add / Edit Team Modal -->
+        <div 
+        id="teamModal"
+        class="dashboard-modal-overlay fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+
+        <div class="dashboard-modal-panel modal-panel bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 id="teamModalTitle" class="text-xl font-semibold text-gray-900">
+                    Add New Team
+                </h2>
+
+                <button 
+                    type="button"
+                    id="closeTeamModal"
+                    class="text-gray-500 hover:text-gray-700 text-2xl">
+                    &times;
+                </button>
+            </div>
+
+            <form id="teamForm" class="space-y-4">
+                <input type="hidden" id="teamId">
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Team Name
+                    </label>
+
+                    <input 
+                        type="text"
+                        id="teamNameInput"
+                        required
+                        placeholder="Enter team name"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                </div>
+
+                <p class="text-xs text-gray-500">
+                    Members are counted automatically from the participants database.
+                </p>
+
+                <div class="flex justify-end space-x-2 pt-4">
+                    <button 
+                        type="button"
+                        id="cancelTeamModal"
+                        class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                        Cancel
+                    </button>
+
+                    <button 
+                        type="submit"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        Save Team
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add / Edit Sport Modal -->
+        <div 
+        id="sportModal"
+        class="dashboard-modal-overlay fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+
+        <div class="dashboard-modal-panel modal-panel bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 id="sportModalTitle" class="text-xl font-semibold text-gray-900">
+                    Add New Sport
+                </h2>
+
+                <button 
+                    type="button"
+                    id="closeSportModal"
+                    class="text-gray-500 hover:text-gray-700 text-2xl">
+                    &times;
+                </button>
+            </div>
+
+            <form id="sportForm" class="space-y-4">
+                <input type="hidden" id="sportId">
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Sport Name
+                    </label>
+
+                    <input 
+                        type="text"
+                        id="sportNameInput"
+                        required
+                        placeholder="Example: Basketball"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Game Type
+                    </label>
+
+                    <select
+                        id="sportGameTypeInput"
+                        required
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                        <option value="major">Major Game</option>
+                        <option value="minor">Minor Game</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Number of Players per Team
+                    </label>
+
+                    <input
+                        type="number"
+                        id="sportPlayerLimitInput"
+                        min="1"
+                        step="1"
+                        placeholder="Example: 12"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2">
+
+                    <p class="mt-1 text-xs text-gray-500">
+                        This is the registration limit for each college/team in this sport category.
+                    </p>
+                </div>
+
+                <div class="flex justify-end space-x-2 pt-4">
+                    <button 
+                        type="button"
+                        id="cancelSportModal"
+                        class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                        Cancel
+                    </button>
+
+                    <button 
+                        type="submit"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        Save Sport
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Announcement Modal -->
+    <div
+        id="announcementEditModal"
+        class="dashboard-modal-overlay fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+
+        <div class="dashboard-modal-panel modal-panel bg-white rounded-lg shadow-lg w-full max-w-lg p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-semibold text-gray-900">Edit Announcement</h2>
+
+                <button
+                    type="button"
+                    id="closeAnnouncementEditModal"
+                    class="text-gray-500 hover:text-gray-700 text-2xl">
+                    &times;
+                </button>
+            </div>
+
+            <form id="announcementEditForm" class="space-y-4">
+                <input type="hidden" id="announcementEditId">
+
+                <div>
+                    <label for="announcementEditTitle" class="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                    <input id="announcementEditTitle" type="text" required maxlength="160" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                </div>
+
+                <div>
+                    <label for="announcementEditMessage" class="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                    <textarea id="announcementEditMessage" required rows="6" maxlength="1600" class="w-full border border-gray-300 rounded-lg px-3 py-2"></textarea>
+                </div>
+
+                <div>
+                    <label for="announcementEditAudience" class="block text-sm font-medium text-gray-700 mb-1">Visible To</label>
+                    <select id="announcementEditAudience" required class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                        <option value="all">Students and Committee</option>
+                        <option value="students">Students only</option>
+                        <option value="committee">Committee only</option>
+                    </select>
+                </div>
+
+                <label class="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                    <input id="announcementEditActive" type="checkbox" class="w-4 h-4">
+                    Show this announcement
+                </label>
+
+                <div class="flex justify-end gap-2 pt-4">
+                    <button
+                        type="button"
+                        id="cancelAnnouncementEditModal"
+                        class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                        Cancel
+                    </button>
+
+                    <button
+                        type="submit"
+                        id="saveAnnouncementEditButton"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add / Edit Participant Modal -->
+        <div 
+        id="participantModal"
+        class="dashboard-modal-overlay fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+
+        <div class="dashboard-modal-panel modal-panel max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-lg bg-white shadow-lg">
+            <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                <h2 id="participantModalTitle" class="text-xl font-semibold text-gray-900">
+                    Add Participant
+                </h2>
+
+                <button 
+                    type="button"
+                    id="closeParticipantModal"
+                    class="text-gray-500 hover:text-gray-700 text-2xl">
+                    &times;
+                </button>
+            </div>
+
+            <form id="participantForm" class="max-h-[calc(90vh-84px)] space-y-5 overflow-y-auto p-6">
+                <input type="hidden" id="participantId">
+
+                <section class="rounded-2xl border border-gray-200 bg-white p-4">
+                    <h3 class="mb-4 text-sm font-black uppercase tracking-widest text-gray-500">Registration Details</h3>
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <label class="block">
+                            <span class="block text-sm font-medium text-gray-700 mb-1">Full Name</span>
+                            <input type="text" id="participantName" required placeholder="Enter participant name" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                        </label>
+
+                        <label class="block">
+                            <span class="block text-sm font-medium text-gray-700 mb-1">Student ID</span>
+                            <input type="text" id="participantStudentId" required placeholder="Enter student ID" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                        </label>
+
+                        <label class="block">
+                            <span class="block text-sm font-medium text-gray-700 mb-1">Course</span>
+                            <input type="text" id="participantCourse" placeholder="Example: BSIT" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                        </label>
+
+                        <label class="block">
+                            <span class="block text-sm font-medium text-gray-700 mb-1">Age</span>
+                            <input type="number" id="participantAge" min="1" max="120" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                        </label>
+
+                        <label class="block">
+                            <span class="block text-sm font-medium text-gray-700 mb-1">Home College</span>
+                            <select id="participantHomeCollege" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option value="">Select home college</option>
+                            </select>
+                        </label>
+
+                        <label class="block">
+                            <span class="block text-sm font-medium text-gray-700 mb-1">Team to Join</span>
+                            <select id="participantTeam" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option value="">Select a registered team</option>
+                            </select>
+                        </label>
+
+                        <label class="flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50/70 p-3 md:col-span-2">
+                            <input id="participantIsImport" type="checkbox" class="mt-1 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <span>
+                                <span class="block text-sm font-black text-gray-800">Import Player</span>
+                                <span class="mt-1 block text-xs font-semibold text-gray-500">Enable this if the participant is joining a different team.</span>
+                            </span>
+                        </label>
+
+                        <label id="participantImportCollegeGroup" class="block">
+                            <span class="block text-sm font-medium text-gray-700 mb-1">Import College</span>
+                            <select id="participantImportCollege" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option value="">Select import college</option>
+                            </select>
+                        </label>
+
+                        <label class="block">
+                            <span class="block text-sm font-medium text-gray-700 mb-1">Playing In</span>
+                            <select id="participantGameScope" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option value="">Select game category</option>
+                                <option value="major">Major Game Only</option>
+                                <option value="minor">Minor Game Only</option>
+                                <option value="both">Both Major and Minor Game</option>
+                            </select>
+                        </label>
+
+                        <label class="block">
+                            <span class="block text-sm font-medium text-gray-700 mb-1">Major Sport</span>
+                            <input type="text" id="participantMajorSportName" placeholder="Example: Basketball, Frisbee" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                        </label>
+
+                        <label class="block">
+                            <span class="block text-sm font-medium text-gray-700 mb-1">Minor Sport</span>
+                            <input type="text" id="participantMinorSportName" placeholder="Example: Chess, Scrabble" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                        </label>
+
+                        <label class="block">
+                            <span class="block text-sm font-medium text-gray-700 mb-1">Date Registered</span>
+                            <input type="datetime-local" id="participantCreatedAt" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                        </label>
+
+                        <label class="block">
+                            <span class="block text-sm font-medium text-gray-700 mb-1">Status</span>
+                            <select id="participantStatus" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option value="Approved">Approved</option>
+                                <option value="Pending">Pending</option>
+                                <option value="Rejected">Rejected</option>
+                            </select>
+                        </label>
+                    </div>
+                </section>
+
+                <section class="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                    <h3 class="mb-4 text-sm font-black uppercase tracking-widest text-gray-500">Review Details</h3>
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <label class="block">
+                            <span class="block text-sm font-medium text-gray-700 mb-1">Reviewed By</span>
+                            <input type="text" id="participantReviewedByName" placeholder="Reviewer name" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                        </label>
+
+                        <label class="block">
+                            <span class="block text-sm font-medium text-gray-700 mb-1">Reviewed At</span>
+                            <input type="datetime-local" id="participantReviewedAt" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                        </label>
+
+                        <label class="block md:col-span-2">
+                            <span class="block text-sm font-medium text-gray-700 mb-1">Rejection Reason</span>
+                            <textarea id="participantRejectionReasonEdit" rows="3" placeholder="Reason shown when the participant is rejected" class="w-full resize-y border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                        </label>
+                    </div>
+                </section>
+
+                <div class="flex justify-end space-x-2 border-t border-gray-200 pt-4">
+                    <button 
+                        type="button"
+                        id="cancelParticipantModal"
+                        class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                        Cancel
+                    </button>
+
+                    <button 
+                        type="submit"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        Save Participant
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div
+        id="participantDetailsModal"
+        class="dashboard-modal-overlay fixed inset-0 z-[1000] hidden items-center justify-center bg-black bg-opacity-60 p-4">
+        <div class="dashboard-modal-panel modal-panel max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+                <div>
+                    <h2 id="participantDetailsTitle" class="text-xl font-black text-gray-900">Participant Details</h2>
+                    <p class="text-xs font-semibold text-gray-500">Review registration details and captured documents.</p>
+                </div>
+                <button type="button" id="closeParticipantDetailsModal" class="text-3xl leading-none text-gray-500 hover:text-gray-900">&times;</button>
+            </div>
+
+            <div class="max-h-[calc(90vh-76px)] overflow-y-auto p-5">
+                <div id="participantDetailsContent" class="space-y-5"></div>
+
+                <div class="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <h3 class="mb-3 text-sm font-black uppercase tracking-widest text-slate-700">Admin Review</h3>
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        <button type="button" data-participant-review-status="approved" class="participant-review-status-btn rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-700">Approved</button>
+                        <button type="button" data-participant-review-status="pending" class="participant-review-status-btn rounded-xl bg-amber-500 px-4 py-3 text-sm font-black text-white hover:bg-amber-600">Pending</button>
+                        <button type="button" data-participant-review-status="rejected" class="participant-review-status-btn rounded-xl bg-red-600 px-4 py-3 text-sm font-black text-white hover:bg-red-700">Rejected</button>
+                    </div>
+                    <label class="mt-4 block">
+                        <span class="mb-1 block text-sm font-bold text-slate-700">Rejection Reason</span>
+                        <textarea id="participantRejectionReason" rows="3" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100" placeholder="Required when rejecting a participant."></textarea>
+                    </label>
+                    <p id="participantReviewStatus" class="mt-3 text-sm font-bold"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div
+        id="participantImageViewerModal"
+        class="dashboard-modal-overlay fixed inset-0 z-[1100] hidden items-center justify-center bg-black bg-opacity-80 p-4">
+        <div class="relative max-h-[94vh] w-full max-w-5xl">
+            <button type="button" id="closeParticipantImageViewer" class="absolute right-2 top-2 z-10 rounded-full bg-white px-3 py-1 text-2xl font-black leading-none text-gray-900 shadow">&times;</button>
+            <img id="participantImageViewerImage" alt="Participant document preview" class="mx-auto max-h-[94vh] w-auto max-w-full rounded-2xl bg-white object-contain shadow-2xl">
+        </div>
+    </div>
+
+    <!-- Attendance checker is now a separate tab instead of a modal. -->
+    <script type="module" src="./js/pages/admin.js"></script>
+
+</body>
+</html>

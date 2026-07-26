@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - School Sports System</title>
+
+    <link rel="icon" href="data:,">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link 
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" 
+        rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="./styles.css">
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const images = [
+                "./dashboard-backgrounds/56435184_2377398058971412_6905733492668104704_n.jpg",
+                "./dashboard-backgrounds/469984691_918281827068965_7471383534469226798_n.jpg",
+                "./dashboard-backgrounds/472760250_9329332677111214_8161660048911603548_n.jpg",
+                "./dashboard-backgrounds/671018030_1284495603780917_8907957753481931746_n.jpg"
+            ];
+            let index = 0;
+            let layer = "a";
+            const root = document.documentElement;
+            const apply = (name, image) => root.style.setProperty(`--dashboard-photo-url-${name}`, `url("${image}")`);
+            apply("a", images[0]);
+            apply("b", images[0]);
+            root.style.setProperty("--dashboard-photo-size", "cover");
+            window.setInterval(() => {
+                index = (index + 1) % images.length;
+                if (layer === "a") {
+                    apply("b", images[index]);
+                    document.body.classList.add("dashboard-bg-show-b");
+                    layer = "b";
+                } else {
+                    apply("a", images[index]);
+                    document.body.classList.remove("dashboard-bg-show-b");
+                    layer = "a";
+                }
+            }, 8500);
+        });
+    </script>
+
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+            --secondary-gradient: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+            --accent-gradient: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        h1, h2, h3, .font-heading {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .tab-button.active {
+            background: var(--primary-gradient);
+            color: white;
+            box-shadow: 0 4px 12px rgba(30, 64, 175, 0.2);
+        }
+
+        .mobile-scroll {
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+        }
+
+        .leaderboard-table {
+            width: 100%;
+            table-layout: auto;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .leaderboard-rank-cell { width: 12%; }
+        .leaderboard-team-cell { width: 40%; }
+        .leaderboard-stat-cell { width: 16%; }
+
+        .leaderboard-points-badge {
+            max-width: 100%;
+            min-width: 2.6rem;
+            justify-content: center;
+            white-space: nowrap;
+            word-break: keep-all;
+            overflow-wrap: normal;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .leaderboard-points-value,
+        .team-detail-score-value {
+            display: inline-block;
+            max-width: 100%;
+            font-variant-numeric: tabular-nums;
+            line-height: 1;
+            white-space: nowrap;
+            word-break: keep-all;
+            overflow-wrap: normal;
+        }
+
+        .leaderboard-points-small {
+            font-size: 0.78rem;
+            letter-spacing: -0.025em;
+        }
+
+        .leaderboard-points-compact {
+            font-size: 0.68rem;
+            letter-spacing: -0.045em;
+        }
+
+        .leaderboard-moving-row {
+            position: relative;
+            z-index: 1;
+            will-change: transform;
+        }
+
+        .leaderboard-rank-up { z-index: 3; }
+        .leaderboard-rank-down { z-index: 2; }
+
+        .leaderboard-rank-up td {
+            animation: leaderboard-up-highlight 4900ms ease-out;
+        }
+
+        .leaderboard-rank-down td {
+            animation: leaderboard-down-highlight 4900ms ease-out;
+        }
+
+        @keyframes leaderboard-up-highlight {
+            0%, 35% { background-color: rgba(16, 185, 129, 0.2); }
+            100% { background-color: transparent; }
+        }
+
+        @keyframes leaderboard-down-highlight {
+            0%, 35% { background-color: rgba(245, 158, 11, 0.15); }
+            100% { background-color: transparent; }
+        }
+
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.15);
+        }
+
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .schedule-filter {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.05;
+        }
+
+        .student-basketball-score-grid {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        }
+
+        .student-basketball-score-team {
+            min-width: 0;
+        }
+
+        .student-basketball-score-table th,
+        .student-basketball-score-table td {
+            padding-left: clamp(0.2rem, 1.4vw, 0.5rem);
+            padding-right: clamp(0.2rem, 1.4vw, 0.5rem);
+        }
+
+        .student-basketball-score-player {
+            max-width: 1px;
+        }
+
+        @media (max-width: 420px) {
+            .student-basketball-score-preview {
+                margin-left: -0.75rem;
+                margin-right: -0.75rem;
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+        }
+
+        .about-modal-copy p {
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 640px) {
+            .leaderboard-table {
+                table-layout: fixed;
+                min-width: 0;
+            }
+
+            .leaderboard-table th,
+            .leaderboard-table td {
+                padding-left: clamp(0.2rem, 1.5vw, 0.45rem) !important;
+                padding-right: clamp(0.2rem, 1.5vw, 0.45rem) !important;
+            }
+
+            .leaderboard-team-cell {
+                width: 34%;
+            }
+
+            .leaderboard-stat-cell {
+                width: 18%;
+            }
+
+            .leaderboard-stat-label {
+                display: inline-block;
+                max-width: 100%;
+                font-size: clamp(0.48rem, 2vw, 0.62rem);
+                letter-spacing: 0.02em;
+                line-height: 1;
+                white-space: nowrap;
+            }
+
+            .leaderboard-table th:nth-child(3),
+            .leaderboard-table td:nth-child(3) {
+                width: 22%;
+            }
+
+            .leaderboard-table th:nth-child(4),
+            .leaderboard-table td:nth-child(4),
+            .leaderboard-table th:nth-child(5),
+            .leaderboard-table td:nth-child(5) {
+                width: 16%;
+            }
+
+            .leaderboard-points-badge {
+                display: inline-grid !important;
+                place-items: center;
+                width: min(100%, 3.45rem);
+                min-width: 3.15rem;
+                padding: 0.24rem 0.2rem !important;
+                border-radius: 9999px;
+            }
+
+            .leaderboard-points-value {
+                font-size: clamp(0.54rem, 2.45vw, 0.68rem);
+                letter-spacing: -0.045em;
+            }
+
+            .leaderboard-points-small {
+                font-size: clamp(0.48rem, 2.15vw, 0.6rem);
+                letter-spacing: -0.07em;
+            }
+
+            .leaderboard-points-compact {
+                font-size: clamp(0.42rem, 1.9vw, 0.53rem);
+                letter-spacing: -0.085em;
+            }
+
+            .team-detail-score-value {
+                font-size: clamp(1.15rem, 7vw, 1.5rem) !important;
+                letter-spacing: -0.04em;
+            }
+
+            .mobile-table-container {
+                overflow-x: visible;
+                border-radius: 0.75rem;
+                box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+            }
+
+            .dashboard-tabs {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .stats-card-value {
+                font-size: 1.75rem;
+            }
+
+            .schedule-filter {
+                min-height: 2.35rem;
+                padding-left: 0.2rem !important;
+                padding-right: 0.2rem !important;
+                font-size: clamp(0.55rem, 2.7vw, 0.72rem) !important;
+                letter-spacing: 0 !important;
+                white-space: nowrap;
+            }
+
+            .student-footer {
+                margin-top: 2.5rem !important;
+                padding-top: 1.25rem !important;
+                padding-bottom: 1.25rem !important;
+            }
+
+            .student-footer-content {
+                gap: 0.7rem !important;
+            }
+
+            .student-footer-brand img {
+                width: 1.5rem !important;
+                height: 1.5rem !important;
+            }
+
+            .student-footer-brand span,
+            .student-footer-copy {
+                font-size: 0.72rem !important;
+                line-height: 1rem !important;
+                text-align: center;
+            }
+
+            .student-footer-links {
+                gap: 0.8rem !important;
+                font-size: 0.62rem !important;
+                letter-spacing: 0 !important;
+            }
+
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="dashboard-header bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 border-b border-yellow-700 shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+            <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center space-x-4 min-w-0">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white p-0.5 shadow-inner flex-shrink-0">
+                        <img
+                            src="./Adventist_University_of_the_Philippines_logo.png"
+                            alt="School Logo"
+                            class="w-full h-full object-contain rounded-full">
+                    </div>
+
+                    <div class="truncate">
+                        <h1 class="font-extrabold text-gray-900 text-sm sm:text-lg leading-tight tracking-tight">AUP- Central Student Council</h1>
+                        <p class="text-[10px] sm:text-xs font-semibold text-gray-800 uppercase tracking-widest opacity-80">Student Dashboard</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button
+                        type="button"
+                        id="openNotificationsModal"
+                        title="Announcements"
+                        aria-label="Open announcements"
+                        class="relative shrink-0 rounded-full bg-white/90 px-3 py-2 text-lg font-black text-blue-900 shadow-md shadow-blue-900/10 hover:bg-white transition-colors">
+                        🔔
+                        <span id="studentAnnouncementCount" class="absolute -right-1 -top-1 hidden min-w-5 rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-black leading-none text-white">0</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        id="openAboutModal"
+                        title="About L.I.V.E."
+                        aria-label="About L.I.V.E."
+                        class="shrink-0 rounded-full bg-white/90 px-3 py-2 text-lg font-black text-blue-900 shadow-md shadow-blue-900/10 hover:bg-white transition-colors">
+                        ⓘ
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="w-full max-w-7xl mx-auto flex-1 px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+        <!-- Tab Navigation -->
+        <div class="dashboard-tabs grid w-full grid-cols-2 mb-4 bg-white p-1.5 shadow-sm rounded-2xl border border-slate-200">
+            <button
+                type="button"
+                onclick="switchTab('leaderboard', this)"
+                class="tab-button active flex items-center justify-center space-x-2 py-3 px-4 rounded-xl font-semibold text-sm sm:text-base transition-all duration-200">
+                <span class="tab-label">Leaderboard</span>
+            </button>
+
+            <button
+                type="button"
+                onclick="switchTab('schedule', this)"
+                class="tab-button flex items-center justify-center space-x-2 py-3 px-4 rounded-xl text-slate-600 hover:bg-slate-50 font-semibold text-sm sm:text-base transition-all duration-200">
+                <span class="tab-label">Game Schedule</span>
+            </button>
+        </div>
+
+        <!-- Leaderboard Tab -->
+        <div id="leaderboard" class="tab-content space-y-4 animate-in fade-in duration-500">
+            <div class="text-center">
+                <h2 class="text-3xl font-extrabold text-slate-950 tracking-tight leading-none">Team Leaderboard</h2>
+            </div>
+
+            <p class="text-center text-sm font-bold text-slate-800">
+                To see the history of the games, click the team you want.
+            </p>
+
+            <!-- Leaderboard Table -->
+            <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/60 border border-slate-200 overflow-hidden">
+                <div class="mobile-table-container">
+                    <table class="leaderboard-table">
+                        <thead>
+                            <tr class="bg-gradient-to-r from-slate-800 to-slate-900 text-white">
+                                <th class="leaderboard-rank-cell text-left py-5 px-6 font-bold uppercase text-xs tracking-wider">Rank</th>
+                                <th class="leaderboard-team-cell text-left py-5 px-6 font-bold uppercase text-xs tracking-wider">Team Name</th>
+                                <th class="leaderboard-stat-cell text-center py-5 px-6 font-bold uppercase text-xs tracking-wider">Points</th>
+                                <th class="leaderboard-stat-cell text-center py-5 px-6 font-bold uppercase text-xs tracking-wider"><span class="leaderboard-stat-label">Victory</span></th>
+                                <th class="leaderboard-stat-cell text-center py-5 px-6 font-bold uppercase text-xs tracking-wider"><span class="leaderboard-stat-label">Defeated</span></th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="studentLeaderboardBody" class="divide-y divide-slate-100">
+                            <tr>
+                                <td colspan="5" class="text-center py-16">
+                                    <div class="flex flex-col items-center space-y-3">
+                                        <div class="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                        <p class="text-slate-500 font-medium">Loading leaderboard data...</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6">
+                <div class="mb-4">
+                    <h3 class="text-xl font-black text-slate-950">Send a Recommendation or Concern</h3>
+                    <p class="text-sm font-semibold text-slate-700">Share feedback with the CSC administrators.</p>
+                </div>
+
+                <form id="studentFeedbackForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="feedbackType" class="block text-xs font-black uppercase tracking-widest text-slate-600 mb-1">Type</label>
+                        <select id="feedbackType" required class="w-full rounded-xl border border-slate-300 bg-white/80 px-3 py-2.5 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                            <option value="Recommendation">Recommendation</option>
+                            <option value="Concern">Concern</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="feedbackStudentName" class="block text-xs font-black uppercase tracking-widest text-slate-600 mb-1">Name</label>
+                        <input id="feedbackStudentName" type="text" maxlength="120" placeholder="Optional" class="w-full rounded-xl border border-slate-300 bg-white/80 px-3 py-2.5 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                    </div>
+
+                    <div>
+                        <label for="feedbackStudentId" class="block text-xs font-black uppercase tracking-widest text-slate-600 mb-1">Student ID</label>
+                        <input id="feedbackStudentId" type="text" maxlength="80" placeholder="Optional" class="w-full rounded-xl border border-slate-300 bg-white/80 px-3 py-2.5 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                    </div>
+
+                    <div>
+                        <label for="feedbackContact" class="block text-xs font-black uppercase tracking-widest text-slate-600 mb-1">Contact</label>
+                        <input id="feedbackContact" type="text" maxlength="120" placeholder="Optional email or messenger" class="w-full rounded-xl border border-slate-300 bg-white/80 px-3 py-2.5 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label for="feedbackMessage" class="block text-xs font-black uppercase tracking-widest text-slate-600 mb-1">Message</label>
+                        <textarea id="feedbackMessage" required rows="4" maxlength="1200" placeholder="Write your recommendation or concern..." class="w-full rounded-xl border border-slate-300 bg-white/80 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"></textarea>
+                    </div>
+
+                    <div class="md:col-span-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <p id="studentFeedbackStatus" class="text-sm font-bold text-slate-700"></p>
+                        <button type="submit" id="submitStudentFeedback" class="rounded-xl bg-blue-700 px-5 py-2.5 text-sm font-black text-white shadow-md shadow-blue-900/20 hover:bg-blue-800 transition-colors">
+                            Submit Feedback
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+
+        <!-- Game Schedule & Status Tab -->
+        <div id="schedule" class="tab-content hidden space-y-8 animate-in fade-in duration-500">
+
+            <!-- Schedule Filters -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 space-y-4">
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-end gap-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <label for="gameCategoryFilter" class="text-xs font-black uppercase tracking-widest text-slate-500 whitespace-nowrap">
+                            Game Category
+                        </label>
+
+                        <select
+                            id="gameCategoryFilter"
+                            class="w-full sm:w-64 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                            <option value="All">All Registered Sports</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-3">
+                    <button
+                        type="button"
+                        data-schedule-filter="Next"
+                        class="schedule-filter w-full min-w-0 sm:w-auto px-2 sm:px-6 py-2.5 rounded-full font-bold text-[11px] sm:text-sm transition-all duration-200 bg-blue-600 text-white shadow-md shadow-blue-100">
+                        Upcoming
+                    </button>
+
+                    <button
+                        type="button"
+                        data-schedule-filter="Ongoing"
+                        class="schedule-filter w-full min-w-0 sm:w-auto px-2 sm:px-6 py-2.5 rounded-full font-bold text-[11px] sm:text-sm transition-all duration-200 bg-white border border-slate-200 text-slate-600 hover:border-red-400 hover:text-red-600">
+                        Ongoing
+                    </button>
+
+                    <button
+                        type="button"
+                        data-schedule-filter="Done"
+                        class="schedule-filter w-full min-w-0 sm:w-auto px-2 sm:px-6 py-2.5 rounded-full font-bold text-[11px] sm:text-sm transition-all duration-200 bg-white border border-slate-200 text-slate-600 hover:border-emerald-400 hover:text-emerald-600">
+                        Completed
+                    </button>
+                </div>
+            </div>
+
+            <!-- Matches Grid -->
+            <div id="studentMatchesGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div class="col-span-full py-20 text-center bg-white rounded-2xl border border-slate-200">
+                    <div class="flex flex-col items-center space-y-3">
+                        <div class="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        <p class="text-slate-500 font-medium">Loading match schedule...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- About Modal -->
+    <div
+        id="aboutModal"
+        class="dashboard-modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-[1000] p-4 transition-all duration-300">
+
+        <div class="dashboard-modal-panel bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col">
+            <div class="bg-gradient-to-r from-slate-800 to-slate-900 p-6 flex items-center justify-between">
+                <h2 class="text-xl font-bold text-white tracking-tight">About L.I.V.E.</h2>
+                <button
+                    type="button"
+                    id="closeAboutModal"
+                    class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors text-2xl leading-none">
+                    ×
+                </button>
+            </div>
+
+            <div class="about-modal-copy p-6 sm:p-8 overflow-y-auto max-h-[75vh] text-sm sm:text-base font-semibold leading-relaxed text-slate-800">
+                <p>L.I.V.E., which stands for <strong>League Information &amp; Viewing Engine</strong>, is a gaming information and viewing platform developed to help players, organizers, and viewers access important details about gaming events at Adventist University of the Philippines.</p>
+                <p>The system was published on July 26, 2026 and was initiated by Rex Dominic F. Perico, CSC President for S.Y. 2026-2027, as a project intended to support the university's sport community. L.I.V.E. provides a centralized space where users can check league information, game schedules, team details, match updates, standings, and other tournament-related announcements.</p>
+                <p>The platform was created to help make sports events more organized and easier to follow. Instead of depending on separate announcements and manual updates, users can refer to one system for relevant and updated information about ongoing and upcoming games.</p>
+                <p>Through L.I.V.E., the CSC hopes to contribute to the gradual improvement of sports and gaming-related activities in AUP by offering a more accessible and efficient way of sharing information. The system may also help strengthen communication between organizers and participants while providing students and viewers with a more convenient way to stay connected with gaming events.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Announcement Modal -->
+    <div
+        id="studentAnnouncementModal"
+        class="dashboard-modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-[1000] p-4 transition-all duration-300">
+
+        <div class="dashboard-modal-panel bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col">
+            <div class="bg-gradient-to-r from-blue-800 to-slate-900 p-6 flex items-center justify-between">
+                <h2 class="text-xl font-bold text-white tracking-tight">Announcement</h2>
+                <button
+                    type="button"
+                    id="closeStudentAnnouncementModal"
+                    class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors text-2xl leading-none">
+                    ×
+                </button>
+            </div>
+
+            <div class="p-6 sm:p-8">
+                <p id="studentAnnouncementDate" class="mb-2 text-xs font-black uppercase tracking-widest text-blue-700"></p>
+                <h3 id="studentAnnouncementTitle" class="text-2xl font-black text-slate-950"></h3>
+                <p id="studentAnnouncementMessage" class="mt-4 whitespace-pre-wrap text-sm sm:text-base font-semibold leading-relaxed text-slate-800"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- All Announcements Modal -->
+    <div
+        id="studentNotificationsModal"
+        class="dashboard-modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-[5000] p-4 transition-all duration-300">
+
+        <div class="dashboard-modal-panel bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col">
+            <div class="bg-gradient-to-r from-blue-800 to-blue-900 p-6 flex items-center justify-between">
+                <h2 class="text-xl font-bold text-white tracking-tight">Announcements</h2>
+                <button
+                    type="button"
+                    id="closeStudentNotificationsModal"
+                    class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors text-2xl leading-none">
+                    ×
+                </button>
+            </div>
+
+            <div id="studentNotificationsList" class="p-6 sm:p-8 overflow-y-auto max-h-[75vh] space-y-4">
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm font-bold text-slate-500">
+                    Loading announcements...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Match Details Modal -->
+    <div
+        id="matchDetailsModal"
+        class="dashboard-modal-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-[1000] p-4 transition-all duration-300">
+
+        <div class="dashboard-modal-panel bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col transform transition-all scale-100">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-slate-800 to-slate-900 p-6 flex items-center justify-between">
+                <h2 id="matchDetailsTitle" class="text-xl font-bold text-white tracking-tight">
+                    Match Details
+                </h2>
+                <button
+                    type="button"
+                    id="closeMatchDetailsModal"
+                    class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors text-2xl leading-none">
+                    ×
+                </button>
+            </div>
+
+            <!-- Modal Content -->
+            <div id="matchDetailsContent" class="p-6 sm:p-8 overflow-y-auto max-h-[75vh]">
+                <div class="text-center py-10 text-slate-400">
+                    <div class="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p>Loading details...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="student-footer bg-slate-900 text-slate-400 mt-0 py-12 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="student-footer-content flex flex-col md:flex-row justify-between items-center gap-6">
+                <div class="student-footer-brand flex items-center space-x-3">
+                    <img src="./Adventist_University_of_the_Philippines_logo.png" alt="Logo" class="w-8 h-8 opacity-50 grayscale">
+                    <span class="font-bold text-slate-200">AUP-CSC L.I.V.E</span>
+                </div>
+                <p class="student-footer-copy text-sm">© 2026 Adventist University of the Philippines - Central Student Council.</p>
+                <div class="student-footer-links flex space-x-6 text-xs uppercase tracking-widest font-bold">
+                    <a href="#" class="hover:text-white transition-colors">Privacy</a>
+                    <a href="#" class="hover:text-white transition-colors">Terms</a>
+                    <a href="#" class="hover:text-white transition-colors">Support</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script type="module" src="./js/pages/student.js"></script>
+</body>
+</html>

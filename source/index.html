@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSC L.I.V.E. - Log In / Sign In</title>
+
+    <link rel="icon" href="data:,">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        :root {
+            --primary: #1e40af;
+            --primary-dark: #1e3a8a;
+            --accent: #fbbf24;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            min-height: 100%;
+            overflow-x: hidden;
+            font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background:
+                linear-gradient(rgba(248, 250, 252, 0.9), rgba(248, 250, 252, 0.9)),
+                url("./assets/backgrounds/dashboard-background-slides.png") center / cover no-repeat fixed;
+        }
+
+        h1,
+        h2,
+        h3,
+        .font-display {
+            font-family: "Poppins", "Inter", system-ui, sans-serif;
+        }
+
+        .auth-shell {
+            min-height: 100vh;
+            min-height: 100dvh;
+        }
+
+        .auth-panel {
+            width: min(100%, 28rem);
+        }
+
+        .auth-hero {
+            background-image:
+                linear-gradient(90deg, rgba(30, 58, 138, 0.92), rgba(29, 78, 216, 0.72)),
+                url("https://d2xsxph8kpxj0f.cloudfront.net/310519663079004813/HRScgrtMjfFKKgfh8EJfQz/hero-sports-banner-ZUVcr9VSPDhW6ei7AebP8T.webp");
+            background-size: cover;
+            background-position: center;
+        }
+
+        .mode-btn.active,
+        .role-btn.active,
+        .signin-role-btn.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 8px 18px rgba(30, 64, 175, 0.24);
+        }
+
+        .mode-btn:not(.active),
+        .role-btn:not(.active),
+        .signin-role-btn:not(.active) {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .auth-input {
+            width: 100%;
+            border: 1px solid #e5e7eb;
+            background: #f9fafb;
+            border-radius: 0.75rem;
+            padding: 0.7rem 0.9rem 0.7rem 2.65rem;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+        }
+
+        .auth-input:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+            background: white;
+        }
+
+        .field-icon {
+            position: absolute;
+            left: 0.9rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            pointer-events: none;
+        }
+
+        @media (max-width: 640px) {
+            body {
+                background:
+                    linear-gradient(rgba(248, 250, 252, 0.82), rgba(248, 250, 252, 0.9)),
+                    url("./assets/backgrounds/dashboard-background-slides.png") center / cover no-repeat fixed;
+            }
+
+            .auth-shell {
+                display: block !important;
+                min-height: 100dvh;
+            }
+
+            .auth-panel {
+                width: 100%;
+                max-width: 25rem;
+                margin: 0 auto;
+            }
+
+            .auth-hero {
+                display: flex !important;
+                min-height: 72dvh;
+                padding: 2rem 1.25rem !important;
+            }
+
+            .auth-hero > div {
+                max-width: 22rem;
+            }
+
+            .auth-hero h1 {
+                font-size: 2rem !important;
+                line-height: 2.35rem !important;
+            }
+
+            .auth-hero p {
+                font-size: 0.9rem;
+            }
+
+            .auth-hero .space-y-4 {
+                margin-top: 1.25rem;
+            }
+
+            .hero-auth-actions {
+                display: grid !important;
+            }
+
+            .auth-card {
+                border-radius: 1rem;
+                padding: 1.1rem !important;
+                box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+                background: rgba(255, 255, 255, 0.94);
+                backdrop-filter: blur(10px);
+            }
+
+            .form-wrap {
+                min-height: 100dvh !important;
+                padding: 1rem !important;
+                justify-content: flex-start !important;
+                align-items: center !important;
+            }
+
+            .mobile-brand {
+                display: none !important;
+            }
+
+            .auth-title {
+                font-size: 1.45rem !important;
+                line-height: 1.8rem !important;
+                margin-bottom: 0.3rem !important;
+            }
+
+            .auth-subtitle {
+                font-size: 0.88rem !important;
+                line-height: 1.35rem !important;
+            }
+
+            #formTitle,
+            #formSubtitle {
+                text-align: left;
+            }
+
+            #signInForm,
+            #registerForm {
+                gap: 0.75rem;
+            }
+
+            .auth-input {
+                font-size: 0.88rem;
+                padding-top: 0.62rem;
+                padding-bottom: 0.62rem;
+            }
+
+            .mode-btn,
+            .role-btn,
+            .signin-role-btn,
+            .submit-btn {
+                font-size: 0.86rem !important;
+                padding-top: 0.68rem !important;
+                padding-bottom: 0.68rem !important;
+            }
+
+            .small-text {
+                font-size: 0.78rem !important;
+                line-height: 1.15rem !important;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .auth-card {
+                padding: 0.9rem !important;
+            }
+
+            .mode-btn,
+            .role-btn,
+            .signin-role-btn {
+                padding-left: 0.55rem !important;
+                padding-right: 0.55rem !important;
+            }
+
+            .mobile-brand p:first-child {
+                font-size: 0.78rem !important;
+                line-height: 1.1rem;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50">
+    <main class="auth-shell grid grid-cols-1 lg:grid-cols-2 bg-gray-50">
+
+        <!-- Hero Section -->
+        <section class="auth-hero flex relative overflow-hidden items-center justify-center px-8 py-12">
+            <div class="relative z-10 max-w-md text-center">
+                <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-yellow-400 mb-6 shadow-lg">
+                    <img src="./assets/logos/L1.png" alt="School Logo" class="w-16 h-16 object-contain">
+                </div>
+                <h1 class="font-display text-4xl font-bold text-white mb-4">Adventist University of the Philippines</h1>
+                <p class="text-blue-100 text-lg mb-8"> Central Student Council - Physical Development Web App</p>
+                <div class="space-y-4 text-left">
+                    <div class="flex items-start gap-3">
+                        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-yellow-400 text-blue-900 font-bold">✓</div>
+                        <div>
+                            <p class="text-white font-semibold">Real-time Leaderboard</p>
+                            <p class="text-blue-100 text-sm">Track team performance instantly.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3">
+                        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-yellow-400 text-blue-900 font-bold">✓</div>
+                        <div>
+                            <p class="text-white font-semibold">Game Scheduling</p>
+                            <p class="text-blue-100 text-sm">Organize matches and manage attendance.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3">
+                        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-yellow-400 text-blue-900 font-bold">✓</div>
+                        <div>
+                            <p class="text-white font-semibold">Team Management</p>
+                            <p class="text-blue-100 text-sm">Manage participants and teams efficiently.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hero-auth-actions mt-8 hidden grid-cols-2 gap-3">
+                    <button type="button" data-hero-auth-mode="signin" class="rounded-xl bg-yellow-400 px-4 py-3 text-sm font-bold text-blue-950 shadow-lg transition hover:bg-yellow-300">Log In</button>
+                    <button type="button" data-hero-auth-mode="register" class="rounded-xl border border-white/70 bg-white/15 px-4 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-white/25">Sign In</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Log In / Sign In Section -->
+        <section id="authForms" class="form-wrap flex min-h-screen min-h-dvh items-center justify-center px-6 py-8 sm:px-8 lg:px-12">
+            <div class="auth-panel">
+
+                <!-- Mobile Brand -->
+                <div class="mobile-brand hidden items-center gap-3 mb-6">
+                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-600">
+                        <img src="./assets/logos/Adventist_University_of_the_Philippines_logo.png" alt="School Logo" class="h-10 w-10 object-contain">
+                    </div>
+                    <div>
+                        <p class="font-display text-sm font-bold text-blue-900">
+                            Adventist University of the Philippines
+                        </p>
+                        <p class="text-xs text-gray-500">
+                            CSC- L.I.V.E.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <h2 id="formTitle" class="auth-title font-display text-3xl font-bold text-gray-900 mb-2">
+                        Welcome Back
+                    </h2>
+                    <p id="formSubtitle" class="auth-subtitle text-gray-600">
+                        Log in to access CSC-L.I.V.E.
+                    </p>
+                </div>
+
+                <div class="auth-card rounded-2xl bg-white p-6 sm:p-8 shadow-xl border border-gray-100">
+
+                    <!-- Mode Switch -->
+                    <div class="grid grid-cols-2 gap-3 mb-6">
+                        <button type="button" class="mode-btn active rounded-xl px-4 py-3 font-semibold transition" data-mode="signin">Log In</button>
+                        <button type="button" class="mode-btn rounded-xl px-4 py-3 font-semibold transition" data-mode="register">Sign In</button>
+                    </div>
+
+                    <!-- Log In Form -->
+                    <form id="signInForm" class="space-y-5">
+                        <!-- Email Field -->
+                        <div class="space-y-2"><label for="signInEmail" class="block text-sm font-medium text-gray-700">Email Address</label><div class="relative"><input id="signInEmail" type="email" required autocomplete="email" placeholder="your.email@school.edu" class="auth-input"></div></div>
+                        <!-- Password Field -->
+                        <div class="space-y-2"><label for="signInPassword" class="block text-sm font-medium text-gray-700">Password</label><div class="relative"><input id="signInPassword" type="password" required autocomplete="current-password" placeholder="••••••••" class="auth-input"></div></div>
+                        <!-- Role Selection -->
+                        <div class="space-y-2"><label class="block text-sm font-medium text-gray-700">Log in as</label><div class="grid grid-cols-2 gap-3"><button type="button" class="signin-role-btn active rounded-xl px-4 py-3 font-semibold transition" data-signin-role="admin">Admin</button><button type="button" class="signin-role-btn rounded-xl px-4 py-3 font-semibold transition" data-signin-role="committee">Committee</button></div><p class="small-text text-xs text-gray-500">Choose the same role assigned to your account.</p></div>
+                        <!-- Submit Button -->
+                        <button id="signInSubmit" type="submit" class="submit-btn w-full rounded-xl bg-blue-600 py-3 font-semibold text-white shadow-md transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">Log In</button>
+                    </form>
+
+                    <!-- Sign In Form -->
+                    <!-- Register Form -->
+                    <form id="registerForm" class="hidden space-y-5">
+                        <!-- Name Field -->
+                        <div class="space-y-2">
+                            <label for="registerName" class="block text-sm font-medium text-gray-700">Full Name</label>
+                            <div class="relative">
+                                <input id="registerName" type="text" required autocomplete="name" placeholder="Enter your full name" class="auth-input">
+                            </div>
+                        </div>
+
+                        <!-- Email Field -->
+                        <div class="space-y-2">
+                            <label for="registerEmail" class="block text-sm font-medium text-gray-700">Email Address</label>
+                            <div class="relative">
+                                <input id="registerEmail" type="email" required autocomplete="email" placeholder="your.email@school.edu" class="auth-input">
+                            </div>
+                        </div>
+
+                        <!-- Mobile Field -->
+                        <div class="space-y-2">
+                            <label for="registerMobile" class="block text-sm font-medium text-gray-700">Mobile Number</label>
+                            <div class="relative">
+                                <input id="registerMobile" type="tel" required autocomplete="tel" inputmode="tel" placeholder="Enter mobile number" class="auth-input">
+                            </div>
+                        </div>
+
+                        <!-- Password Field -->
+                        <div class="space-y-2">
+                            <label for="registerPassword" class="block text-sm font-medium text-gray-700">Password</label>
+                            <div class="relative">
+                                <input id="registerPassword" type="password" required minlength="6" autocomplete="new-password" placeholder="Minimum 6 characters" class="auth-input">
+                            </div>
+                        </div>
+
+                        <!-- Confirm Password Field -->
+                        <div class="space-y-2">
+                            <label for="confirmPassword" class="block text-sm font-medium text-gray-700">Confirm Password</label>
+                            <div class="relative">
+                                <input id="confirmPassword" type="password" required minlength="6" autocomplete="new-password" placeholder="Repeat password" class="auth-input">
+                            </div>
+                        </div>
+
+                        <!-- Account Role Selection -->
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">Account Role</label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button type="button" class="role-btn active rounded-xl px-4 py-3 font-semibold transition" data-role="committee">Committee</button>
+                                <button type="button" class="role-btn rounded-xl px-4 py-3 font-semibold transition" data-role="admin">Admin</button>
+                            </div>
+                            <p class="small-text text-xs text-gray-500">New accounts must be approved by an admin before dashboard access is allowed.</p>
+                        </div>
+
+                        <!-- Sport Assignment -->
+                        <div id="registerSportAssignmentGroup" class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">Sport Assignment</label>
+                            <button id="openRegisterSportModal" type="button" class="auth-input flex w-full items-center justify-between text-left">
+                                <span id="selectedRegisterSportLabel">Choose the sport you will handle</span>
+                                <span aria-hidden="true">Select</span>
+                            </button>
+                            <p class="small-text text-xs text-gray-500">Choose one registered sport. An admin can edit this assignment later.</p>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button id="registerSubmit" type="submit" class="submit-btn w-full rounded-xl bg-blue-600 py-3 font-semibold text-white shadow-md transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">Create Account</button>
+                    </form>
+
+                    <!-- Alert -->
+                    <div id="alertBox" class="hidden mt-5 rounded-xl border p-4">
+                        <p id="alertMessage" class="text-sm"></p>
+                    </div>
+
+                    <!-- Helper Text -->
+                    <div class="mt-6 border-t border-gray-200 pt-4">
+                        <p id="helperText" class="small-text text-center text-sm text-gray-600">No account yet? <button type="button" id="goRegister" class="font-semibold text-blue-600 hover:text-blue-700">Sign in here.</button></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="registerSportModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+        <div class="max-h-[80vh] w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+                <h2 class="text-lg font-bold text-gray-900">Choose Your Sport</h2>
+                <button id="closeRegisterSportModal" type="button" class="text-2xl leading-none text-gray-500 hover:text-gray-800">&times;</button>
+            </div>
+            <div id="registerSportList" class="max-h-[62vh] space-y-2 overflow-y-auto p-4">
+                <p class="text-sm font-semibold text-gray-500">Loading registered sports...</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="./js/pages/login.js"></script>
+</body>
+</html>

@@ -1,0 +1,2305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Committee Dashboard - School Sports System</title>
+
+    <link rel="icon" href="data:,">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        body {
+            min-height: 100dvh;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            object-fit: contain;
+        }
+
+        .committee-shell {
+            width: 100%;
+            height: 100dvh;
+            min-height: 100dvh;
+            max-width: 100%;
+            overflow: hidden;
+        }
+
+        .committee-sidebar {
+            width: 20rem;
+            flex: 0 0 20rem;
+            max-width: 20rem;
+            height: 100dvh;
+            min-height: 100dvh;
+            overflow-y: hidden;
+            overflow-x: hidden;
+            z-index: 80;
+        }
+
+        .committee-sidebar nav {
+            min-height: 0;
+        }
+
+        .committee-sidebar .sidebar-footer {
+            flex: 0 0 auto;
+        }
+
+        .main-content {
+            min-width: 0;
+            width: 100%;
+            height: 100dvh;
+            min-height: 100dvh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .admin-header {
+            flex: 0 0 auto;
+            position: relative;
+            top: 0;
+            z-index: 70;
+            padding: 0 !important;
+            box-shadow: 0 1px 0 rgba(15, 23, 42, 0.08);
+        }
+
+        .admin-header-row {
+            min-height: 5.5rem;
+            align-items: stretch;
+        }
+
+        .admin-header-text {
+            min-width: 0;
+            padding: 1.75rem;
+        }
+
+        .notification-overlay-panel {
+            position: fixed !important;
+            top: max(0.75rem, env(safe-area-inset-top)) !important;
+            right: max(0.75rem, env(safe-area-inset-right)) !important;
+            z-index: 5000 !important;
+            max-height: calc(100dvh - 1.5rem) !important;
+            overscroll-behavior: contain;
+            isolation: isolate;
+        }
+
+        #notificationList {
+            max-height: calc(100dvh - 7rem) !important;
+        }
+
+        @media (max-width: 480px) {
+            .notification-overlay-panel {
+                left: max(0.75rem, env(safe-area-inset-left)) !important;
+                right: max(0.75rem, env(safe-area-inset-right)) !important;
+                width: auto !important;
+                max-width: none !important;
+            }
+        }
+
+        #sidebarToggle {
+            align-self: stretch;
+            min-height: 100%;
+            border-radius: 0;
+        }
+
+        .content-scroll {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-bottom: 1rem;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .tab-content {
+            width: auto;
+            max-width: 100%;
+        }
+
+        .tab-content,
+        .tab-content * {
+            min-width: 0;
+        }
+
+        .tab-content table {
+            max-width: 100%;
+        }
+
+        .break-safe,
+        .tab-content p,
+        .tab-content h1,
+        .tab-content h2,
+        .tab-content h3,
+        .tab-content span,
+        .tab-content td,
+        .tab-content th {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        #sidebarBackdrop {
+            display: none;
+        }
+
+        /* ===== MODAL IMPROVEMENTS ===== */
+        .fixed.inset-0.bg-black {
+            z-index: 1000 !important;
+            backdrop-filter: blur(2px);
+        }
+
+        .bg-white.rounded-2xl {
+            animation: slideUp 0.3s ease-out;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* ===== VISUAL ENHANCEMENTS ===== */
+        .admin-header {
+            background: linear-gradient(to right, #facc15, #eab308, #ca8a04) !important;
+            border-bottom: 4px solid #1d4ed8 !important;
+        }
+
+        .committee-sidebar {
+            background: linear-gradient(180deg, #FFFFFF 0%, #F9FAFB 100%);
+            border-right: 1.5px solid rgba(229, 231, 235, 0.8);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%) !important;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .tab-btn:hover {
+            background: #F3F4F6 !important;
+        }
+
+        .p-6.bg-white {
+            border: 1.5px solid rgba(229, 231, 235, 0.8);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .p-6.bg-white:hover {
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1);
+            transform: translateY(-2px);
+        }
+
+        table thead {
+            background: linear-gradient(90deg, #F9FAFB 0%, #F3F4F6 100%) !important;
+            border-bottom: 2px solid rgba(229, 231, 235, 0.8) !important;
+        }
+
+        table th {
+            font-weight: 700;
+            color: #374151;
+        }
+
+        table tbody tr:hover {
+            background-color: #F9FAFB;
+        }
+
+        .chat-shell {
+            min-height: min(72vh, 760px);
+            height: calc(100dvh - 11.5rem);
+        }
+
+        .chat-sidebar {
+            width: minmax(0, 100%);
+        }
+
+        .chat-thread {
+            min-height: 0;
+        }
+
+        @media (max-width: 767px) {
+            .chat-shell {
+                height: calc(100dvh - 7rem);
+            }
+
+            .chat-shell.chat-open .chat-sidebar {
+                display: none;
+            }
+
+            .chat-shell:not(.chat-open) .chat-thread {
+                display: none;
+            }
+        }
+
+        .leaderboard-table {
+            width: 100%;
+            table-layout: auto;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .leaderboard-rank-cell { width: 12%; }
+        .leaderboard-team-cell { width: 40%; }
+        .leaderboard-stat-cell { width: 16%; }
+
+        .leaderboard-points-badge {
+            max-width: 100%;
+            min-width: 2.6rem;
+            justify-content: center;
+            white-space: nowrap;
+            word-break: keep-all;
+            overflow-wrap: normal;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .leaderboard-points-value,
+        .team-detail-score-value {
+            display: inline-block;
+            max-width: 100%;
+            font-variant-numeric: tabular-nums;
+            line-height: 1;
+            white-space: nowrap;
+            word-break: keep-all;
+            overflow-wrap: normal;
+        }
+
+        .leaderboard-points-small {
+            font-size: 0.78rem;
+            letter-spacing: -0.025em;
+        }
+
+        .leaderboard-points-compact {
+            font-size: 0.68rem;
+            letter-spacing: -0.045em;
+        }
+
+        .leaderboard-moving-row {
+            position: relative;
+            z-index: 1;
+            will-change: transform;
+        }
+
+        .leaderboard-rank-up { z-index: 3; }
+        .leaderboard-rank-down { z-index: 2; }
+
+        .leaderboard-rank-up td {
+            animation: leaderboard-up-highlight 4900ms ease-out;
+        }
+
+        .leaderboard-rank-down td {
+            animation: leaderboard-down-highlight 4900ms ease-out;
+        }
+
+        @keyframes leaderboard-up-highlight {
+            0%, 35% { background-color: rgba(16, 185, 129, 0.2); }
+            100% { background-color: transparent; }
+        }
+
+        @keyframes leaderboard-down-highlight {
+            0%, 35% { background-color: rgba(245, 158, 11, 0.15); }
+            100% { background-color: transparent; }
+        }
+
+        .leaderboard-table thead th {
+            color: #ffffff !important;
+        }
+
+        @media (max-width: 640px) {
+            .leaderboard-table {
+                table-layout: fixed;
+                min-width: 0;
+            }
+
+            .leaderboard-table th,
+            .leaderboard-table td {
+                padding-left: clamp(0.2rem, 1.5vw, 0.45rem) !important;
+                padding-right: clamp(0.2rem, 1.5vw, 0.45rem) !important;
+            }
+
+            .leaderboard-team-cell {
+                width: 34%;
+            }
+
+            .leaderboard-stat-cell {
+                width: 18%;
+            }
+
+            .leaderboard-table th:nth-child(3),
+            .leaderboard-table td:nth-child(3) {
+                width: 22%;
+            }
+
+            .leaderboard-table th:nth-child(4),
+            .leaderboard-table td:nth-child(4),
+            .leaderboard-table th:nth-child(5),
+            .leaderboard-table td:nth-child(5) {
+                width: 16%;
+            }
+
+            .leaderboard-points-badge {
+                display: inline-grid !important;
+                place-items: center;
+                width: min(100%, 3.45rem);
+                min-width: 3.15rem;
+                padding: 0.24rem 0.2rem !important;
+                border-radius: 9999px;
+            }
+
+            .leaderboard-points-value {
+                font-size: clamp(0.54rem, 2.45vw, 0.68rem);
+                letter-spacing: -0.045em;
+            }
+
+            .leaderboard-points-small {
+                font-size: clamp(0.48rem, 2.15vw, 0.6rem);
+                letter-spacing: -0.07em;
+            }
+
+            .leaderboard-points-compact {
+                font-size: clamp(0.42rem, 1.9vw, 0.53rem);
+                letter-spacing: -0.085em;
+            }
+
+            .team-detail-score-value {
+                font-size: clamp(1.15rem, 7vw, 1.5rem) !important;
+                letter-spacing: -0.04em;
+            }
+
+            .mobile-table-container {
+                overflow-x: visible;
+                border-radius: 0.75rem;
+                box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+            }
+        }
+
+        @media (max-width: 1023px) {
+            .committee-shell {
+                display: block;
+            }
+
+            .committee-sidebar {
+                position: fixed;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                width: min(82vw, 300px);
+                max-width: 300px;
+                height: 100dvh;
+                min-height: 100dvh;
+                overflow-y: hidden;
+                transform: translateX(-105%);
+                transition: transform 180ms ease;
+                box-shadow: 0 20px 45px rgba(15, 23, 42, 0.24);
+            }
+
+            body.sidebar-open .committee-sidebar {
+                transform: translateX(0);
+            }
+
+            #sidebarBackdrop {
+                position: fixed;
+                inset: 0;
+                z-index: 80;
+                background: rgba(15, 23, 42, 0.48);
+            }
+
+            body.sidebar-open #sidebarBackdrop {
+                display: block;
+            }
+
+            .sidebar-footer {
+                position: static !important;
+                margin-top: auto;
+                flex: 0 0 auto;
+            }
+
+            .main-content {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .admin-header {
+                padding: 0 !important;
+            }
+
+            .admin-header-row {
+                align-items: stretch !important;
+                gap: 0 !important;
+                min-height: 5.35rem;
+            }
+
+            .admin-header-text {
+                padding: 0.9rem 0.95rem !important;
+            }
+
+            .admin-header h2 {
+                font-size: 1.25rem !important;
+                line-height: 1.55rem !important;
+                margin-bottom: 0.25rem !important;
+            }
+
+            .admin-header p {
+                font-size: 0.78rem !important;
+                line-height: 1.15rem !important;
+            }
+
+            #sidebarToggle {
+                flex: 0 0 auto;
+                align-self: stretch;
+                padding: 0 0.85rem !important;
+                font-size: 0.78rem !important;
+                white-space: nowrap;
+                border-radius: 0 !important;
+            }
+
+            .committee-sidebar .p-8 {
+                padding: 1rem !important;
+            }
+
+            .committee-sidebar nav {
+                padding: 0.75rem !important;
+            }
+
+            .committee-sidebar .tab-btn {
+                padding: 0.7rem 0.75rem !important;
+                gap: 0.55rem !important;
+                font-size: 0.84rem !important;
+            }
+
+            .committee-sidebar img {
+                width: 2rem !important;
+                height: 2rem !important;
+            }
+
+            .committee-sidebar h1 {
+                font-size: 0.82rem !important;
+                line-height: 1.1rem !important;
+            }
+
+            .committee-sidebar .sidebar-footer {
+                padding: 0.75rem !important;
+            }
+
+            .committee-sidebar .sidebar-footer > div {
+                gap: 0.45rem !important;
+            }
+
+            .committee-sidebar .sidebar-footer button {
+                padding: 0.55rem 0.7rem !important;
+                font-size: 0.78rem !important;
+            }
+
+            .tab-content {
+                margin: 0.85rem 0.65rem 0 0.65rem !important;
+            }
+
+            .tab-content h2,
+            .tab-content h3 {
+                font-size: 1rem !important;
+                line-height: 1.35rem !important;
+            }
+
+            .tab-content .p-6 {
+                padding: 0.85rem !important;
+            }
+
+            .tab-content .gap-6 {
+                gap: 0.75rem !important;
+            }
+
+            .tab-content .gap-5,
+            .tab-content .gap-4,
+            .tab-content .gap-3 {
+                gap: 0.65rem !important;
+            }
+
+            .tab-content .mb-8,
+            .tab-content .mb-6 {
+                margin-bottom: 0.85rem !important;
+            }
+
+            .tab-content .text-4xl {
+                font-size: 1.55rem !important;
+                line-height: 1.9rem !important;
+            }
+
+            .tab-content .text-3xl {
+                font-size: 1.35rem !important;
+                line-height: 1.7rem !important;
+            }
+
+            .tab-content .text-2xl {
+                font-size: 1.15rem !important;
+                line-height: 1.5rem !important;
+            }
+
+            .tab-content .text-xl {
+                font-size: 1rem !important;
+                line-height: 1.35rem !important;
+            }
+
+            .tab-content .text-lg {
+                font-size: 0.95rem !important;
+                line-height: 1.3rem !important;
+            }
+
+            .tab-content .text-sm {
+                font-size: 0.75rem !important;
+                line-height: 1.05rem !important;
+            }
+
+            .tab-content .text-xs {
+                font-size: 0.68rem !important;
+                line-height: 0.95rem !important;
+            }
+
+            .tab-content input,
+            .tab-content select,
+            .tab-content button {
+                max-width: 100%;
+                font-size: 0.78rem !important;
+            }
+
+            .tab-content input,
+            .tab-content select {
+                padding: 0.52rem 0.55rem !important;
+            }
+
+            .tab-content button {
+                padding: 0.5rem 0.65rem !important;
+                white-space: normal;
+                line-height: 1.05rem;
+            }
+
+            .tab-content table {
+                table-layout: fixed;
+                min-width: 0 !important;
+                width: 100% !important;
+                font-size: 0.68rem !important;
+            }
+
+            .tab-content th,
+            .tab-content td {
+                padding: 0.45rem 0.28rem !important;
+                line-height: 1.05rem !important;
+                white-space: normal !important;
+                overflow-wrap: anywhere;
+                word-break: break-word;
+                vertical-align: top;
+            }
+
+            .tab-content th {
+                font-size: 0.64rem !important;
+            }
+
+            .tab-content td button {
+                display: inline-flex;
+                margin: 0.1rem 0.08rem !important;
+                padding: 0.2rem 0.25rem !important;
+                font-size: 0.65rem !important;
+            }
+
+            .match-status-tab {
+                flex: 1 1 0;
+                min-width: 0;
+                text-align: center;
+            }
+
+            .match-countdown {
+                font-size: 1.65rem !important;
+                line-height: 2rem !important;
+            }
+
+            #nextMatchesGrid,
+            #ongoingMatchesGrid,
+            #doneMatchesGrid {
+                gap: 0.75rem !important;
+            }
+
+            #historyModal > div,
+            #matchModal > div,
+            #resultModal > div {
+                width: 96vw !important;
+                max-width: 96vw !important;
+                max-height: 88dvh;
+                overflow-y: auto;
+                padding: 1rem !important;
+            }
+
+            #historyModal h2,
+            #matchModal h2,
+            #resultModal h2 {
+                font-size: 1rem !important;
+                line-height: 1.3rem !important;
+                padding-right: 1.75rem;
+            }
+        }
+
+        .basketball-score-sheet {
+            border: 1px solid #cbd5e1;
+            background: rgba(255, 255, 255, 0.82);
+            border-radius: 0.75rem;
+            padding: 0.75rem;
+        }
+
+        .basketball-score-team {
+            border-radius: 0.75rem;
+            border: 1px solid var(--score-border, #bfdbfe);
+            background: var(--score-bg, #eff6ff);
+            overflow: hidden;
+        }
+
+        .basketball-score-input {
+            width: 100%;
+            border-radius: 0.45rem;
+            border: 1px solid #cbd5e1;
+            padding: 0.35rem 0.45rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            outline: none;
+        }
+
+        .basketball-score-input:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        .basketball-score-button {
+            border-radius: 0.45rem;
+            padding: 0.35rem 0.55rem;
+            font-size: 0.75rem;
+            font-weight: 900;
+        }
+
+        .basketball-score-table th,
+        .basketball-score-table td {
+            white-space: nowrap;
+        }
+
+        .basketball-score-table th {
+            font-size: clamp(0.58rem, 0.78vw, 0.75rem);
+            line-height: 1;
+        }
+
+        .basketball-score-table .basketball-active-column {
+            width: 3rem;
+        }
+
+        .basketball-score-table .basketball-player-column {
+            width: auto;
+        }
+
+        .basketball-score-table .basketball-stat-column {
+            width: 4.25rem;
+        }
+
+        .basketball-score-control {
+            display: inline-flex;
+            width: 100%;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+        }
+
+        .basketball-score-teams-grid {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        @media (min-width: 641px) {
+            .basketball-score-teams-grid {
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .basketball-score-sheet {
+                padding: 0.5rem;
+            }
+
+            .basketball-score-teams-grid {
+                gap: 0.45rem !important;
+                grid-template-columns: minmax(0, 1fr) !important;
+            }
+
+            .basketball-score-team > div:first-child {
+                padding-left: 0.55rem !important;
+                padding-right: 0.55rem !important;
+            }
+
+            .basketball-score-team h4 {
+                font-size: clamp(0.62rem, 2.6vw, 0.82rem) !important;
+            }
+
+            .basketball-score-team .basketball-team-total {
+                font-size: clamp(1.15rem, 5.8vw, 1.7rem) !important;
+            }
+
+            .basketball-score-input {
+                padding: 0.28rem 0.34rem;
+                font-size: clamp(0.58rem, 2.35vw, 0.7rem);
+            }
+
+            .basketball-score-button {
+                padding: 0.28rem 0.38rem;
+                font-size: clamp(0.58rem, 2.35vw, 0.7rem);
+                border-radius: 0.38rem;
+            }
+
+            .basketball-score-table {
+                min-width: 0 !important;
+                font-size: clamp(0.55rem, 2.1vw, 0.68rem) !important;
+            }
+
+            .basketball-score-table th,
+            .basketball-score-table td {
+                padding-left: 0.18rem !important;
+                padding-right: 0.18rem !important;
+            }
+
+            .basketball-score-table .basketball-active-column {
+                width: clamp(1.85rem, 7.4vw, 2.35rem);
+            }
+
+            .basketball-score-table .basketball-stat-column {
+                width: clamp(2.65rem, 12.2vw, 3.25rem);
+            }
+
+            .basketball-active-player-btn {
+                width: clamp(1.55rem, 7vw, 1.9rem) !important;
+                height: clamp(1.55rem, 7vw, 1.9rem) !important;
+            }
+        }
+
+        .basketball-score-scroll {
+            overflow-y: hidden;
+        }
+
+        .basketball-score-body {
+            display: block;
+            max-height: 16.5rem;
+            overflow-y: auto;
+        }
+
+        .basketball-score-body tr,
+        .basketball-score-table thead,
+        .basketball-score-table tfoot {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        @media (max-width: 380px) {
+            .tab-content table {
+                font-size: 0.62rem !important;
+            }
+
+            .tab-content th,
+            .tab-content td {
+                padding: 0.35rem 0.18rem !important;
+            }
+
+            .tab-content button {
+                font-size: 0.68rem !important;
+                padding: 0.42rem 0.5rem !important;
+            }
+
+            .admin-header h2 {
+                font-size: 1.08rem !important;
+            }
+        }
+    
+
+        /* HARD MOBILE FIX:
+        Prevents the hidden sidebar from reserving desktop width and squeezing the page. */
+        @media (max-width: 1023px) {
+            html,
+            body {
+                width: 100% !important;
+                max-width: 100% !important;
+                overflow: hidden !important;
+            }
+
+            .committee-shell {
+                display: block !important;
+                width: 100vw !important;
+                max-width: 100vw !important;
+                height: 100dvh !important;
+                min-height: 100dvh !important;
+                overflow: hidden !important;
+            }
+
+            #pageSidebar.committee-sidebar {
+                position: fixed !important;
+                top: 0 !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                width: min(82vw, 300px) !important;
+                max-width: 300px !important;
+                height: 100dvh !important;
+                min-height: 100dvh !important;
+                margin: 0 !important;
+                flex: none !important;
+                display: flex !important;
+                flex-direction: column !important;
+                overflow-y: hidden !important;
+                transform: translateX(-105%) !important;
+                z-index: 90 !important;
+            }
+
+            #pageSidebar.committee-sidebar nav {
+                min-height: 0 !important;
+                overflow-y: auto !important;
+            }
+
+            #pageSidebar.committee-sidebar .sidebar-footer {
+                flex: 0 0 auto !important;
+            }
+
+            body.sidebar-open #pageSidebar.committee-sidebar {
+                transform: translateX(0) !important;
+            }
+
+            .main-content {
+                position: fixed !important;
+                inset: 0 !important;
+                width: 100vw !important;
+                max-width: 100vw !important;
+                height: 100dvh !important;
+                min-height: 100dvh !important;
+                min-width: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                flex: none !important;
+                display: flex !important;
+                flex-direction: column !important;
+                overflow: hidden !important;
+                transform: none !important;
+            }
+
+            .admin-header {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                flex: 0 0 auto !important;
+            }
+
+            .content-scroll {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                min-width: 0 !important;
+                flex: 1 1 auto !important;
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+            }
+        }
+
+        @media (max-width: 640px) {
+            :root {
+                --admin-header-height: 4.85rem;
+            }
+
+            .admin-header-row {
+                align-items: stretch !important;
+                gap: 0 !important;
+                min-height: var(--admin-header-height) !important;
+            }
+
+            .admin-header-text {
+                padding: 0.75rem 0.85rem !important;
+            }
+
+            .admin-header h2 {
+                font-size: 1.08rem !important;
+                line-height: 1.32rem !important;
+                margin-bottom: 0.15rem !important;
+            }
+
+            .admin-header p {
+                font-size: 0.72rem !important;
+                line-height: 1rem !important;
+            }
+
+            .dashboard-header .admin-header-text {
+                max-width: calc(100vw - 195px) !important;
+            }
+
+            #sidebarToggle {
+                align-self: stretch !important;
+                min-height: 100% !important;
+                padding: 0 0.75rem !important;
+                font-size: 0.72rem !important;
+                border-radius: 0 !important;
+                white-space: nowrap;
+            }
+
+            #overview .grid {
+                gap: 0.75rem !important;
+            }
+
+            #overview .p-6 {
+                padding: 0.9rem !important;
+            }
+
+            #overview .dashboard-overview-grid {
+                grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+                gap: 0.45rem !important;
+            }
+
+            #overview .dashboard-overview-card {
+                aspect-ratio: 1 / 1;
+                min-height: 0 !important;
+                padding: 0.45rem !important;
+            }
+
+            .overflow-x-auto {
+                overflow-x: visible !important;
+            }
+
+            .tab-content table {
+                table-layout: fixed !important;
+                min-width: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                font-size: 0.66rem !important;
+            }
+
+            .tab-content th,
+            .tab-content td {
+                padding: 0.42rem 0.32rem !important;
+                white-space: normal !important;
+                word-break: break-word !important;
+                overflow-wrap: anywhere !important;
+            }
+
+        }
+
+        /* Final sidebar behavior: off-canvas on every screen size */
+        .committee-shell {
+            display: block !important;
+            width: 100vw !important;
+            max-width: 100vw !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            overflow: hidden !important;
+        }
+
+        #pageSidebar.committee-sidebar {
+            position: fixed !important;
+            inset: 0 auto 0 0 !important;
+            z-index: 90 !important;
+            width: min(86vw, 320px) !important;
+            max-width: 320px !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            transform: translateX(-105%) !important;
+            transition: transform 0.25s ease !important;
+        }
+
+        body.sidebar-open #pageSidebar.committee-sidebar {
+            transform: translateX(0) !important;
+        }
+
+        .main-content {
+            position: relative !important;
+            inset: auto !important;
+            width: 100vw !important;
+            max-width: 100vw !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            min-height: 100dvh !important;
+            min-width: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            flex: none !important;
+            display: flex !important;
+            flex-direction: column !important;
+            overflow: hidden !important;
+            transform: none !important;
+        }
+
+        #sidebarToggle {
+            display: inline-flex !important;
+            order: -2 !important;
+            align-self: stretch !important;
+            min-height: 100% !important;
+            border-radius: 0 !important;
+        }
+
+        .dashboard-header-brand {
+            order: -1 !important;
+        }
+
+        .admin-header-text {
+            order: 0 !important;
+        }
+
+        #sidebarBackdrop {
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 80 !important;
+            background: rgba(15, 23, 42, 0.48) !important;
+            display: none;
+        }
+
+        body.sidebar-open #sidebarBackdrop {
+            display: block !important;
+        }
+
+        .admin-header {
+            border-bottom: 4px solid #1d4ed8 !important;
+        }
+
+        .dashboard-header.match-management-active .admin-header-text {
+            flex: 0 1 clamp(20rem, 34vw, 31rem) !important;
+            min-width: 0;
+        }
+
+        .dashboard-header.match-management-active #pageTitle {
+            font-size: clamp(1.05rem, 1.55vw, 1.62rem) !important;
+            line-height: 1.15 !important;
+            margin-bottom: 0.35rem !important;
+            white-space: nowrap;
+        }
+
+        .dashboard-header.match-management-active #pageDesc {
+            font-size: clamp(0.68rem, 0.92vw, 0.86rem) !important;
+            line-height: 1.22 !important;
+            max-width: 100%;
+        }
+
+        .match-header-controls {
+            display: none;
+            min-width: 0;
+            flex: 1 1 auto;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            margin-right: 0.9rem;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .match-header-controls::-webkit-scrollbar {
+            display: none;
+        }
+
+        .match-header-controls.is-active {
+            display: flex;
+        }
+
+        body.match-controls-pending #matchPrimaryControls,
+        body.match-controls-pending #matchViewFilterCard {
+            display: none !important;
+        }
+
+        .match-control-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            min-width: 0;
+            flex-wrap: nowrap;
+            white-space: nowrap;
+        }
+
+        .match-control-bar .match-status-tab,
+        .match-control-bar #openMatchModal,
+        .match-control-bar #doneMatchesDateFilter,
+        .match-control-bar #clearDoneMatchesDateFilter {
+            flex: 0 0 auto;
+            min-height: 2.35rem;
+            padding: 0.55rem 0.75rem !important;
+            font-size: clamp(0.68rem, 0.75vw, 0.875rem) !important;
+            line-height: 1rem !important;
+        }
+
+        .match-control-bar #doneMatchesDateFilter {
+            width: clamp(8.5rem, 10vw, 10rem);
+        }
+
+        .match-date-trigger {
+            display: none;
+        }
+
+        .match-control-bar #clearDoneMatchesDateFilter {
+            max-width: 5.75rem;
+        }
+
+        .match-controls-home-collapsed {
+            margin-bottom: 0.75rem !important;
+        }
+
+        @media (max-width: 1023px) {
+            .dashboard-header {
+                overflow: visible !important;
+            }
+
+            .match-header-controls {
+                display: none !important;
+            }
+
+            #matches {
+                margin-left: clamp(0.5rem, 2.6vw, 0.9rem) !important;
+                margin-right: clamp(0.5rem, 2.6vw, 0.9rem) !important;
+            }
+
+            .dashboard-header.match-management-active .admin-header-text {
+                flex: 1 1 auto !important;
+            }
+
+            .dashboard-header.match-management-active #pageTitle {
+                font-size: clamp(0.9rem, 3.7vw, 1.05rem) !important;
+                line-height: 1.1 !important;
+                margin-bottom: 0.18rem !important;
+                white-space: normal;
+            }
+
+            .dashboard-header.match-management-active #pageDesc {
+                font-size: clamp(0.56rem, 2.35vw, 0.68rem) !important;
+                line-height: 1.12 !important;
+            }
+
+            .match-control-bar {
+                width: 100%;
+                display: grid;
+                grid-template-columns: 1.35fr 0.78fr 1fr 0.8fr 0.62fr 1fr;
+                align-items: stretch;
+                gap: clamp(0.22rem, 1.15vw, 0.4rem);
+                overflow: visible;
+                padding: 0 clamp(0.1rem, 0.9vw, 0.25rem) 0.1rem;
+            }
+
+            .match-control-bar::-webkit-scrollbar {
+                display: none;
+            }
+
+            .match-control-bar .match-status-tab,
+            .match-control-bar #openMatchModal,
+            .match-control-bar #doneMatchesDateFilter,
+            .match-control-bar #clearDoneMatchesDateFilter {
+                display: inline-flex;
+                align-items: center;
+                width: 100%;
+                min-width: 0;
+                min-height: 2rem;
+                justify-content: center;
+                padding: 0.42rem clamp(0.22rem, 1.15vw, 0.55rem) !important;
+                font-size: clamp(0.52rem, 2.25vw, 0.7rem) !important;
+                border-radius: 0.5rem !important;
+                text-align: center;
+            }
+
+            .match-control-bar #doneMatchesDateFilter {
+                position: absolute;
+                width: 1px;
+                height: 1px;
+                opacity: 0;
+                pointer-events: none;
+            }
+
+            .match-date-trigger {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+                min-width: 0;
+                min-height: 2rem;
+                padding: 0.42rem clamp(0.18rem, 0.9vw, 0.5rem) !important;
+                border-radius: 0.5rem !important;
+                background: #fff;
+                border: 1px solid #d1d5db;
+                color: #1f2937;
+                font-size: clamp(0.58rem, 2.5vw, 0.72rem) !important;
+                font-weight: 700;
+                line-height: 1rem !important;
+            }
+
+            .match-control-bar #clearDoneMatchesDateFilter {
+                max-width: 4.9rem;
+            }
+
+            .match-controls-home-collapsed {
+                width: 100%;
+                margin-top: 0.45rem !important;
+                margin-bottom: 0.9rem !important;
+                padding: 0 !important;
+            }
+
+            .match-schedule-full-label {
+                display: none;
+            }
+
+            .match-schedule-short-label {
+                display: inline;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .match-schedule-short-label {
+                display: none;
+            }
+        }
+
+</style>
+</head>
+
+<body class="bg-gray-50 overflow-hidden match-controls-pending">
+    <div class="committee-shell min-h-screen flex">
+
+        <!-- Sidebar -->
+        <div id="pageSidebar" class="committee-sidebar bg-white border-r border-gray-200 shadow-sm relative flex flex-col">
+            <div class="p-8 border-b border-gray-200">
+                <div class="flex items-center space-x-3">
+                    <div class="sidebar-logo-badge">
+                        <img src="./assets/logos/L1.png" alt="School Logo" class="w-9 h-9">
+                    </div>
+
+                    <div>
+                        <h1 class="font-bold text-gray-900">
+                            Adventist University Of the Philippines
+                        </h1>
+                        <p class="text-xs text-gray-500">Committee Panel</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <nav class="p-4 space-y-2 flex-1 overflow-y-auto">
+                <button
+                    onclick="switchTab('overview')"
+                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 bg-blue-600 text-white shadow-md"
+                    data-tab="overview">
+                    <span class="font-medium">Overview</span>
+                </button>
+
+                <button
+                    onclick="switchTab('leaderboard')"
+                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100"
+                    data-tab="leaderboard">
+                    <span class="font-medium">Leaderboard</span>
+                </button>
+
+                <button
+                    onclick="switchTab('verifyAttendance')"
+                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100"
+                    data-tab="verifyAttendance">
+                    <span class="font-medium">Participant Checker</span>
+                </button>
+
+                <button
+                    onclick="switchTab('matches')"
+                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100"
+                    data-tab="matches">
+                    <span class="font-medium">Matches</span>
+                </button>
+
+                <button
+                    onclick="switchTab('contacts')"
+                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100"
+                    data-tab="contacts">
+                    <span class="font-medium">Contacts</span>
+                </button>
+
+                <button
+                    onclick="switchTab('about')"
+                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100"
+                    data-tab="about">
+                    <span class="font-medium">About</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer p-4 border-t border-gray-200 bg-white">
+                <div class="flex items-center gap-3">
+                    <div
+                        id="accountInitialBadge"
+                        class="w-11 h-11 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-lg shadow-sm shrink-0"
+                        title="Current account">
+                        ?
+                    </div>
+
+                    <div class="min-w-0 flex-1">
+                        <p id="accountDisplayName" class="text-sm font-semibold text-gray-900 truncate">
+                            Account
+                        </p>
+                        <p id="accountDisplayRole" class="text-xs text-gray-500 truncate">
+                            Signed in
+                        </p>
+                    </div>
+
+                    <button
+                        onclick="logout()"
+                        class="shrink-0 bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-1 px-3 py-2 rounded-lg font-medium"
+                        title="Logout">
+                        <span>Logout</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="sidebarBackdrop" onclick="closeSidebar()" aria-hidden="true"></div>
+
+        <!-- Main Content -->
+        <div class="main-content flex-1 min-w-0 overflow-hidden flex flex-col">
+            
+
+            <!-- Header -->
+            <div class="admin-header dashboard-header bg-yellow-400">
+                <div class="admin-header-row mb-0 flex justify-between">
+                    <div class="dashboard-header-brand" aria-hidden="true">
+                        <img src="./assets/logos/L1.png" alt="">
+                    </div>
+
+                    <div class="admin-header-text flex-1">
+                        <h2 id="pageTitle" class="text-xl sm:text-3xl font-bold text-blue-900 mb-2">
+                            Committee Dashboard
+                        </h2>
+
+                        <p id="pageDesc" class="text-blue-800 text-sm sm:text-base break-safe">
+                            Monitor sports activities and team performance.
+                        </p>
+                    </div>
+
+                    <div id="matchHeaderControls" class="match-header-controls" aria-label="Match management controls"></div>
+
+                    <div id="notificationContainer" class="relative z-50 mr-3 self-center shrink-0">
+                        <button
+                            id="messageNotificationBell"
+                            type="button"
+                            aria-label="Open message notifications"
+                            aria-expanded="false"
+                            title="Messages"
+                            class="relative inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/80 text-blue-900 shadow-sm transition hover:bg-white">
+                            <svg aria-hidden="true" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0a3 3 0 0 1-6 0m6 0H9" />
+                            </svg>
+                            <span id="messageNotificationBadge" class="hidden absolute -right-1 -top-1 min-w-5 rounded-full bg-red-600 px-1.5 py-0.5 text-center text-xs font-bold leading-4 text-white">0</span>
+                        </button>
+                        <div id="notificationPanel" class="notification-overlay-panel hidden w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+                            <div class="border-b border-gray-100 px-4 py-3">
+                                <p class="font-bold text-gray-900">Notifications</p>
+                                <p class="text-xs text-gray-500">Messages and announcements</p>
+                            </div>
+                            <div id="notificationList" class="max-h-96 divide-y divide-gray-100 overflow-y-auto p-2"></div>
+                        </div>
+                    </div>
+
+                    <button
+                        id="sidebarToggle"
+                        type="button"
+                        aria-expanded="false"
+                        aria-controls="pageSidebar"
+                        onclick="toggleSidebar()"
+                        class="inline-flex items-center justify-center gap-2 bg-blue-600 px-4 text-sm font-medium text-white shrink-0">
+                        ☰ Menu
+                    </button>
+                </div>
+            </div>
+
+            <div class="content-scroll">
+
+            <!-- Overview Tab -->
+            <div id="overview" class="tab-content mt-8 ml-5 mr-5">
+                <div id="committeeAnnouncementsArea" class="mb-8 rounded-2xl border border-blue-100 bg-white p-5 shadow-md transition-shadow">
+                    <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-900">Announcements</h2>
+                            <p class="text-sm text-gray-600">Latest announcements from the admin dashboard.</p>
+                        </div>
+                    </div>
+                    <div id="committeeAnnouncementsList" class="space-y-3">
+                        <div class="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm font-semibold text-gray-600">
+                            Loading announcements...
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-overview-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+
+                    <div class="dashboard-overview-card p-6 bg-white border-0 shadow-md hover:shadow-lg transition-shadow rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="dashboard-overview-label text-gray-600 text-sm font-medium">Total Teams</p>
+                                <p id="teamsCount" class="dashboard-overview-value text-3xl font-bold text-gray-900 mt-2">...</p>
+                                <p class="dashboard-overview-note text-xs text-gray-500 mt-1">Registered team records</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-overview-card p-6 bg-white border-0 shadow-md hover:shadow-lg transition-shadow rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="dashboard-overview-label text-gray-600 text-sm font-medium">Registered Sports</p>
+                                <p id="committeeTotalSports" class="dashboard-overview-value text-3xl font-bold text-gray-900 mt-2">...</p>
+                                <p class="dashboard-overview-note text-xs text-gray-500 mt-1">Sports/game categories</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-overview-card p-6 bg-white border-0 shadow-md hover:shadow-lg transition-shadow rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="dashboard-overview-label text-gray-600 text-sm font-medium">Total Participants</p>
+                                <p id="participantsCount" class="dashboard-overview-value text-3xl font-bold text-gray-900 mt-2">...</p>
+                                <p class="dashboard-overview-note text-xs text-gray-500 mt-1">All participant records</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-overview-card p-6 bg-white border-0 shadow-md hover:shadow-lg transition-shadow rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="dashboard-overview-label text-gray-600 text-sm font-medium">Scheduled Matches</p>
+                                <p id="committeeTotalMatches" class="dashboard-overview-value text-3xl font-bold text-gray-900 mt-2">...</p>
+                                <p class="dashboard-overview-note text-xs text-gray-500 mt-1">All match records</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-overview-card p-6 bg-white border-0 shadow-md hover:shadow-lg transition-shadow rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="dashboard-overview-label text-gray-600 text-sm font-medium">Upcoming Matches</p>
+                                <p id="upcomingMatchesCount" class="dashboard-overview-value text-3xl font-bold text-blue-700 mt-2">...</p>
+                                <p class="dashboard-overview-note text-xs text-gray-500 mt-1">Status: Next</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-overview-card p-6 bg-white border-0 shadow-md hover:shadow-lg transition-shadow rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="dashboard-overview-label text-gray-600 text-sm font-medium">Active Games</p>
+                                <p id="committeeActiveGames" class="dashboard-overview-value text-3xl font-bold text-red-700 mt-2">...</p>
+                                <p class="dashboard-overview-note text-xs text-gray-500 mt-1">Status: Ongoing</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-overview-card p-6 bg-white border-0 shadow-md hover:shadow-lg transition-shadow rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="dashboard-overview-label text-gray-600 text-sm font-medium">Completed Matches</p>
+                                <p id="completedMatchesCount" class="dashboard-overview-value text-3xl font-bold text-green-700 mt-2">...</p>
+                                <p class="dashboard-overview-note text-xs text-gray-500 mt-1">Status: Done</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-overview-card p-6 bg-white border-0 shadow-md hover:shadow-lg transition-shadow rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="dashboard-overview-label text-gray-600 text-sm font-medium">Match Days</p>
+                                <p id="committeeTotalDays" class="dashboard-overview-value text-3xl font-bold text-gray-900 mt-2">...</p>
+                                <p class="dashboard-overview-note text-xs text-gray-500 mt-1">Unique scheduled dates</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Leaderboard Tab -->
+            <div id="leaderboard" class="tab-content hidden mt-8 ml-5 mr-5 space-y-4 animate-in fade-in duration-500">
+                <div class="text-center">
+                    <h2 class="text-3xl font-extrabold text-slate-950 tracking-tight leading-none">Team Leaderboard</h2>
+                </div>
+
+                <p class="text-center text-sm font-bold text-slate-800">
+                    To see the history of the games, click the team you want.
+                </p>
+
+                <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/60 border border-slate-200 overflow-hidden">
+                    <div class="mobile-table-container">
+                        <table class="leaderboard-table">
+                            <thead>
+                                <tr class="bg-gradient-to-r from-slate-800 to-slate-900 text-white">
+                                    <th class="leaderboard-rank-cell text-left py-5 px-6 font-bold uppercase text-xs tracking-wider">Rank</th>
+                                    <th class="leaderboard-team-cell text-left py-5 px-6 font-bold uppercase text-xs tracking-wider">Team Name</th>
+                                    <th class="leaderboard-stat-cell text-center py-5 px-6 font-bold uppercase text-xs tracking-wider">Points</th>
+                                    <th class="leaderboard-stat-cell text-center py-5 px-6 font-bold uppercase text-xs tracking-wider">Victory</th>
+                                    <th class="leaderboard-stat-cell text-center py-5 px-6 font-bold uppercase text-xs tracking-wider">Defeated</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="leaderboardBody" class="divide-y divide-slate-100">
+                                <tr>
+                                    <td colspan="5" class="text-center py-16">
+                                        <div class="flex flex-col items-center space-y-3">
+                                            <div class="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                            <p class="text-slate-500 font-medium">Loading leaderboard data...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contacts Tab -->
+            <div id="contacts" class="tab-content hidden mt-8 ml-5 mr-5">
+                <div id="committeeChatShell" class="chat-shell grid grid-cols-1 md:grid-cols-[350px_minmax(0,1fr)] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
+                    <aside class="chat-sidebar flex min-h-0 flex-col border-r border-gray-200 bg-slate-50/80">
+                        <div class="border-b border-gray-200 bg-white p-4">
+                            <h2 class="text-xl font-bold text-gray-900">Messages</h2>
+                            <p id="contactsSportSummary" class="mt-1 text-sm text-gray-500">Choose who to contact first.</p>
+                            <input
+                                id="contactSearchInput"
+                                type="search"
+                                placeholder="Search contacts"
+                                class="mt-4 w-full rounded-xl border border-gray-300 bg-gray-50 px-4 py-2.5 text-sm font-semibold text-gray-800 outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100">
+                            <select
+                                id="contactsSportSelect"
+                                class="mt-3 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-semibold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                                <option value="">Choose sport or admin</option>
+                                <option value="__admin__">Admin</option>
+                            </select>
+                        </div>
+
+                        <div class="min-h-0 flex-1 overflow-y-auto p-3">
+                            <div id="contactsSection">
+                                <p class="px-2 pb-2 text-xs font-bold uppercase tracking-wide text-gray-500">Contacts</p>
+                                <div id="contactsList" class="space-y-2">
+                                    <div class="rounded-xl bg-white p-4 text-sm font-semibold text-gray-500 shadow-sm">
+                                        Choose a sport group or Admin first to see who you can contact.
+                                    </div>
+                                </div>
+                            </div>
+                            <p id="recentConversationsHeading" class="px-2 pb-2 pt-4 text-xs font-bold uppercase tracking-wide text-gray-500">Recent</p>
+                            <div id="committeeConversationList" class="space-y-2"></div>
+                        </div>
+                    </aside>
+
+                    <section class="chat-thread flex min-h-0 flex-col bg-white">
+                        <div class="relative z-30 flex items-center gap-3 overflow-visible border-b border-gray-200 bg-white px-4 py-3">
+                            <button
+                                type="button"
+                                id="committeeChatBack"
+                                class="rounded-lg bg-gray-100 px-3 py-2 text-sm font-bold text-gray-700 md:hidden">
+                                Back
+                            </button>
+                            <div id="activeChatAvatar" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white">?</div>
+                            <div class="min-w-0 flex-1">
+                                <h2 id="activeChatTitle" class="truncate text-lg font-bold text-gray-900">Select a conversation</h2>
+                                <p id="activeChatSubtitle" class="truncate text-sm font-semibold text-gray-500">Select a conversation to start messaging.</p>
+                            </div>
+                            <span id="activeChatStatus" class="hidden rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700">Live</span>
+                            <a
+                                id="activeChatCall"
+                                href="#"
+                                class="hidden rounded-full bg-green-600 px-3 py-2 text-sm font-bold text-white hover:bg-green-700">
+                                Call
+                            </a>
+                            <div id="conversationMenuContainer" class="relative z-40">
+                                <button
+                                    id="conversationMenuButton"
+                                    type="button"
+                                    aria-label="Conversation settings"
+                                    aria-expanded="false"
+                                    disabled
+                                    class="inline-flex h-10 w-10 items-center justify-center rounded-full text-xl font-bold text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40">
+                                    &#8942;
+                                </button>
+                                <div id="conversationMenu" class="hidden absolute right-0 top-11 z-50 w-48 rounded-xl border border-gray-200 bg-white p-1 shadow-xl">
+                                    <button id="deleteConversation" type="button" class="w-full rounded-lg px-3 py-2 text-left text-sm font-bold text-red-600 hover:bg-red-50">
+                                        Delete conversation
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="contactMessagesList" class="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-4">
+                            <div class="flex h-full items-center justify-center text-center text-sm font-semibold text-gray-500">
+                                Select a conversation to start messaging.
+                            </div>
+                        </div>
+
+                        <form id="contactMessageForm" autocomplete="off" class="border-t border-gray-200 bg-white p-3">
+                            <div id="cameraPreview" class="mb-2 hidden items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-2">
+                                <img id="cameraPreviewImage" alt="Captured image preview" class="h-16 w-16 rounded-lg object-cover">
+                                <span class="min-w-0 flex-1 text-xs font-semibold text-gray-600">Camera photo selected</span>
+                                <button type="button" id="removeCameraPhoto" class="rounded-full bg-gray-200 px-3 py-1 text-xs font-bold text-gray-700 hover:bg-gray-300">Remove</button>
+                            </div>
+                            <div class="flex items-center gap-2 rounded-2xl border border-gray-200 bg-gray-50 p-2">
+                                <button type="button" id="openCamera" class="rounded-full px-3 py-2 text-lg font-bold text-blue-600 hover:bg-blue-100" title="Open camera">+</button>
+                                <input id="cameraInput" type="file" accept="image/*" capture="environment" class="hidden">
+                                <input
+                                    type="text"
+                                    id="contactMessageInput"
+                                    name="committee-chat-message"
+                                    autocomplete="off"
+                                    autocorrect="off"
+                                    autocapitalize="off"
+                                    spellcheck="false"
+                                    maxlength="2000"
+                                    disabled
+                                    placeholder="Write a message"
+                                    class="min-w-0 flex-1 bg-transparent px-2 py-2 text-sm font-semibold text-gray-900 outline-none disabled:text-gray-400">
+                                <button
+                                    type="submit"
+                                    id="sendContactMessage"
+                                    disabled
+                                    class="rounded-full bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    Send
+                                </button>
+                            </div>
+                        </form>
+                    </section>
+                </div>
+            </div>
+
+            <!-- About Tab -->
+            <div id="about" class="tab-content hidden mt-8 ml-5 mr-5">
+                <div class="p-6 bg-white border-0 shadow-md rounded-lg max-w-4xl">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">About L.I.V.E.</h2>
+                    <div class="space-y-4 text-sm sm:text-base font-semibold leading-relaxed text-gray-700">
+                        <p>L.I.V.E., which stands for <strong>League Information &amp; Viewing Engine</strong>, is a gaming information and viewing platform developed to help players, organizers, and viewers access important details about gaming events at Adventist University of the Philippines.</p>
+                        <p>The system was published on July 26, 2026 and was initiated by Rex Dominic F. Perico, CSC President for S.Y. 2026-2027, as a project intended to support the university's sport community. L.I.V.E. provides a centralized space where users can check league information, game schedules, team details, match updates, standings, and other tournament-related announcements.</p>
+                        <p>The platform was created to help make sports events more organized and easier to follow. Instead of depending on separate announcements and manual updates, users can refer to one system for relevant and updated information about ongoing and upcoming games.</p>
+                        <p>Through L.I.V.E., the CSC hopes to contribute to the gradual improvement of sports and gaming-related activities in AUP by offering a more accessible and efficient way of sharing information. The system may also help strengthen communication between organizers and participants while providing students and viewers with a more convenient way to stay connected with gaming events.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Participant Checker Tab -->
+            <div id="verifyAttendance" class="tab-content hidden mt-8 ml-5 mr-5">
+                <div class="space-y-6">
+                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                        <div class="xl:col-span-1 p-6 bg-white border-0 shadow-md rounded-lg">
+                            <h2 class="text-2xl font-bold text-gray-900 mb-2">
+                                Participant Checker
+                            </h2>
+                            <p class="mb-4 text-sm text-gray-500">
+                                Check if a student is registered before verifying attendance.
+                            </p>
+
+                            <form id="participantCheckForm" class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        Student ID
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="participantCheckStudentId"
+                                        required
+                                        autocomplete="off"
+                                        placeholder="Enter student ID"
+                                        class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none">
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed">
+                                    Check Registration
+                                </button>
+                            </form>
+                        </div>
+
+                        <div class="xl:col-span-2 p-6 bg-white border-0 shadow-md rounded-lg">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-xl font-bold text-gray-900">
+                                    Registration Result
+                                </h3>
+
+                                <button
+                                    type="button"
+                                    id="clearParticipantCheckResult"
+                                    class="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm font-medium">
+                                    Clear
+                                </button>
+                            </div>
+
+                            <div id="participantCheckResult" class="rounded-lg border border-gray-200 bg-gray-50 p-6 text-gray-600">
+                                Enter a student ID to check if the participant is registered.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                        <div class="xl:col-span-1 p-6 bg-white border-0 shadow-md rounded-lg">
+                            <h2 class="text-2xl font-bold text-gray-900 mb-2">
+                                Verify Attendance
+                            </h2>
+                            <p class="mb-4 text-sm text-gray-500">
+                                Confirm if the registered participant is present today.
+                            </p>
+
+                            <form id="verifyAttendanceForm" class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        Student ID
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="verifyStudentId"
+                                        required
+                                        autocomplete="off"
+                                        placeholder="Enter student ID"
+                                        class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none">
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed">
+                                    Verify Attendance
+                                </button>
+                            </form>
+                        </div>
+
+                        <div class="xl:col-span-2 p-6 bg-white border-0 shadow-md rounded-lg">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-xl font-bold text-gray-900">
+                                    Attendance Result
+                                </h3>
+
+                                <button
+                                    type="button"
+                                    id="clearVerificationResult"
+                                    class="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm font-medium">
+                                    Clear
+                                </button>
+                            </div>
+
+                            <div id="verifyAttendanceResult" class="rounded-lg border border-gray-200 bg-gray-50 p-6 text-gray-600">
+                                Enter a student ID to verify if the participant attended today.
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Matches Tab -->
+            <div id="matches" class="tab-content hidden mt-8 ml-5 mr-5">
+
+                <div id="matchControlsHome" class="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center">
+                    <div id="matchPrimaryControls" class="match-control-bar">
+                        <button
+                            type="button"
+                            id="openMatchModal"
+                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium">
+                            <span class="match-schedule-full-label">+ Schedule Match</span>
+                            <span class="match-schedule-short-label">+ Schedule...</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            data-status-tab="Next"
+                            class="match-status-tab px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white">
+                            Next
+                        </button>
+
+                        <button
+                            type="button"
+                            data-status-tab="Ongoing"
+                            class="match-status-tab px-4 py-2 rounded-lg text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">
+                            On Going
+                        </button>
+
+                        <button
+                            type="button"
+                            data-status-tab="Done"
+                            class="match-status-tab px-4 py-2 rounded-lg text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">
+                            Done
+                        </button>
+
+                        <input
+                            id="doneMatchesDateFilter"
+                            type="date"
+                            aria-label="Filter next and done matches by date"
+                            class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+
+                        <button
+                            id="openDoneMatchesDatePicker"
+                            type="button"
+                            class="match-date-trigger"
+                            aria-label="Open match date picker"
+                            title="Choose date">
+                            📅
+                        </button>
+
+                        <button
+                            id="clearDoneMatchesDateFilter"
+                            type="button"
+                            class="rounded-lg bg-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-300">
+                            All dates
+                        </button>
+                    </div>
+
+                    <div id="matchViewFilterCard" class="bg-white border border-gray-200 shadow-sm rounded-xl p-2.5 w-full lg:max-w-3xl">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div class="min-w-0">
+                                <p class="text-xs font-bold uppercase tracking-wide text-gray-700">View Matches</p>
+                            </div>
+
+                            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                                <div class="grid grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1 w-full sm:w-auto">
+                                <button
+                                    type="button"
+                                    data-match-scope-tab="mine"
+                                    class="match-scope-tab px-3 py-1.5 rounded-md text-xs font-semibold bg-blue-600 text-white">
+                                    My Matches
+                                </button>
+
+                                <button
+                                    type="button"
+                                    data-match-scope-tab="all"
+                                    class="match-scope-tab px-3 py-1.5 rounded-md text-xs font-semibold text-gray-700 hover:bg-white">
+                                    All Matches
+                                </button>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    id="openSportFilterModal"
+                                    class="hidden px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-blue-900 rounded-md text-xs font-semibold w-full sm:w-auto">
+                                    Sport
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Next Matches -->
+                <div id="nextMatchesTab" class="match-tab-content">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Next Matches</h2>
+                    <div id="nextMatchesGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+                </div>
+
+                <!-- Ongoing Matches -->
+                <div id="ongoingMatchesTab" class="match-tab-content hidden">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">On Going Matches</h2>
+                    <div id="ongoingMatchesGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+                </div>
+
+                <!-- Done Matches -->
+                <div id="doneMatchesTab" class="match-tab-content hidden">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Done Matches</h2>
+                    <div id="doneMatchesGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+                </div>
+            </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div
+        id="historyModal"
+        class="dashboard-modal-overlay fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+
+        <div class="dashboard-modal-panel bg-white rounded-2xl shadow-2xl w-[95%] max-w-3xl p-6 relative">
+            <button
+                type="button"
+                id="closeHistoryModal"
+                class="absolute top-4 right-4 text-gray-500 hover:text-red-500 text-2xl">
+                ×
+            </button>
+
+            <h2 id="historyTitle" class="text-2xl font-bold text-gray-800 mb-6">
+                Team History
+            </h2>
+
+            <div id="historyContent">
+                <div class="text-center py-10 text-gray-500">
+                    Select a team from the leaderboard to view game history.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schedule Match Modal -->
+    <div
+        id="matchModal"
+        class="dashboard-modal-overlay fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+
+        <div class="dashboard-modal-panel bg-white rounded-lg shadow-lg w-full max-w-3xl p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 id="matchModalTitle" class="text-xl font-semibold text-gray-900">Schedule Match</h2>
+
+                <button
+                    type="button"
+                    id="closeMatchModal"
+                    class="text-gray-500 hover:text-gray-700 text-2xl">
+                    &times;
+                </button>
+            </div>
+
+            <form id="matchForm" class="space-y-4">
+                <input type="hidden" id="editingMatchId">
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Sport / Game Category
+                    </label>
+
+                    <select
+                        id="matchSport"
+                        required
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                        <option value="">Select sport or game category</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Team 1
+                    </label>
+
+                    <select
+                        id="teamOne"
+                        required
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                        <option value="">Select first team</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Match Type
+                    </label>
+
+                    <select
+                        id="matchStage"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                        <option value="regular">Elimination Round</option>
+                        <option value="semifinals">Semifinals</option>
+                        <option value="finals">Finals</option>
+                        <option value="battle_for_third" id="battleForThirdOption" hidden>Battle for Third</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Team 2
+                    </label>
+
+                    <select
+                        id="teamTwo"
+                        required
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                        <option value="">Select second team</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Match Time
+                    </label>
+
+                    <input
+                        type="datetime-local"
+                        id="matchTime"
+                        required
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Location
+                    </label>
+
+                    <input
+                        type="text"
+                        id="matchLocation"
+                        placeholder="Enter location"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Call Time Duration
+                    </label>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <input
+                                type="number"
+                                id="matchTimerMinutes"
+                                min="0"
+                                value="10"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                            <p class="text-xs text-gray-500 mt-1">Minutes</p>
+                        </div>
+
+                        <div>
+                            <input
+                                type="number"
+                                id="matchTimerSeconds"
+                                min="0"
+                                max="59"
+                                value="0"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                            <p class="text-xs text-gray-500 mt-1">Seconds</p>
+                        </div>
+                    </div>
+
+                    <p class="text-xs text-gray-500 mt-1">
+                        The timer will only start when the timer toggle switch is turned on.
+                    </p>
+                </div>
+
+                <div class="flex justify-end space-x-2 pt-4">
+                    <button
+                        type="button"
+                        id="cancelMatchModal"
+                        class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                        Cancel
+                    </button>
+
+                    <button
+                        type="submit"
+                        id="matchSubmitButton"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        Save Match
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <!-- Declare Match Result Modal -->
+    <div
+        id="resultModal"
+        class="dashboard-modal-overlay fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+
+        <div class="dashboard-modal-panel bg-white rounded-lg shadow-lg w-full max-w-lg p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-semibold text-gray-900">Declare Winner Before Marking Done</h2>
+
+                <button
+                    type="button"
+                    id="closeResultModal"
+                    class="text-gray-500 hover:text-gray-700 text-2xl">
+                    &times;
+                </button>
+            </div>
+
+            <div id="resultMatchSummary" class="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700">
+                Select the winning team to continue.
+            </div>
+
+            <form id="resultForm" class="space-y-4">
+                <input type="hidden" id="resultMatchId">
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Winning Team
+                    </label>
+
+                    <select
+                        id="winnerTeamSelect"
+                        required
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                        <option value="">Select winner</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Best Player of the Game
+                    </label>
+
+                    <input
+                        type="text"
+                        id="bestPlayerInput"
+                        required
+                        maxlength="120"
+                        placeholder="Enter the best player's name"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                </div>
+
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <label class="block">
+                        <span class="block text-sm font-medium text-gray-700 mb-1">Winner Actual Points</span>
+                        <input
+                            type="number"
+                            id="winnerActualPointsInput"
+                            required
+                            min="0"
+                            step="0.01"
+                            placeholder="Winner points"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                    </label>
+
+                    <label class="block">
+                        <span class="block text-sm font-medium text-gray-700 mb-1">Loser Actual Points</span>
+                        <input
+                            type="number"
+                            id="loserActualPointsInput"
+                            required
+                            min="0"
+                            step="0.01"
+                            placeholder="Loser points"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                    </label>
+                </div>
+
+                <div class="rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
+                    <div class="mb-3">
+                        <p class="text-xs font-black uppercase tracking-widest text-amber-700">Merit / Demerit Adjustments</p>
+                        <p class="text-xs font-semibold text-amber-900">Saved separately, then added to or subtracted from the team's overall leaderboard points.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div class="rounded-xl border border-blue-200 bg-white p-3">
+                            <p id="teamOneAdjustmentTitle" class="mb-3 text-sm font-black text-blue-800">Team 1</p>
+                            <label class="block mb-2">
+                                <span class="block text-xs font-bold text-slate-600 mb-1">Merit Points</span>
+                                <input id="teamOneMeritPointsInput" type="number" min="0" step="0.01" value="0" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold">
+                            </label>
+                            <label class="block mb-2">
+                                <span class="block text-xs font-bold text-slate-600 mb-1">Merit Remarks</span>
+                                <textarea id="teamOneMeritRemarksInput" rows="2" maxlength="300" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Optional remarks"></textarea>
+                            </label>
+                            <label class="block mb-2">
+                                <span class="block text-xs font-bold text-slate-600 mb-1">Demerit Points</span>
+                                <input id="teamOneDemeritPointsInput" type="number" min="0" step="0.01" value="0" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold">
+                            </label>
+                            <label class="block">
+                                <span class="block text-xs font-bold text-slate-600 mb-1">Demerit Remarks</span>
+                                <textarea id="teamOneDemeritRemarksInput" rows="2" maxlength="300" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Optional remarks"></textarea>
+                            </label>
+                        </div>
+
+                        <div class="rounded-xl border border-emerald-200 bg-white p-3">
+                            <p id="teamTwoAdjustmentTitle" class="mb-3 text-sm font-black text-emerald-800">Team 2</p>
+                            <label class="block mb-2">
+                                <span class="block text-xs font-bold text-slate-600 mb-1">Merit Points</span>
+                                <input id="teamTwoMeritPointsInput" type="number" min="0" step="0.01" value="0" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold">
+                            </label>
+                            <label class="block mb-2">
+                                <span class="block text-xs font-bold text-slate-600 mb-1">Merit Remarks</span>
+                                <textarea id="teamTwoMeritRemarksInput" rows="2" maxlength="300" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Optional remarks"></textarea>
+                            </label>
+                            <label class="block mb-2">
+                                <span class="block text-xs font-bold text-slate-600 mb-1">Demerit Points</span>
+                                <input id="teamTwoDemeritPointsInput" type="number" min="0" step="0.01" value="0" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold">
+                            </label>
+                            <label class="block">
+                                <span class="block text-xs font-bold text-slate-600 mb-1">Demerit Remarks</span>
+                                <textarea id="teamTwoDemeritRemarksInput" rows="2" maxlength="300" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Optional remarks"></textarea>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-2 pt-4">
+                    <button
+                        type="button"
+                        id="cancelResultModal"
+                        class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                        Cancel
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed">
+                        Save Result and Mark Done
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- Basketball Point Modal -->
+    <div
+        id="basketballPointModal"
+        class="dashboard-modal-overlay fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+
+        <div class="dashboard-modal-panel w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl">
+            <div class="mb-4 flex items-center justify-between">
+                <div>
+                    <h2 id="basketballPointModalTitle" class="text-lg font-black text-gray-900">Add Points</h2>
+                    <p id="basketballPointPlayerLabel" class="mt-1 text-sm font-semibold text-gray-600">Select points to add.</p>
+                </div>
+
+                <button
+                    type="button"
+                    id="closeBasketballPointModal"
+                    class="text-2xl leading-none text-gray-500 hover:text-gray-800">
+                    &times;
+                </button>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+                <button type="button" data-basketball-points="1" class="basketball-point-choice rounded-xl bg-blue-600 px-4 py-3 text-lg font-black text-white hover:bg-blue-700">+1</button>
+                <button type="button" data-basketball-points="2" class="basketball-point-choice rounded-xl bg-blue-600 px-4 py-3 text-lg font-black text-white hover:bg-blue-700">+2</button>
+                <button type="button" data-basketball-points="3" class="basketball-point-choice rounded-xl bg-blue-600 px-4 py-3 text-lg font-black text-white hover:bg-blue-700">+3</button>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Sport Filter Modal -->
+    <div
+        id="sportFilterModal"
+        class="dashboard-modal-overlay fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+
+        <div class="dashboard-modal-panel bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-semibold text-gray-900">Filter Matches by Sport</h2>
+
+                <button
+                    type="button"
+                    id="closeSportFilterModal"
+                    class="text-gray-500 hover:text-gray-700 text-2xl">
+                    &times;
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Registered Sports
+                    </label>
+
+                    <select
+                        id="sportFilterSelect"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                        <option value="">All registered sports</option>
+                    </select>
+                </div>
+
+                <div class="flex justify-end pt-2">
+                    <button
+                        type="button"
+                        id="clearSportFilter"
+                        class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                        Show All Sports
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="./js/pages/committee.js"></script>
+    
+</body>
+</html>
