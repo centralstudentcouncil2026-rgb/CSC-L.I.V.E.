@@ -4544,11 +4544,7 @@
             async function fetchAupRfidLookupValue(scannedValue) {
                 const response = await fetch(`${AUP_RFID_LOOKUP_FUNCTION_URL}${encodeURIComponent(scannedValue)}`, {
                     method: "GET",
-                    cache: "no-store",
-                    headers: {
-                        apikey: SUPABASE_ANON_KEY,
-                        Authorization: `Bearer ${SUPABASE_ANON_KEY}`
-                    }
+                    cache: "no-store"
                 });
 
                 if (!response.ok) {

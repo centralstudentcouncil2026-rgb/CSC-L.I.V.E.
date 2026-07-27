@@ -1,0 +1,2 @@
+[functions.aup-rfid-lookup]
+verify_jwt = false
