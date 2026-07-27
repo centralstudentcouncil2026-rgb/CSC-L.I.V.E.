@@ -4472,6 +4472,10 @@
                 return String(value || "").trim();
             }
 
+            function normalizeAttendanceIdentity(value) {
+                return normalizeAttendanceLookupValue(value).replace(/\s+/g, " ").toLowerCase();
+            }
+
             function getAttendanceLookupCandidates(value) {
                 const candidates = new Set();
                 const rawValue = normalizeAttendanceLookupValue(value);
@@ -4493,6 +4497,19 @@
                     // The RFID endpoint may return plain text or HTML, so JSON parsing is optional.
                 }
 
+                const tableCellMatches = rawValue.matchAll(/<td[^>]*>([\s\S]*?)(?=<td|<tr|<\/table>|$)/gi);
+                for (const match of tableCellMatches) {
+                    const cellValue = normalizeAttendanceLookupValue(
+                        match[1]
+                            .replace(/<[^>]+>/g, " ")
+                            .replace(/&nbsp;/gi, " ")
+                    );
+
+                    if (cellValue.length >= 3) {
+                        candidates.add(cellValue);
+                    }
+                }
+
                 const textWithoutTags = rawValue
                     .replace(/<script[\s\S]*?<\/script>/gi, " ")
                     .replace(/<style[\s\S]*?<\/style>/gi, " ")
@@ -4507,6 +4524,41 @@
                 return Array.from(candidates).filter(Boolean);
             }
 
+            async function findParticipantByAttendanceName(value) {
+                const lookupName = normalizeAttendanceLookupValue(value);
+
+                if (!lookupName || !/[A-Za-z]/.test(lookupName)) {
+                    return null;
+                }
+
+                const selectColumns = "id, name, full_name, student_id, id_number, team, home_college, status";
+                const { data: nameMatches, error: nameError } = await supabase
+                    .from(PARTICIPANTS_TABLE)
+                    .select(selectColumns)
+                    .ilike("name", lookupName)
+                    .limit(5);
+
+                if (nameError) {
+                    throw nameError;
+                }
+
+                const { data: fullNameMatches, error: fullNameError } = await supabase
+                    .from(PARTICIPANTS_TABLE)
+                    .select(selectColumns)
+                    .ilike("full_name", lookupName)
+                    .limit(5);
+
+                if (fullNameError) {
+                    throw fullNameError;
+                }
+
+                const normalizedLookupName = normalizeAttendanceIdentity(lookupName);
+                return [...(nameMatches || []), ...(fullNameMatches || [])].find(participant => {
+                    return normalizeAttendanceIdentity(participant.name) === normalizedLookupName
+                        || normalizeAttendanceIdentity(participant.full_name) === normalizedLookupName;
+                }) || null;
+            }
+
             async function findParticipantByAttendanceValue(value) {
                 const lookupValue = normalizeAttendanceLookupValue(value);
 
@@ -4516,7 +4568,7 @@
 
                 const { data: studentIdMatch, error: studentIdError } = await supabase
                     .from(PARTICIPANTS_TABLE)
-                    .select("id, name, student_id, id_number, team, home_college, status")
+                    .select("id, name, full_name, student_id, id_number, team, home_college, status")
                     .eq("student_id", lookupValue)
                     .maybeSingle();
 
@@ -4530,7 +4582,7 @@
 
                 const { data: idNumberMatch, error: idNumberError } = await supabase
                     .from(PARTICIPANTS_TABLE)
-                    .select("id, name, student_id, id_number, team, home_college, status")
+                    .select("id, name, full_name, student_id, id_number, team, home_college, status")
                     .eq("id_number", lookupValue)
                     .maybeSingle();
 
@@ -4538,7 +4590,7 @@
                     throw idNumberError;
                 }
 
-                return idNumberMatch || null;
+                return idNumberMatch || await findParticipantByAttendanceName(lookupValue);
             }
 
             async function fetchAupRfidLookupValue(scannedValue) {
@@ -4572,10 +4624,13 @@
                     const participant = await findParticipantByAttendanceValue(candidate);
 
                     if (participant) {
+                        const matchedByName = normalizeAttendanceIdentity(participant.name) === normalizeAttendanceIdentity(candidate)
+                            || normalizeAttendanceIdentity(participant.full_name) === normalizeAttendanceIdentity(candidate);
+
                         return {
                             participant,
                             resolvedValue: candidate,
-                            source: "rfid"
+                            source: matchedByName ? "rfid-name" : "rfid"
                         };
                     }
                 }
@@ -8131,6 +8186,7 @@
 
                 try {
                     const { participant, resolvedValue, source } = await resolveAttendanceParticipant(scannedValue);
+                    const participantName = participant?.full_name || participant?.name || "";
 
                     if (!participant) {
                         showAttendanceResult("error", `
@@ -8146,7 +8202,7 @@
                     const attendanceRecord = {
                         participant_id: participant.id,
                         student_id: participant.student_id,
-                        participant_name: participant.name || "",
+                        participant_name: participantName,
                         team: attendanceCollege,
                         home_college: attendanceCollege,
                         status: "Present",
@@ -8196,7 +8252,7 @@
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white bg-opacity-70 rounded-lg p-3 border border-green-100">
                                 <div>
                                     <p class="text-xs uppercase tracking-wide text-green-700">Name</p>
-                                    <p class="font-semibold">${escapeHTML(participant.name || "No name")}</p>
+                                    <p class="font-semibold">${escapeHTML(participantName || "No name")}</p>
                                 </div>
 
                                 <div>
@@ -8211,7 +8267,11 @@
 
                                 <div>
                                     <p class="text-xs uppercase tracking-wide text-green-700">Matched By</p>
-                                    <p class="font-semibold">${source === "rfid" ? `RFID lookup (${escapeHTML(resolvedValue)})` : "ID number"}</p>
+                                    <p class="font-semibold">${
+                                        source === "rfid-name"
+                                            ? `RFID lookup name (${escapeHTML(resolvedValue)})`
+                                            : (source === "rfid" ? `RFID lookup (${escapeHTML(resolvedValue)})` : "ID number")
+                                    }</p>
                                 </div>
 
                                 <div>
