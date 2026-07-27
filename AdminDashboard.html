@@ -4727,16 +4727,6 @@
             }
 
             async function resolveAttendanceParticipant(scannedValue) {
-                const directParticipant = await findParticipantByAttendanceValue(scannedValue);
-
-                if (directParticipant) {
-                    return {
-                        participant: directParticipant,
-                        resolvedValue: normalizeAttendanceLookupValue(scannedValue),
-                        source: "direct"
-                    };
-                }
-
                 if (!participantsData.length) {
                     await loadParticipants();
                 }
@@ -4751,9 +4741,36 @@
                     };
                 }
 
+                const directParticipant = await findParticipantByAttendanceValue(scannedValue);
+
+                if (directParticipant) {
+                    return {
+                        participant: directParticipant,
+                        resolvedValue: normalizeAttendanceLookupValue(scannedValue),
+                        source: "direct"
+                    };
+                }
+
                 const lookupText = await fetchAupRfidLookupValue(scannedValue);
                 const aupProfile = parseAupRfidProfile(lookupText);
                 const { idCandidates, nameCandidates } = getAttendanceLookupCandidates(lookupText);
+                const prioritizedNameCandidates = [
+                    aupProfile?.name || "",
+                    ...nameCandidates
+                ].filter(Boolean);
+
+                for (const candidate of prioritizedNameCandidates) {
+                    const participant = findParticipantByLocalAttendanceName(candidate) || await findParticipantByAttendanceName(candidate);
+
+                    if (participant) {
+                        return {
+                            participant,
+                            aupProfile,
+                            resolvedValue: candidate,
+                            source: "rfid-name"
+                        };
+                    }
+                }
 
                 for (const candidate of idCandidates) {
                     const participant = await findParticipantByAttendanceValue(candidate);
@@ -4761,21 +4778,9 @@
                     if (participant) {
                         return {
                             participant,
+                            aupProfile,
                             resolvedValue: candidate,
                             source: "rfid"
-                        };
-                    }
-                }
-
-                for (const candidate of nameCandidates) {
-                    const participant = findParticipantByLocalAttendanceName(candidate) || await findParticipantByAttendanceName(candidate);
-
-                    if (participant) {
-
-                        return {
-                            participant,
-                            resolvedValue: candidate,
-                            source: "rfid-name"
                         };
                     }
                 }
@@ -4786,6 +4791,36 @@
                     resolvedValue: "",
                     source: aupProfile ? "aup-profile" : "none"
                 };
+            }
+
+            async function saveAttendanceRecord(attendanceRecord, optionalProfileData = {}) {
+                const recordWithProfile = {
+                    ...attendanceRecord,
+                    ...optionalProfileData
+                };
+
+                let result = await supabase
+                    .from(ATTENDANCE_TABLE)
+                    .upsert([recordWithProfile], {
+                        onConflict: "student_id,attendance_date"
+                    })
+                    .select("id, participant_id, student_id, participant_name, team, home_college, status, attendance_date, checked_at")
+                    .single();
+
+                const profileColumnError = result.error
+                    && /attendance_course|attendance_source|column|schema cache/i.test(result.error.message || "");
+
+                if (profileColumnError && Object.keys(optionalProfileData).length) {
+                    result = await supabase
+                        .from(ATTENDANCE_TABLE)
+                        .upsert([attendanceRecord], {
+                            onConflict: "student_id,attendance_date"
+                        })
+                        .select("id, participant_id, student_id, participant_name, team, home_college, status, attendance_date, checked_at")
+                        .single();
+                }
+
+                return result;
             }
 
             async function countRows(tableName, options = {}) {
@@ -8358,14 +8393,14 @@
                         status: "Present",
                         checked_at: new Date().toISOString()
                     };
+                    const optionalProfileData = aupProfile ? {
+                        attendance_course: aupProfile.course || null,
+                        attendance_source: participant ? "registered_rfid_lookup" : "aup_rfid_lookup"
+                    } : {
+                        attendance_source: "registered_participant"
+                    };
 
-                    const { data: savedAttendance, error: attendanceError } = await supabase
-                        .from(ATTENDANCE_TABLE)
-                        .upsert([attendanceRecord], {
-                            onConflict: "student_id,attendance_date"
-                        })
-                        .select("id, participant_id, student_id, participant_name, team, home_college, status, attendance_date, checked_at")
-                        .single();
+                    const { data: savedAttendance, error: attendanceError } = await saveAttendanceRecord(attendanceRecord, optionalProfileData);
 
                     if (attendanceError) {
                         throw attendanceError;
