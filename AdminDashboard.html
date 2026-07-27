@@ -4578,6 +4578,40 @@
                 };
             }
 
+            function getAupRfidTableCells(value) {
+                const rawValue = normalizeAttendanceLookupValue(value);
+                const cells = [];
+                const tableCellMatches = rawValue.matchAll(/<td[^>]*>([\s\S]*?)(?=<td|<tr|<\/table>|$)/gi);
+
+                for (const match of tableCellMatches) {
+                    const cellValue = normalizeAttendanceLookupValue(
+                        match[1]
+                            .replace(/<[^>]+>/g, " ")
+                            .replace(/&nbsp;/gi, " ")
+                    );
+
+                    if (cellValue) {
+                        cells.push(cellValue);
+                    }
+                }
+
+                return cells;
+            }
+
+            function parseAupRfidProfile(value) {
+                const [name, course, college] = getAupRfidTableCells(value);
+
+                if (!name) {
+                    return null;
+                }
+
+                return {
+                    name,
+                    course: course || "",
+                    college: college || ""
+                };
+            }
+
             function findParticipantByLocalAttendanceName(value) {
                 const lookupKey = normalizeAttendanceNameKey(value);
 
@@ -4718,6 +4752,7 @@
                 }
 
                 const lookupText = await fetchAupRfidLookupValue(scannedValue);
+                const aupProfile = parseAupRfidProfile(lookupText);
                 const { idCandidates, nameCandidates } = getAttendanceLookupCandidates(lookupText);
 
                 for (const candidate of idCandidates) {
@@ -4747,8 +4782,9 @@
 
                 return {
                     participant: null,
+                    aupProfile,
                     resolvedValue: "",
-                    source: "none"
+                    source: aupProfile ? "aup-profile" : "none"
                 };
             }
 
@@ -8295,23 +8331,27 @@
                 submitButton.textContent = "Checking...";
 
                 try {
-                    const { participant, resolvedValue, source } = await resolveAttendanceParticipant(scannedValue);
-                    const participantName = participant?.full_name || participant?.name || "";
+                    const { participant, aupProfile, resolvedValue, source } = await resolveAttendanceParticipant(scannedValue);
+                    const participantName = participant?.full_name || participant?.name || aupProfile?.name || "";
+                    const attendanceStudentIdValue = participant?.student_id || scannedValue;
+                    const attendanceCollege = participant
+                        ? (participant.home_college || participant.team || "")
+                        : (aupProfile?.college || "");
+                    const attendanceCourse = participant ? "" : (aupProfile?.course || "");
 
-                    if (!participant) {
+                    if (!participant && !aupProfile) {
                         showAttendanceResult("error", `
-                            <p class="font-semibold">Participant not found.</p>
-                            <p>No registered participant matched <strong>${escapeHTML(scannedValue)}</strong> as an ID number or RFID lookup result.</p>
+                            <p class="font-semibold">Student not found.</p>
+                            <p>No registered participant or AUP RFID profile matched <strong>${escapeHTML(scannedValue)}</strong>.</p>
                         `);
                         attendanceForm.reset();
                         setTimeout(() => attendanceStudentId.focus(), 50);
                         return;
                     }
 
-                    const attendanceCollege = participant.home_college || participant.team || "";
                     const attendanceRecord = {
-                        participant_id: participant.id,
-                        student_id: participant.student_id,
+                        participant_id: participant?.id || null,
+                        student_id: attendanceStudentIdValue,
                         participant_name: participantName,
                         team: attendanceCollege,
                         home_college: attendanceCollege,
@@ -8355,8 +8395,8 @@
                     showAttendanceResult("success", `
                         <div class="space-y-3">
                             <div>
-                                <p class="text-lg font-bold">Participant attendance checked.</p>
-                                <p class="text-sm">The participant has been marked <strong>Present</strong> in the attendance table.</p>
+                                <p class="text-lg font-bold">Attendance checked.</p>
+                                <p class="text-sm">${participant ? "The registered participant" : "The AUP student"} has been marked <strong>Present</strong> in the attendance table.</p>
                             </div>
 
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white bg-opacity-70 rounded-lg p-3 border border-green-100">
@@ -8366,9 +8406,16 @@
                                 </div>
 
                                 <div>
-                                    <p class="text-xs uppercase tracking-wide text-green-700">Student ID</p>
-                                    <p class="font-semibold">${escapeHTML(participant.student_id)}</p>
+                                    <p class="text-xs uppercase tracking-wide text-green-700">${participant ? "Student ID" : "RFID / ID Number"}</p>
+                                    <p class="font-semibold">${escapeHTML(attendanceStudentIdValue)}</p>
                                 </div>
+
+                                ${attendanceCourse ? `
+                                    <div>
+                                        <p class="text-xs uppercase tracking-wide text-green-700">Course</p>
+                                        <p class="font-semibold">${escapeHTML(attendanceCourse)}</p>
+                                    </div>
+                                ` : ""}
 
                                 <div>
                                     <p class="text-xs uppercase tracking-wide text-green-700">Scanned Value</p>
@@ -8380,7 +8427,7 @@
                                     <p class="font-semibold">${
                                         source === "rfid-name"
                                             ? `RFID lookup name (${escapeHTML(resolvedValue)})`
-                                            : (source === "rfid" ? `RFID lookup (${escapeHTML(resolvedValue)})` : "ID number")
+                                            : (source === "rfid" ? `RFID lookup (${escapeHTML(resolvedValue)})` : (source === "aup-profile" ? "AUP RFID profile" : "ID number"))
                                     }</p>
                                 </div>
 
