@@ -8366,7 +8366,7 @@
                 submitButton.textContent = "Checking...";
 
                 try {
-                    const { participant, aupProfile, resolvedValue, source } = await resolveAttendanceParticipant(scannedValue);
+                    const { participant, aupProfile } = await resolveAttendanceParticipant(scannedValue);
                     const participantName = participant?.full_name || participant?.name || aupProfile?.name || "";
                     const attendanceStudentIdValue = participant?.student_id || scannedValue;
                     const attendanceCollege = participant
@@ -8443,27 +8443,6 @@
                                 <div>
                                     <p class="text-xs uppercase tracking-wide text-green-700">${participant ? "Student ID" : "RFID / ID Number"}</p>
                                     <p class="font-semibold">${escapeHTML(attendanceStudentIdValue)}</p>
-                                </div>
-
-                                ${attendanceCourse ? `
-                                    <div>
-                                        <p class="text-xs uppercase tracking-wide text-green-700">Course</p>
-                                        <p class="font-semibold">${escapeHTML(attendanceCourse)}</p>
-                                    </div>
-                                ` : ""}
-
-                                <div>
-                                    <p class="text-xs uppercase tracking-wide text-green-700">Scanned Value</p>
-                                    <p class="font-semibold">${escapeHTML(scannedValue)}</p>
-                                </div>
-
-                                <div>
-                                    <p class="text-xs uppercase tracking-wide text-green-700">Matched By</p>
-                                    <p class="font-semibold">${
-                                        source === "rfid-name"
-                                            ? `RFID lookup name (${escapeHTML(resolvedValue)})`
-                                            : (source === "rfid" ? `RFID lookup (${escapeHTML(resolvedValue)})` : (source === "aup-profile" ? "AUP RFID profile" : "ID number"))
-                                    }</p>
                                 </div>
 
                                 <div>
