@@ -1,11 +1,18 @@
 create table if not exists public.rfid_profiles (
     rfid_value text primary key,
+    student_id text,
     full_name text not null,
     course text,
     college text,
     last_checked_at timestamptz not null default now(),
     created_at timestamptz not null default now()
 );
+
+alter table if exists public.rfid_profiles
+    add column if not exists student_id text;
+
+create index if not exists rfid_profiles_student_id_idx
+on public.rfid_profiles (student_id);
 
 alter table public.rfid_profiles enable row level security;
 

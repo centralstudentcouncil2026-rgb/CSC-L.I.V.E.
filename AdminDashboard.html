@@ -4613,6 +4613,26 @@
                 };
             }
 
+            function getAupLookupIdCandidates(value) {
+                return Array.from(new Set(
+                    normalizeAttendanceLookupValue(value)
+                        .replace(/<script[\s\S]*?<\/script>/gi, " ")
+                        .replace(/<style[\s\S]*?<\/style>/gi, " ")
+                        .replace(/<[^>]+>/g, " ")
+                        .replace(/&nbsp;/gi, " ")
+                        .split(/[^A-Za-z0-9-]+/)
+                        .map(normalizeAttendanceLookupValue)
+                        .filter(candidate => /^[0-9]{5,}$/.test(candidate))
+                ));
+            }
+
+            function getResolvedStudentIdFromLookup(scannedValue, lookupText) {
+                const scanned = normalizeAttendanceLookupValue(scannedValue);
+                const candidates = getAupLookupIdCandidates(lookupText).filter(candidate => candidate !== scanned);
+
+                return candidates[0] || scanned;
+            }
+
             function normalizeCachedAupProfile(row) {
                 if (!row?.full_name) {
                     return null;
@@ -4621,7 +4641,9 @@
                 return {
                     name: row.full_name,
                     course: row.course || "",
-                    college: row.college || ""
+                    college: row.college || "",
+                    studentId: row.student_id || "",
+                    rfidValue: row.rfid_value || ""
                 };
             }
 
@@ -4632,23 +4654,39 @@
                     return null;
                 }
 
-                const { data, error } = await supabase
+                const selectColumns = "rfid_value, student_id, full_name, course, college, last_checked_at";
+                const { data: rfidMatch, error: rfidError } = await supabase
                     .from(RFID_PROFILES_TABLE)
-                    .select("rfid_value, full_name, course, college, last_checked_at")
+                    .select(selectColumns)
                     .eq("rfid_value", rfidValue)
                     .maybeSingle();
 
-                if (error) {
-                    console.warn("RFID profile cache lookup skipped:", error.message || error);
+                if (rfidError) {
+                    console.warn("RFID profile cache lookup skipped:", rfidError.message || rfidError);
                     return null;
                 }
 
-                const profile = normalizeCachedAupProfile(data);
-                return profile ? { ...profile, rfidValue: data.rfid_value } : null;
+                if (rfidMatch) {
+                    return normalizeCachedAupProfile(rfidMatch);
+                }
+
+                const { data: studentIdMatch, error: studentIdError } = await supabase
+                    .from(RFID_PROFILES_TABLE)
+                    .select(selectColumns)
+                    .eq("student_id", rfidValue)
+                    .maybeSingle();
+
+                if (studentIdError) {
+                    console.warn("RFID profile cache lookup skipped:", studentIdError.message || studentIdError);
+                    return null;
+                }
+
+                return normalizeCachedAupProfile(studentIdMatch);
             }
 
-            async function saveCachedRfidProfile(scannedValue, profile) {
+            async function saveCachedRfidProfile(scannedValue, profile, resolvedStudentId = "") {
                 const rfidValue = normalizeAttendanceLookupValue(scannedValue);
+                const studentId = normalizeAttendanceLookupValue(resolvedStudentId || profile?.studentId || scannedValue);
 
                 if (!rfidValue || !profile?.name) {
                     return;
@@ -4658,6 +4696,7 @@
                     .from(RFID_PROFILES_TABLE)
                     .upsert([{
                         rfid_value: rfidValue,
+                        student_id: studentId,
                         full_name: profile.name,
                         course: profile.course || null,
                         college: profile.college || null,
@@ -4835,9 +4874,12 @@
 
                 const lookupText = await fetchAupRfidLookupValue(scannedValue);
                 const aupProfile = parseAupRfidProfile(lookupText);
+                const resolvedStudentId = getResolvedStudentIdFromLookup(scannedValue, lookupText);
 
                 if (aupProfile) {
-                    await saveCachedRfidProfile(scannedValue, aupProfile);
+                    aupProfile.studentId = resolvedStudentId;
+                    aupProfile.rfidValue = normalizeAttendanceLookupValue(scannedValue);
+                    await saveCachedRfidProfile(scannedValue, aupProfile, resolvedStudentId);
                 }
 
                 const { idCandidates, nameCandidates } = getAttendanceLookupCandidates(lookupText);
@@ -4895,7 +4937,7 @@
                     .single();
 
                 const profileColumnError = result.error
-                    && /attendance_course|attendance_source|column|schema cache/i.test(result.error.message || "");
+                    && /attendance_rfid_value|attendance_course|attendance_source|column|schema cache/i.test(result.error.message || "");
 
                 if (profileColumnError && Object.keys(optionalProfileData).length) {
                     result = await supabase
@@ -8455,7 +8497,7 @@
                 try {
                     const { participant, aupProfile } = await resolveAttendanceParticipant(scannedValue);
                     const participantName = participant?.full_name || participant?.name || aupProfile?.name || "";
-                    const attendanceStudentIdValue = participant?.student_id || scannedValue;
+                    const attendanceStudentIdValue = participant?.student_id || aupProfile?.studentId || scannedValue;
                     const attendanceCollege = participant
                         ? (participant.home_college || participant.team || "")
                         : (aupProfile?.college || "");
@@ -8481,9 +8523,11 @@
                         checked_at: new Date().toISOString()
                     };
                     const optionalProfileData = aupProfile ? {
+                        attendance_rfid_value: aupProfile.rfidValue || scannedValue,
                         attendance_course: aupProfile.course || null,
                         attendance_source: participant ? "registered_rfid_lookup" : "aup_rfid_lookup"
                     } : {
+                        attendance_rfid_value: scannedValue,
                         attendance_source: "registered_participant"
                     };
 
