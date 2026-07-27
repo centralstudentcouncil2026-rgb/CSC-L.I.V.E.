@@ -1819,7 +1819,7 @@
                             <form id="attendanceForm" class="space-y-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">
-                                        Student ID
+                                        RFID or ID Number
                                     </label>
 
                                     <input 
@@ -1827,7 +1827,7 @@
                                         id="attendanceStudentId"
                                         required
                                         autocomplete="off"
-                                        placeholder="Enter or scan student ID"
+                                        placeholder="Enter or scan RFID / ID number"
                                         class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 outline-none">
                                 </div>
 
@@ -4464,6 +4464,127 @@
                 if (attendanceEmptyState) {
                     attendanceEmptyState.classList.remove("hidden");
                 }
+            }
+
+            const AUP_RFID_LOOKUP_URL = "https://a.aolis.aup.edu.ph/personal/sheepcounter/rfidwho.php?s=";
+
+            function normalizeAttendanceLookupValue(value) {
+                return String(value || "").trim();
+            }
+
+            function getAttendanceLookupCandidates(value) {
+                const candidates = new Set();
+                const rawValue = normalizeAttendanceLookupValue(value);
+
+                if (!rawValue) {
+                    return [];
+                }
+
+                candidates.add(rawValue);
+
+                try {
+                    const parsedValue = JSON.parse(rawValue);
+                    Object.values(parsedValue || {}).forEach(item => {
+                        if (typeof item === "string" || typeof item === "number") {
+                            candidates.add(normalizeAttendanceLookupValue(item));
+                        }
+                    });
+                } catch (error) {
+                    // The RFID endpoint may return plain text or HTML, so JSON parsing is optional.
+                }
+
+                const textWithoutTags = rawValue
+                    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+                    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+                    .replace(/<[^>]+>/g, " ")
+                    .replace(/&nbsp;/gi, " ");
+                textWithoutTags
+                    .split(/[^A-Za-z0-9-]+/)
+                    .map(normalizeAttendanceLookupValue)
+                    .filter(value => value.length >= 3)
+                    .forEach(value => candidates.add(value));
+
+                return Array.from(candidates).filter(Boolean);
+            }
+
+            async function findParticipantByAttendanceValue(value) {
+                const lookupValue = normalizeAttendanceLookupValue(value);
+
+                if (!lookupValue) {
+                    return null;
+                }
+
+                const { data: studentIdMatch, error: studentIdError } = await supabase
+                    .from(PARTICIPANTS_TABLE)
+                    .select("id, name, student_id, id_number, team, home_college, status")
+                    .eq("student_id", lookupValue)
+                    .maybeSingle();
+
+                if (studentIdError) {
+                    throw studentIdError;
+                }
+
+                if (studentIdMatch) {
+                    return studentIdMatch;
+                }
+
+                const { data: idNumberMatch, error: idNumberError } = await supabase
+                    .from(PARTICIPANTS_TABLE)
+                    .select("id, name, student_id, id_number, team, home_college, status")
+                    .eq("id_number", lookupValue)
+                    .maybeSingle();
+
+                if (idNumberError) {
+                    throw idNumberError;
+                }
+
+                return idNumberMatch || null;
+            }
+
+            async function fetchAupRfidLookupValue(scannedValue) {
+                const response = await fetch(`${AUP_RFID_LOOKUP_URL}${encodeURIComponent(scannedValue)}`, {
+                    method: "GET",
+                    cache: "no-store"
+                });
+
+                if (!response.ok) {
+                    throw new Error(`RFID lookup failed with status ${response.status}.`);
+                }
+
+                return response.text();
+            }
+
+            async function resolveAttendanceParticipant(scannedValue) {
+                const directParticipant = await findParticipantByAttendanceValue(scannedValue);
+
+                if (directParticipant) {
+                    return {
+                        participant: directParticipant,
+                        resolvedValue: normalizeAttendanceLookupValue(scannedValue),
+                        source: "direct"
+                    };
+                }
+
+                const lookupText = await fetchAupRfidLookupValue(scannedValue);
+                const candidates = getAttendanceLookupCandidates(lookupText);
+
+                for (const candidate of candidates) {
+                    const participant = await findParticipantByAttendanceValue(candidate);
+
+                    if (participant) {
+                        return {
+                            participant,
+                            resolvedValue: candidate,
+                            source: "rfid"
+                        };
+                    }
+                }
+
+                return {
+                    participant: null,
+                    resolvedValue: "",
+                    source: "none"
+                };
             }
 
             async function countRows(tableName, options = {}) {
@@ -7993,13 +8114,13 @@
             async function checkAttendance(event) {
                 event.preventDefault();
 
-                const studentId = attendanceStudentId.value.trim();
+                const scannedValue = attendanceStudentId.value.trim();
                 const submitButton = attendanceForm.querySelector('button[type="submit"]');
 
-                if (!studentId) {
+                if (!scannedValue) {
                     showAttendanceResult("error", `
-                        <p class="font-semibold">Student ID is required.</p>
-                        <p>Please enter a Student ID before checking attendance.</p>
+                        <p class="font-semibold">RFID or ID Number is required.</p>
+                        <p>Please enter or scan an RFID / ID number before checking attendance.</p>
                     `);
                     attendanceStudentId.focus();
                     return;
@@ -8009,20 +8130,12 @@
                 submitButton.textContent = "Checking...";
 
                 try {
-                    const { data: participant, error: lookupError } = await supabase
-                        .from(PARTICIPANTS_TABLE)
-                        .select("id, name, student_id, team, home_college, status")
-                        .eq("student_id", studentId)
-                        .maybeSingle();
-
-                    if (lookupError) {
-                        throw lookupError;
-                    }
+                    const { participant, resolvedValue, source } = await resolveAttendanceParticipant(scannedValue);
 
                     if (!participant) {
                         showAttendanceResult("error", `
-                            <p class="font-semibold">Student ID not found.</p>
-                            <p>No registered participant matched <strong>${escapeHTML(studentId)}</strong>.</p>
+                            <p class="font-semibold">Participant not found.</p>
+                            <p>No registered participant matched <strong>${escapeHTML(scannedValue)}</strong> as an ID number or RFID lookup result.</p>
                         `);
                         attendanceForm.reset();
                         setTimeout(() => attendanceStudentId.focus(), 50);
@@ -8092,6 +8205,16 @@
                                 </div>
 
                                 <div>
+                                    <p class="text-xs uppercase tracking-wide text-green-700">Scanned Value</p>
+                                    <p class="font-semibold">${escapeHTML(scannedValue)}</p>
+                                </div>
+
+                                <div>
+                                    <p class="text-xs uppercase tracking-wide text-green-700">Matched By</p>
+                                    <p class="font-semibold">${source === "rfid" ? `RFID lookup (${escapeHTML(resolvedValue)})` : "ID number"}</p>
+                                </div>
+
+                                <div>
                                     <p class="text-xs uppercase tracking-wide text-green-700">Home College</p>
                                     <p class="font-semibold">${escapeHTML(attendanceCollege || "No college")}</p>
                                 </div>
@@ -8109,7 +8232,7 @@
 
                             ${attendanceBonusNotice}
 
-                            <p class="text-xs text-green-700">Ready for the next attendance check. Enter another Student ID or close this window.</p>
+                            <p class="text-xs text-green-700">Ready for the next attendance check. Enter another RFID / ID number or close this window.</p>
                         </div>
                     `);
 
@@ -8121,8 +8244,8 @@
                 } catch (err) {
                     console.error("Attendance check error:", err.message || err);
                     showAttendanceResult("error", `
-                        <p class="font-semibold">Failed to save attendance.</p>
-                        <p>${escapeHTML(err.message || "Please check your attendance table, columns, unique constraint, and RLS policy.")}</p>
+                        <p class="font-semibold">Failed to check attendance.</p>
+                        <p>${escapeHTML(err.message || "Please check the participant, attendance, and RFID lookup connection.")}</p>
                     `);
                     setTimeout(() => attendanceStudentId.focus(), 50);
                 } finally {
