@@ -4466,7 +4466,7 @@
                 }
             }
 
-            const AUP_RFID_LOOKUP_URL = "https://a.aolis.aup.edu.ph/personal/sheepcounter/rfidwho.php?s=";
+            const AUP_RFID_LOOKUP_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/aup-rfid-lookup?s=`;
 
             function normalizeAttendanceLookupValue(value) {
                 return String(value || "").trim();
@@ -4542,9 +4542,13 @@
             }
 
             async function fetchAupRfidLookupValue(scannedValue) {
-                const response = await fetch(`${AUP_RFID_LOOKUP_URL}${encodeURIComponent(scannedValue)}`, {
+                const response = await fetch(`${AUP_RFID_LOOKUP_FUNCTION_URL}${encodeURIComponent(scannedValue)}`, {
                     method: "GET",
-                    cache: "no-store"
+                    cache: "no-store",
+                    headers: {
+                        apikey: SUPABASE_ANON_KEY,
+                        Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+                    }
                 });
 
                 if (!response.ok) {
