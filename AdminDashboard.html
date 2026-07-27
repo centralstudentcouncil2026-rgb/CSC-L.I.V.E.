@@ -4476,21 +4476,68 @@
                 return normalizeAttendanceLookupValue(value).replace(/\s+/g, " ").toLowerCase();
             }
 
+            function normalizeAttendanceNameKey(value) {
+                return normalizeAttendanceLookupValue(value).toLowerCase().replace(/[^a-z0-9]+/g, "");
+            }
+
+            function getAttendanceNameTokens(value) {
+                return normalizeAttendanceLookupValue(value)
+                    .toLowerCase()
+                    .split(/[^a-z0-9]+/)
+                    .filter(token => token.length >= 2);
+            }
+
+            function namesLookLikeSamePerson(sourceName, participantName) {
+                const sourceKey = normalizeAttendanceNameKey(sourceName);
+                const participantKey = normalizeAttendanceNameKey(participantName);
+
+                if (!sourceKey || !participantKey) {
+                    return false;
+                }
+
+                if (sourceKey === participantKey || sourceKey.includes(participantKey) || participantKey.includes(sourceKey)) {
+                    return true;
+                }
+
+                const sourceTokens = getAttendanceNameTokens(sourceName);
+                const participantTokens = getAttendanceNameTokens(participantName);
+
+                if (!sourceTokens.length || !participantTokens.length) {
+                    return false;
+                }
+
+                const sourceTokenSet = new Set(sourceTokens);
+                const participantTokenSet = new Set(participantTokens);
+                const firstNameMatches = sourceTokens[0] === participantTokens[0];
+                const lastNameMatches = sourceTokens[sourceTokens.length - 1] === participantTokens[participantTokens.length - 1];
+                const overlapCount = participantTokens.filter(token => sourceTokenSet.has(token)).length;
+
+                return (firstNameMatches && lastNameMatches)
+                    || (lastNameMatches && overlapCount >= Math.min(2, participantTokenSet.size));
+            }
+
             function getAttendanceLookupCandidates(value) {
-                const candidates = new Set();
+                const idCandidates = new Set();
+                const nameCandidates = new Set();
                 const rawValue = normalizeAttendanceLookupValue(value);
 
                 if (!rawValue) {
-                    return [];
+                    return { idCandidates: [], nameCandidates: [] };
                 }
 
-                candidates.add(rawValue);
+                if (/^[A-Za-z0-9-]{3,}$/.test(rawValue) && !/<[a-z][\s\S]*>/i.test(rawValue)) {
+                    idCandidates.add(rawValue);
+                }
 
                 try {
                     const parsedValue = JSON.parse(rawValue);
                     Object.values(parsedValue || {}).forEach(item => {
-                        if (typeof item === "string" || typeof item === "number") {
-                            candidates.add(normalizeAttendanceLookupValue(item));
+                        const candidate = normalizeAttendanceLookupValue(item);
+
+                        if (/^[A-Za-z0-9-]{3,}$/.test(candidate)) {
+                            idCandidates.add(candidate);
+                        } else if (/[A-Za-z]/.test(candidate) && candidate.includes(" ")) {
+                            nameCandidates.add(candidate);
                         }
                     });
                 } catch (error) {
@@ -4506,7 +4553,11 @@
                     );
 
                     if (cellValue.length >= 3) {
-                        candidates.add(cellValue);
+                        if (/^[A-Za-z0-9-]{3,}$/.test(cellValue)) {
+                            idCandidates.add(cellValue);
+                        } else if (/[A-Za-z]/.test(cellValue) && cellValue.includes(" ")) {
+                            nameCandidates.add(cellValue);
+                        }
                     }
                 }
 
@@ -4518,10 +4569,39 @@
                 textWithoutTags
                     .split(/[^A-Za-z0-9-]+/)
                     .map(normalizeAttendanceLookupValue)
-                    .filter(value => value.length >= 3)
-                    .forEach(value => candidates.add(value));
+                    .filter(value => /^[0-9]{5,}$/.test(value))
+                    .forEach(value => idCandidates.add(value));
 
-                return Array.from(candidates).filter(Boolean);
+                return {
+                    idCandidates: Array.from(idCandidates).filter(Boolean).slice(0, 8),
+                    nameCandidates: Array.from(nameCandidates).filter(Boolean).slice(0, 5)
+                };
+            }
+
+            function findParticipantByLocalAttendanceName(value) {
+                const lookupKey = normalizeAttendanceNameKey(value);
+
+                if (!lookupKey) {
+                    return null;
+                }
+
+                return participantsData.find(participant => {
+                    return namesLookLikeSamePerson(value, participant.full_name || participant.name);
+                }) || null;
+            }
+
+            function findParticipantByLocalAttendanceValue(value) {
+                const lookupValue = normalizeAttendanceLookupValue(value);
+
+                if (!lookupValue) {
+                    return null;
+                }
+
+                const normalizedLookupValue = normalizeAttendanceIdentity(lookupValue);
+                return participantsData.find(participant => {
+                    return normalizeAttendanceIdentity(participant.student_id) === normalizedLookupValue
+                        || normalizeAttendanceIdentity(participant.id_number) === normalizedLookupValue;
+                }) || findParticipantByLocalAttendanceName(lookupValue);
             }
 
             async function findParticipantByAttendanceName(value) {
@@ -4564,6 +4644,12 @@
 
                 if (!lookupValue) {
                     return null;
+                }
+
+                const localParticipant = findParticipantByLocalAttendanceValue(lookupValue);
+
+                if (localParticipant) {
+                    return localParticipant;
                 }
 
                 const { data: studentIdMatch, error: studentIdError } = await supabase
@@ -4617,20 +4703,44 @@
                     };
                 }
 
-                const lookupText = await fetchAupRfidLookupValue(scannedValue);
-                const candidates = getAttendanceLookupCandidates(lookupText);
+                if (!participantsData.length) {
+                    await loadParticipants();
+                }
 
-                for (const candidate of candidates) {
+                const refreshedDirectParticipant = findParticipantByLocalAttendanceValue(scannedValue);
+
+                if (refreshedDirectParticipant) {
+                    return {
+                        participant: refreshedDirectParticipant,
+                        resolvedValue: normalizeAttendanceLookupValue(scannedValue),
+                        source: "direct"
+                    };
+                }
+
+                const lookupText = await fetchAupRfidLookupValue(scannedValue);
+                const { idCandidates, nameCandidates } = getAttendanceLookupCandidates(lookupText);
+
+                for (const candidate of idCandidates) {
                     const participant = await findParticipantByAttendanceValue(candidate);
 
                     if (participant) {
-                        const matchedByName = normalizeAttendanceIdentity(participant.name) === normalizeAttendanceIdentity(candidate)
-                            || normalizeAttendanceIdentity(participant.full_name) === normalizeAttendanceIdentity(candidate);
+                        return {
+                            participant,
+                            resolvedValue: candidate,
+                            source: "rfid"
+                        };
+                    }
+                }
+
+                for (const candidate of nameCandidates) {
+                    const participant = findParticipantByLocalAttendanceName(candidate) || await findParticipantByAttendanceName(candidate);
+
+                    if (participant) {
 
                         return {
                             participant,
                             resolvedValue: candidate,
-                            source: matchedByName ? "rfid-name" : "rfid"
+                            source: "rfid-name"
                         };
                     }
                 }
