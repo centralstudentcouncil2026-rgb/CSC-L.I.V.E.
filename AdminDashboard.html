@@ -2778,6 +2778,7 @@
             const MATCHES_TABLE = "scheduled_matches";
             const SPORTS_TABLE = "sports";
             const ATTENDANCE_TABLE = "attendance";
+            const RFID_PROFILES_TABLE = "rfid_profiles";
             const GAME_HISTORY_TABLE = "game_history";
             const BASKETBALL_STATS_TABLE = "basketball_match_player_stats";
             const STUDENT_FEEDBACK_TABLE = "student_feedback";
@@ -4612,6 +4613,64 @@
                 };
             }
 
+            function normalizeCachedAupProfile(row) {
+                if (!row?.full_name) {
+                    return null;
+                }
+
+                return {
+                    name: row.full_name,
+                    course: row.course || "",
+                    college: row.college || ""
+                };
+            }
+
+            async function getCachedRfidProfile(scannedValue) {
+                const rfidValue = normalizeAttendanceLookupValue(scannedValue);
+
+                if (!rfidValue) {
+                    return null;
+                }
+
+                const { data, error } = await supabase
+                    .from(RFID_PROFILES_TABLE)
+                    .select("rfid_value, full_name, course, college, last_checked_at")
+                    .eq("rfid_value", rfidValue)
+                    .maybeSingle();
+
+                if (error) {
+                    console.warn("RFID profile cache lookup skipped:", error.message || error);
+                    return null;
+                }
+
+                const profile = normalizeCachedAupProfile(data);
+                return profile ? { ...profile, rfidValue: data.rfid_value } : null;
+            }
+
+            async function saveCachedRfidProfile(scannedValue, profile) {
+                const rfidValue = normalizeAttendanceLookupValue(scannedValue);
+
+                if (!rfidValue || !profile?.name) {
+                    return;
+                }
+
+                const { error } = await supabase
+                    .from(RFID_PROFILES_TABLE)
+                    .upsert([{
+                        rfid_value: rfidValue,
+                        full_name: profile.name,
+                        course: profile.course || null,
+                        college: profile.college || null,
+                        last_checked_at: new Date().toISOString()
+                    }], {
+                        onConflict: "rfid_value"
+                    });
+
+                if (error) {
+                    console.warn("RFID profile cache save skipped:", error.message || error);
+                }
+            }
+
             function findParticipantByLocalAttendanceName(value) {
                 const lookupKey = normalizeAttendanceNameKey(value);
 
@@ -4751,8 +4810,36 @@
                     };
                 }
 
+                const cachedAupProfile = await getCachedRfidProfile(scannedValue);
+
+                if (cachedAupProfile) {
+                    const cachedParticipant = findParticipantByLocalAttendanceName(cachedAupProfile.name)
+                        || await findParticipantByAttendanceName(cachedAupProfile.name);
+
+                    if (cachedParticipant) {
+                        return {
+                            participant: cachedParticipant,
+                            aupProfile: cachedAupProfile,
+                            resolvedValue: cachedAupProfile.name,
+                            source: "rfid-cache-name"
+                        };
+                    }
+
+                    return {
+                        participant: null,
+                        aupProfile: cachedAupProfile,
+                        resolvedValue: cachedAupProfile.name,
+                        source: "rfid-cache"
+                    };
+                }
+
                 const lookupText = await fetchAupRfidLookupValue(scannedValue);
                 const aupProfile = parseAupRfidProfile(lookupText);
+
+                if (aupProfile) {
+                    await saveCachedRfidProfile(scannedValue, aupProfile);
+                }
+
                 const { idCandidates, nameCandidates } = getAttendanceLookupCandidates(lookupText);
                 const prioritizedNameCandidates = [
                     aupProfile?.name || "",
