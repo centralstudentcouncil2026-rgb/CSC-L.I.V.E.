@@ -1527,9 +1527,9 @@
                     </div>
 
                     <div class="dashboard-overview-card p-6 bg-white border-0 shadow-md rounded-lg">
-                        <p class="dashboard-overview-label text-gray-600 text-sm font-medium">Today's Attendance</p>
+                        <p class="dashboard-overview-label text-gray-600 text-sm font-medium">Session Attendance</p>
                         <p id="adminTodayAttendance" class="dashboard-overview-value text-3xl font-bold text-blue-700 mt-2">...</p>
-                        <p class="dashboard-overview-note text-xs text-gray-500 mt-1">Participant attendance checked today</p>
+                        <p class="dashboard-overview-note text-xs text-gray-500 mt-1">Participant attendance for the active session date</p>
                     </div>
                 </div>
 
@@ -1562,8 +1562,8 @@
                     <div class="responsive-table-card p-6 bg-white border-0 shadow-md rounded-lg overflow-x-auto">
                         <div class="flex items-center justify-between gap-3 mb-4">
                             <div>
-                                <h3 class="text-xl font-bold text-gray-900">Today's Attendance Records</h3>
-                                <p class="text-xs text-gray-500">Latest participant attendance checks for today.</p>
+                                <h3 class="text-xl font-bold text-gray-900">Session Attendance Records</h3>
+                                <p class="text-xs text-gray-500">Latest participant attendance checks for the active session date.</p>
                             </div>
                         </div>
 
@@ -1815,6 +1815,45 @@
                             <h3 class="text-xl font-bold text-gray-900 mb-2">
                                 Participant Attendance Checker
                             </h3>
+                            <p class="mb-5 text-sm font-semibold text-gray-500">Set the shared attendance date and acceptance window before scanning.</p>
+
+                            <form id="attendanceSettingsForm" class="mb-5 space-y-4 rounded-xl border border-blue-100 bg-blue-50 p-4">
+                                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                    <div>
+                                        <label for="attendanceSessionDate" class="mb-1 block text-xs font-black uppercase tracking-wide text-blue-900">Attendance Date</label>
+                                        <input
+                                            id="attendanceSessionDate"
+                                            type="date"
+                                            required
+                                            class="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-bold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                                    </div>
+
+                                    <div>
+                                        <label for="attendanceDurationMinutes" class="mb-1 block text-xs font-black uppercase tracking-wide text-blue-900">Accept For</label>
+                                        <div class="flex items-center gap-2">
+                                            <input
+                                                id="attendanceDurationMinutes"
+                                                type="number"
+                                                min="1"
+                                                step="1"
+                                                required
+                                                class="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-bold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                                            <span class="text-xs font-black uppercase tracking-wide text-blue-900">min</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button
+                                    id="attendanceSettingsSaveButton"
+                                    type="submit"
+                                    class="w-full rounded-lg bg-blue-700 px-4 py-2 text-sm font-black text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60">
+                                    Save Attendance Session
+                                </button>
+
+                                <div id="attendanceSettingsStatus" class="rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-blue-900">
+                                    Loading shared attendance session...
+                                </div>
+                            </form>
 
                             <form id="attendanceForm" class="space-y-4">
                                 <div>
@@ -2778,6 +2817,7 @@
             const MATCHES_TABLE = "scheduled_matches";
             const SPORTS_TABLE = "sports";
             const ATTENDANCE_TABLE = "attendance";
+            const ATTENDANCE_SETTINGS_TABLE = "attendance_settings";
             const RFID_PROFILES_TABLE = "rfid_profiles";
             const GAME_HISTORY_TABLE = "game_history";
             const BASKETBALL_STATS_TABLE = "basketball_match_player_stats";
@@ -2866,6 +2906,11 @@
             const closeParticipantImageViewer = document.getElementById("closeParticipantImageViewer");
             const printParticipantsButton = document.getElementById("printParticipantsButton");
             const attendanceForm = document.getElementById("attendanceForm");
+            const attendanceSettingsForm = document.getElementById("attendanceSettingsForm");
+            const attendanceSessionDate = document.getElementById("attendanceSessionDate");
+            const attendanceDurationMinutes = document.getElementById("attendanceDurationMinutes");
+            const attendanceSettingsSaveButton = document.getElementById("attendanceSettingsSaveButton");
+            const attendanceSettingsStatus = document.getElementById("attendanceSettingsStatus");
             const attendanceStudentId = document.getElementById("attendanceStudentId");
             const attendanceResult = document.getElementById("attendanceResult");
             const attendanceEmptyState = document.getElementById("attendanceEmptyState");
@@ -2952,6 +2997,7 @@
             let accountApprovalsData = [];
             let isLoadingAccountApprovals = false;
             let shouldReloadAccountApprovalsAgain = false;
+            let activeAttendanceSettings = null;
             let editingAccountSportId = "";
             let hasLoadedAdminOverview = false;
             let currentAdminUser = null;
@@ -3043,6 +3089,63 @@
 
             function getLocalISODate() {
                 return new Date().toLocaleDateString("en-CA");
+            }
+
+            function getAttendanceSessionDate() {
+                return activeAttendanceSettings?.attendance_date || attendanceSessionDate?.value || getLocalISODate();
+            }
+
+            function getAttendanceSessionClosesAt(settings = activeAttendanceSettings) {
+                if (settings?.closes_at) {
+                    return new Date(settings.closes_at);
+                }
+
+                const openedAt = settings?.opened_at ? new Date(settings.opened_at) : new Date();
+                const durationMinutes = Math.max(1, Number(settings?.duration_minutes || attendanceDurationMinutes?.value || 0));
+
+                if (Number.isNaN(openedAt.getTime())) {
+                    return null;
+                }
+
+                return new Date(openedAt.getTime() + durationMinutes * 60000);
+            }
+
+            function isAttendanceSessionOpen(settings = activeAttendanceSettings) {
+                if (!settings?.attendance_date) {
+                    return false;
+                }
+
+                const closesAt = getAttendanceSessionClosesAt(settings);
+                return Boolean(closesAt && Date.now() <= closesAt.getTime());
+            }
+
+            function getAttendanceSessionRemainingText(settings = activeAttendanceSettings) {
+                const closesAt = getAttendanceSessionClosesAt(settings);
+
+                if (!closesAt || Number.isNaN(closesAt.getTime())) {
+                    return "No closing time set";
+                }
+
+                const remainingMs = closesAt.getTime() - Date.now();
+
+                if (remainingMs <= 0) {
+                    return `Closed at ${closesAt.toLocaleString()}`;
+                }
+
+                const totalMinutes = Math.ceil(remainingMs / 60000);
+                const hours = Math.floor(totalMinutes / 60);
+                const minutes = totalMinutes % 60;
+                const parts = [];
+
+                if (hours) {
+                    parts.push(`${hours} hr`);
+                }
+
+                if (minutes || !parts.length) {
+                    parts.push(`${minutes} min`);
+                }
+
+                return `${parts.join(" ")} remaining, closes ${closesAt.toLocaleString()}`;
             }
 
             function getStoredAdminUser() {
@@ -4522,6 +4625,105 @@
                 }
             }
 
+            function renderAttendanceSettingsStatus(message = "") {
+                if (!attendanceSessionDate || !attendanceDurationMinutes || !attendanceSettingsStatus) {
+                    return;
+                }
+
+                const settings = activeAttendanceSettings;
+                const dateValue = getAttendanceSessionDate();
+                const durationValue = Number(settings?.duration_minutes || attendanceDurationMinutes.value || 0);
+
+                attendanceSessionDate.value = dateValue;
+                attendanceDurationMinutes.value = durationValue > 0 ? durationValue : 480;
+
+                if (message) {
+                    attendanceSettingsStatus.className = "rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-900";
+                    attendanceSettingsStatus.textContent = message;
+                    return;
+                }
+
+                if (!settings) {
+                    attendanceSettingsStatus.className = "rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-900";
+                    attendanceSettingsStatus.textContent = "No shared attendance session has been saved yet.";
+                    return;
+                }
+
+                const open = isAttendanceSessionOpen(settings);
+                attendanceSettingsStatus.className = open
+                    ? "rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-bold text-green-900"
+                    : "rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-900";
+                attendanceSettingsStatus.textContent = `${open ? "Open" : "Closed"} for ${settings.attendance_date}. ${getAttendanceSessionRemainingText(settings)}`;
+            }
+
+            async function loadAttendanceSettings() {
+                if (!attendanceSettingsStatus) {
+                    return null;
+                }
+
+                const { data, error } = await supabase
+                    .from(ATTENDANCE_SETTINGS_TABLE)
+                    .select("*")
+                    .eq("id", 1)
+                    .maybeSingle();
+
+                if (error) {
+                    console.error("Attendance settings load error:", error.message || error);
+                    activeAttendanceSettings = null;
+                    renderAttendanceSettingsStatus("Attendance session settings are not ready. Run the attendance settings SQL first.");
+                    return null;
+                }
+
+                activeAttendanceSettings = data || null;
+                renderAttendanceSettingsStatus();
+                return activeAttendanceSettings;
+            }
+
+            async function saveAttendanceSettings(event) {
+                event.preventDefault();
+
+                const attendanceDate = attendanceSessionDate.value || getLocalISODate();
+                const rawDurationMinutes = Math.floor(Number(attendanceDurationMinutes.value || 0));
+                const durationMinutes = Number.isFinite(rawDurationMinutes) && rawDurationMinutes > 0 ? rawDurationMinutes : 480;
+                const openedAt = new Date();
+                const closesAt = new Date(openedAt.getTime() + durationMinutes * 60000);
+                const adminUser = getStoredAdminUser();
+
+                attendanceSettingsSaveButton.disabled = true;
+                attendanceSettingsSaveButton.textContent = "Saving...";
+
+                const payload = {
+                    id: 1,
+                    attendance_date: attendanceDate,
+                    duration_minutes: durationMinutes,
+                    opened_at: openedAt.toISOString(),
+                    closes_at: closesAt.toISOString(),
+                    updated_by: adminUser?.id || adminUser?.email || null,
+                    updated_by_name: adminUser?.fullName || adminUser?.full_name || adminUser?.email || "Admin",
+                    updated_at: openedAt.toISOString()
+                };
+
+                const { data, error } = await supabase
+                    .from(ATTENDANCE_SETTINGS_TABLE)
+                    .upsert([payload], { onConflict: "id" })
+                    .select("*")
+                    .single();
+
+                attendanceSettingsSaveButton.disabled = false;
+                attendanceSettingsSaveButton.textContent = "Save Attendance Session";
+
+                if (error) {
+                    console.error("Attendance settings save error:", error.message || error);
+                    renderAttendanceSettingsStatus(error.message || "Failed to save attendance session settings.");
+                    return;
+                }
+
+                activeAttendanceSettings = data || payload;
+                renderAttendanceSettingsStatus();
+                await loadAdminOverviewCounts();
+                showDashboardToast("Attendance session saved.");
+            }
+
             const AUP_RFID_LOOKUP_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/aup-rfid-lookup?s=`;
 
             function normalizeAttendanceLookupValue(value) {
@@ -5213,12 +5415,12 @@
             }
 
             async function loadTodayAttendanceRows() {
-                const today = getLocalISODate();
+                const attendanceDate = getAttendanceSessionDate();
 
                 const { data, error } = await supabase
                     .from(ATTENDANCE_TABLE)
                     .select("id, participant_name, student_id, team, status, attendance_date, checked_at")
-                    .eq("attendance_date", today)
+                    .eq("attendance_date", attendanceDate)
                     .order("checked_at", { ascending: false });
 
                 if (error) {
@@ -5261,7 +5463,7 @@
                 }
 
                 if (!attendanceRows.length) {
-                    renderEmptyRow(overviewAttendanceBody, 4, "No participant attendance records checked today.");
+                    renderEmptyRow(overviewAttendanceBody, 4, `No participant attendance records checked for ${getAttendanceSessionDate()}.`);
                     return;
                 }
 
@@ -8607,6 +8809,18 @@
                 submitButton.textContent = "Checking...";
 
                 try {
+                    await loadAttendanceSettings();
+
+                    if (!isAttendanceSessionOpen()) {
+                        showAttendanceResult("warning", `
+                            <p class="font-semibold">Attendance session is closed.</p>
+                            <p>Please set the attendance date and duration, then save the attendance session before checking attendance.</p>
+                        `);
+                        attendanceStudentId.focus();
+                        return;
+                    }
+
+                    const configuredAttendanceDate = getAttendanceSessionDate();
                     const { participant, aupProfile } = await resolveAttendanceParticipant(scannedValue);
                     const participantName = participant?.full_name || participant?.name || aupProfile?.name || "";
                     const attendanceStudentIdValue = participant?.student_id || aupProfile?.studentId || scannedValue;
@@ -8632,6 +8846,7 @@
                         team: attendanceCollege,
                         home_college: attendanceCollege,
                         status: "Present",
+                        attendance_date: configuredAttendanceDate,
                         checked_at: new Date().toISOString()
                     };
                     const optionalProfileData = aupProfile ? {
@@ -8649,7 +8864,7 @@
                         throw attendanceError;
                     }
 
-                    const attendanceDate = savedAttendance?.attendance_date || getLocalISODate();
+                    const attendanceDate = savedAttendance?.attendance_date || configuredAttendanceDate;
                     let attendanceBonusNotice = "";
 
                     if (attendanceCollege) {
@@ -8665,8 +8880,8 @@
                         } else {
                             const remainingAttendance = Math.max(0, 100 - Number(teamAttendanceCount || 0));
                             attendanceBonusNotice = Number(teamAttendanceCount || 0) >= 100
-                                ? `<p class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-bold text-blue-800">Daily home college attendance bonus active: ${escapeHTML(attendanceCollege)} has ${Number(teamAttendanceCount || 0).toLocaleString()} present records today, so +5 points will be added to the leaderboard.</p>`
-                                : `<p class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800">${escapeHTML(attendanceCollege)} has ${Number(teamAttendanceCount || 0).toLocaleString()}/100 present records today. ${remainingAttendance.toLocaleString()} more needed for the +5 daily home college bonus.</p>`;
+                                ? `<p class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-bold text-blue-800">Daily home college attendance bonus active: ${escapeHTML(attendanceCollege)} has ${Number(teamAttendanceCount || 0).toLocaleString()} present records for ${escapeHTML(attendanceDate)}, so +5 points will be added to the leaderboard.</p>`
+                                : `<p class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800">${escapeHTML(attendanceCollege)} has ${Number(teamAttendanceCount || 0).toLocaleString()}/100 present records for ${escapeHTML(attendanceDate)}. ${remainingAttendance.toLocaleString()} more needed for the +5 daily home college bonus.</p>`;
                         }
                     }
 
@@ -8698,7 +8913,12 @@
                                     <p class="font-semibold">${escapeHTML(savedAttendance?.status || "Present")}</p>
                                 </div>
 
-                                <div class="sm:col-span-2">
+                                <div>
+                                    <p class="text-xs uppercase tracking-wide text-green-700">Attendance Date</p>
+                                    <p class="font-semibold">${escapeHTML(attendanceDate)}</p>
+                                </div>
+
+                                <div>
                                     <p class="text-xs uppercase tracking-wide text-green-700">Checked At</p>
                                     <p class="font-semibold">${escapeHTML(formatDateTime(savedAttendance?.checked_at || attendanceRecord.checked_at))}</p>
                                 </div>
@@ -8862,6 +9082,9 @@
             printBestPlayersDate.value = getLocalISODate();
             printAttendanceDate.value = getLocalISODate();
             printCommitteeMatchesDate.value = "";
+            attendanceSessionDate.value = getLocalISODate();
+            attendanceDurationMinutes.value = 480;
+            attendanceSettingsForm.addEventListener("submit", saveAttendanceSettings);
             attendanceForm.addEventListener("submit", checkAttendance);
             announcementForm.addEventListener("submit", saveAnnouncement);
 
@@ -8909,6 +9132,7 @@
                 feedback: false,
                 announcements: false,
                 accounts: false,
+                attendanceSettings: false,
                 contacts: false,
                 contactMessages: false,
                 conversations: false
@@ -8925,6 +9149,10 @@
                     }
 
                     const reloads = [];
+
+                    if (pendingAdminReloads.attendanceSettings) {
+                        await loadAttendanceSettings();
+                    }
 
                     if (pendingAdminReloads.teams) reloads.push(loadTeams());
                     if (pendingAdminReloads.sports) reloads.push(loadSports());
@@ -8944,6 +9172,7 @@
                     pendingAdminReloads.feedback = false;
                     pendingAdminReloads.announcements = false;
                     pendingAdminReloads.accounts = false;
+                    pendingAdminReloads.attendanceSettings = false;
                     pendingAdminReloads.contacts = false;
                     pendingAdminReloads.contactMessages = false;
                     pendingAdminReloads.conversations = false;
@@ -8980,6 +9209,7 @@
             });
 
             if (!await loadCurrentAdminUser()) return;
+            await loadAttendanceSettings();
 
             await Promise.all([
                 loadAdminOverviewCounts({ showLoading: true }),
@@ -8994,6 +9224,7 @@
             ]);
 
             setInterval(() => scheduleAdminRealtimeReload({ overview: true }), 10000);
+            setInterval(renderAttendanceSettingsStatus, 30000);
             setInterval(() => scheduleAdminRealtimeReload({ feedback: true }), 5000);
             setInterval(() => scheduleAdminRealtimeReload({ accounts: true }), 5000);
             function scheduleAdminFallbackSync() {
@@ -9005,6 +9236,7 @@
                     feedback: true,
                     announcements: true,
                     accounts: true,
+                    attendanceSettings: true,
                     contacts: true,
                     conversations: true,
                     contactMessages: Boolean(activeAdminContactConversationId)
@@ -9101,6 +9333,15 @@
                         table: ATTENDANCE_TABLE
                     },
                     () => scheduleAdminRealtimeReload({ overview: true })
+                )
+                .on(
+                    "postgres_changes",
+                    {
+                        event: "*",
+                        schema: "public",
+                        table: ATTENDANCE_SETTINGS_TABLE
+                    },
+                    () => scheduleAdminRealtimeReload({ attendanceSettings: true, overview: true }, 0, { force: true })
                 )
                 .on(
                     "postgres_changes",
