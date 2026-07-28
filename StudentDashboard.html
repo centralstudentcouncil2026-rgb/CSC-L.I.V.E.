@@ -483,7 +483,28 @@
 
             <!-- Schedule Filters -->
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 space-y-4">
-                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-end gap-4">
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <label for="scheduleDateFilter" class="text-xs font-black uppercase tracking-widest text-slate-500 whitespace-nowrap">
+                            Match Date
+                        </label>
+
+                        <div class="relative w-full sm:w-56">
+                            <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
+                                <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M8 2v4"></path>
+                                    <path d="M16 2v4"></path>
+                                    <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                                    <path d="M3 10h18"></path>
+                                </svg>
+                            </span>
+                            <input
+                                id="scheduleDateFilter"
+                                type="date"
+                                class="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                        </div>
+                    </div>
+
                     <div class="flex flex-col sm:flex-row sm:items-center gap-3">
                         <label for="gameCategoryFilter" class="text-xs font-black uppercase tracking-widest text-slate-500 whitespace-nowrap">
                             Game Category
@@ -740,6 +761,7 @@
             const studentNotificationsList = document.getElementById("studentNotificationsList");
 
             const studentMatchesGrid = document.getElementById("studentMatchesGrid");
+            const scheduleDateFilter = document.getElementById("scheduleDateFilter");
             const gameCategoryFilter = document.getElementById("gameCategoryFilter");
 
             const matchDetailsModal = document.getElementById("matchDetailsModal");
@@ -791,6 +813,39 @@
                 return parsed.toLocaleString([], {
                     dateStyle: "medium",
                     timeStyle: "short"
+                });
+            }
+
+            function getLocalDateInputValue(dateValue = new Date()) {
+                const parsed = dateValue instanceof Date ? dateValue : new Date(dateValue);
+
+                if (Number.isNaN(parsed.getTime())) {
+                    return "";
+                }
+
+                const year = parsed.getFullYear();
+                const month = String(parsed.getMonth() + 1).padStart(2, "0");
+                const day = String(parsed.getDate()).padStart(2, "0");
+                return `${year}-${month}-${day}`;
+            }
+
+            function getActiveScheduleDateFilter() {
+                return scheduleDateFilter?.value || getLocalDateInputValue();
+            }
+
+            function getMatchDateValue(match) {
+                return getLocalDateInputValue(match?.match_time);
+            }
+
+            function formatDateFilterLabel(dateValue) {
+                const parsed = new Date(`${dateValue}T00:00:00`);
+
+                if (Number.isNaN(parsed.getTime())) {
+                    return "the selected date";
+                }
+
+                return parsed.toLocaleDateString([], {
+                    dateStyle: "medium"
                 });
             }
 
@@ -2413,10 +2468,15 @@
 
             function renderMatches() {
                 let filtered = [...studentMatchesData];
+                const activeDateFilter = getActiveScheduleDateFilter();
                 const showOngoingSingleColumn = activeScheduleFilter === "Ongoing";
                 studentMatchesGrid.className = showOngoingSingleColumn
                     ? "grid grid-cols-1 gap-6"
                     : "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6";
+
+                if (activeDateFilter) {
+                    filtered = filtered.filter(m => getMatchDateValue(m) === activeDateFilter);
+                }
 
                 if (activeScheduleFilter !== "All") {
                     filtered = filtered.filter(m => m.status === activeScheduleFilter);
@@ -2431,7 +2491,7 @@
                 }
 
                 if (filtered.length === 0) {
-                    studentMatchesGrid.innerHTML = `<div class="col-span-full py-20 text-center bg-white rounded-2xl border border-slate-200 text-slate-400 italic">No matches found for the selected status and game category.</div>`;
+                    studentMatchesGrid.innerHTML = `<div class="col-span-full py-20 text-center bg-white rounded-2xl border border-slate-200 text-slate-400 italic">No ${escapeHTML(getStatusMeta(activeScheduleFilter).label.toLowerCase())} matches found for ${escapeHTML(formatDateFilterLabel(activeDateFilter))} in the selected game category.</div>`;
                     return;
                 }
 
@@ -2665,6 +2725,18 @@
             document.querySelectorAll(".schedule-filter").forEach(btn => {
                 btn.onclick = function() { setActiveScheduleFilter(this.dataset.scheduleFilter); };
             });
+
+            if (scheduleDateFilter) {
+                scheduleDateFilter.value = getLocalDateInputValue();
+                scheduleDateFilter.addEventListener("change", () => {
+                    if (!scheduleDateFilter.value) {
+                        scheduleDateFilter.value = getLocalDateInputValue();
+                    }
+
+                    renderMatches();
+                });
+            }
+
             setActiveScheduleFilter(activeScheduleFilter);
 
             if (gameCategoryFilter) {
