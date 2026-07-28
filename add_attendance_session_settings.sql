@@ -13,23 +13,12 @@ create table if not exists public.attendance_settings (
     check (id = 1)
 );
 
-insert into public.attendance_settings (
-    id,
-    attendance_date,
-    duration_minutes,
-    opened_at,
-    closes_at,
-    updated_by_name
-)
-values (
-    1,
-    current_date,
-    480,
-    now(),
-    now() + interval '480 minutes',
-    'System'
-)
-on conflict (id) do nothing;
+update public.attendance_settings
+set opened_at = now() - interval '1 day',
+    closes_at = now() - interval '1 minute',
+    updated_at = now()
+where id = 1
+  and closes_at > now();
 
 alter table public.attendance_settings enable row level security;
 

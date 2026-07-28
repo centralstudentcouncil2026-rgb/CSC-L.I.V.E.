@@ -1815,9 +1815,21 @@
                             <h3 class="text-xl font-bold text-gray-900 mb-2">
                                 Participant Attendance Checker
                             </h3>
-                            <p class="mb-5 text-sm font-semibold text-gray-500">Set the shared attendance date and acceptance window before scanning.</p>
+                            <div class="mb-5 flex items-start justify-between gap-3">
+                                <p class="text-sm font-semibold text-gray-500">Set the shared attendance date and due time before scanning.</p>
+                                <button
+                                    id="attendanceSettingsToggle"
+                                    type="button"
+                                    class="shrink-0 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-black uppercase tracking-wide text-blue-700 hover:bg-blue-100">
+                                    Settings
+                                </button>
+                            </div>
 
-                            <form id="attendanceSettingsForm" class="mb-5 space-y-4 rounded-xl border border-blue-100 bg-blue-50 p-4">
+                            <div id="attendanceSettingsStatus" class="mb-5 rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-blue-900">
+                                Loading shared attendance session...
+                            </div>
+
+                            <form id="attendanceSettingsForm" class="mb-5 hidden space-y-4 rounded-xl border border-blue-100 bg-blue-50 p-4">
                                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                     <div>
                                         <label for="attendanceSessionDate" class="mb-1 block text-xs font-black uppercase tracking-wide text-blue-900">Attendance Date</label>
@@ -1829,17 +1841,12 @@
                                     </div>
 
                                     <div>
-                                        <label for="attendanceDurationMinutes" class="mb-1 block text-xs font-black uppercase tracking-wide text-blue-900">Accept For</label>
-                                        <div class="flex items-center gap-2">
-                                            <input
-                                                id="attendanceDurationMinutes"
-                                                type="number"
-                                                min="1"
-                                                step="1"
-                                                required
-                                                class="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-bold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
-                                            <span class="text-xs font-black uppercase tracking-wide text-blue-900">min</span>
-                                        </div>
+                                        <label for="attendanceOpenUntil" class="mb-1 block text-xs font-black uppercase tracking-wide text-blue-900">Open Until</label>
+                                        <input
+                                            id="attendanceOpenUntil"
+                                            type="time"
+                                            required
+                                            class="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-bold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
                                     </div>
                                 </div>
 
@@ -1850,9 +1857,6 @@
                                     Save Attendance Session
                                 </button>
 
-                                <div id="attendanceSettingsStatus" class="rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-blue-900">
-                                    Loading shared attendance session...
-                                </div>
                             </form>
 
                             <form id="attendanceForm" class="space-y-4">
@@ -2907,8 +2911,9 @@
             const printParticipantsButton = document.getElementById("printParticipantsButton");
             const attendanceForm = document.getElementById("attendanceForm");
             const attendanceSettingsForm = document.getElementById("attendanceSettingsForm");
+            const attendanceSettingsToggle = document.getElementById("attendanceSettingsToggle");
             const attendanceSessionDate = document.getElementById("attendanceSessionDate");
-            const attendanceDurationMinutes = document.getElementById("attendanceDurationMinutes");
+            const attendanceOpenUntil = document.getElementById("attendanceOpenUntil");
             const attendanceSettingsSaveButton = document.getElementById("attendanceSettingsSaveButton");
             const attendanceSettingsStatus = document.getElementById("attendanceSettingsStatus");
             const attendanceStudentId = document.getElementById("attendanceStudentId");
@@ -3095,13 +3100,45 @@
                 return activeAttendanceSettings?.attendance_date || attendanceSessionDate?.value || getLocalISODate();
             }
 
+            function getLocalDateFromValue(value) {
+                if (!value) {
+                    return "";
+                }
+
+                const parsed = new Date(value);
+                return Number.isNaN(parsed.getTime()) ? "" : parsed.toLocaleDateString("en-CA");
+            }
+
+            function isAttendanceSessionFromCurrentDay(settings = activeAttendanceSettings) {
+                return Boolean(settings?.opened_at && getLocalDateFromValue(settings.opened_at) === getLocalISODate());
+            }
+
+            function getTimeInputValueFromDate(dateValue) {
+                const parsed = dateValue instanceof Date ? dateValue : new Date(dateValue);
+
+                if (Number.isNaN(parsed.getTime())) {
+                    return "";
+                }
+
+                return `${String(parsed.getHours()).padStart(2, "0")}:${String(parsed.getMinutes()).padStart(2, "0")}`;
+            }
+
+            function getAttendanceCloseDateTime(attendanceDate, openUntilTime) {
+                if (!attendanceDate || !openUntilTime) {
+                    return null;
+                }
+
+                const parsed = new Date(`${attendanceDate}T${openUntilTime}:00`);
+                return Number.isNaN(parsed.getTime()) ? null : parsed;
+            }
+
             function getAttendanceSessionClosesAt(settings = activeAttendanceSettings) {
                 if (settings?.closes_at) {
                     return new Date(settings.closes_at);
                 }
 
                 const openedAt = settings?.opened_at ? new Date(settings.opened_at) : new Date();
-                const durationMinutes = Math.max(1, Number(settings?.duration_minutes || attendanceDurationMinutes?.value || 0));
+                const durationMinutes = Math.max(1, Number(settings?.duration_minutes || 0));
 
                 if (Number.isNaN(openedAt.getTime())) {
                     return null;
@@ -3112,6 +3149,10 @@
 
             function isAttendanceSessionOpen(settings = activeAttendanceSettings) {
                 if (!settings?.attendance_date) {
+                    return false;
+                }
+
+                if (!isAttendanceSessionFromCurrentDay(settings)) {
                     return false;
                 }
 
@@ -4626,16 +4667,17 @@
             }
 
             function renderAttendanceSettingsStatus(message = "") {
-                if (!attendanceSessionDate || !attendanceDurationMinutes || !attendanceSettingsStatus) {
+                if (!attendanceSessionDate || !attendanceOpenUntil || !attendanceSettingsStatus) {
                     return;
                 }
 
                 const settings = activeAttendanceSettings;
                 const dateValue = getAttendanceSessionDate();
-                const durationValue = Number(settings?.duration_minutes || attendanceDurationMinutes.value || 0);
 
                 attendanceSessionDate.value = dateValue;
-                attendanceDurationMinutes.value = durationValue > 0 ? durationValue : 480;
+                attendanceOpenUntil.value = settings?.closes_at && isAttendanceSessionFromCurrentDay(settings)
+                    ? getTimeInputValueFromDate(settings.closes_at)
+                    : "";
 
                 if (message) {
                     attendanceSettingsStatus.className = "rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-900";
@@ -4645,7 +4687,13 @@
 
                 if (!settings) {
                     attendanceSettingsStatus.className = "rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-900";
-                    attendanceSettingsStatus.textContent = "No shared attendance session has been saved yet.";
+                    attendanceSettingsStatus.textContent = "No shared attendance session is open. Open Settings, set the date and open-until time, then save.";
+                    return;
+                }
+
+                if (!isAttendanceSessionFromCurrentDay(settings)) {
+                    attendanceSettingsStatus.className = "rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-900";
+                    attendanceSettingsStatus.textContent = "Attendance session reset for a new day. Open Settings and save today's date and open-until time.";
                     return;
                 }
 
@@ -4674,7 +4722,7 @@
                     return null;
                 }
 
-                activeAttendanceSettings = data || null;
+                activeAttendanceSettings = data && isAttendanceSessionFromCurrentDay(data) ? data : null;
                 renderAttendanceSettingsStatus();
                 return activeAttendanceSettings;
             }
@@ -4683,11 +4731,17 @@
                 event.preventDefault();
 
                 const attendanceDate = attendanceSessionDate.value || getLocalISODate();
-                const rawDurationMinutes = Math.floor(Number(attendanceDurationMinutes.value || 0));
-                const durationMinutes = Number.isFinite(rawDurationMinutes) && rawDurationMinutes > 0 ? rawDurationMinutes : 480;
                 const openedAt = new Date();
-                const closesAt = new Date(openedAt.getTime() + durationMinutes * 60000);
+                const closesAt = getAttendanceCloseDateTime(attendanceDate, attendanceOpenUntil.value);
                 const adminUser = getStoredAdminUser();
+
+                if (!closesAt || closesAt.getTime() <= openedAt.getTime()) {
+                    renderAttendanceSettingsStatus("Please select an open-until time later than the current time.");
+                    attendanceOpenUntil.focus();
+                    return;
+                }
+
+                const durationMinutes = Math.max(1, Math.ceil((closesAt.getTime() - openedAt.getTime()) / 60000));
 
                 attendanceSettingsSaveButton.disabled = true;
                 attendanceSettingsSaveButton.textContent = "Saving...";
@@ -9083,7 +9137,10 @@
             printAttendanceDate.value = getLocalISODate();
             printCommitteeMatchesDate.value = "";
             attendanceSessionDate.value = getLocalISODate();
-            attendanceDurationMinutes.value = 480;
+            attendanceOpenUntil.value = "";
+            attendanceSettingsToggle.addEventListener("click", function () {
+                attendanceSettingsForm.classList.toggle("hidden");
+            });
             attendanceSettingsForm.addEventListener("submit", saveAttendanceSettings);
             attendanceForm.addEventListener("submit", checkAttendance);
             announcementForm.addEventListener("submit", saveAnnouncement);
