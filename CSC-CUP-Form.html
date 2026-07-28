@@ -400,7 +400,7 @@
                     </div>
                 </div>
 
-                <div id="documentRequirementsSection" class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <div id="documentRequirementsSection" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <article class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                         <div class="mb-3">
                             <h2 class="text-lg font-black text-slate-950">Parent Consent - Page 1</h2>
@@ -435,6 +435,22 @@
 
                     <article class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                         <div class="mb-3">
+                            <h2 class="text-lg font-black text-slate-950">Parent Consent - Page 3</h2>
+                            <p class="text-xs font-semibold text-slate-500">Capture the ID with signature using your camera.</p>
+                        </div>
+                        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                            <canvas id="parentPage3Canvas" class="hidden"></canvas>
+                            <img id="parentPage3Preview" alt="Parent consent ID with signature preview" class="camera-preview hidden w-full">
+                            <div id="parentPage3Placeholder" class="flex aspect-[3/4] items-center justify-center p-6 text-center text-sm font-bold text-slate-400">No parent consent ID with signature photo captured yet.</div>
+                        </div>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <button type="button" data-camera-start="parentPage3" class="rounded-xl bg-blue-700 px-4 py-2 text-sm font-black text-white hover:bg-blue-800">Open Camera</button>
+                            <button type="button" data-camera-retake="parentPage3" class="hidden rounded-xl bg-slate-800 px-4 py-2 text-sm font-black text-white hover:bg-slate-900">Retake</button>
+                        </div>
+                    </article>
+
+                    <article class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <div class="mb-3">
                             <h2 class="text-lg font-black text-slate-950">Medical Certificate</h2>
                             <p class="text-xs font-semibold text-slate-500">Camera capture only. Gallery uploads are not accepted.</p>
                         </div>
@@ -449,7 +465,7 @@
                         </div>
                     </article>
 
-                    <article id="importFormCard" class="hidden rounded-2xl border border-blue-200 bg-blue-50 p-4 lg:col-span-3">
+                    <article id="importFormCard" class="hidden rounded-2xl border border-blue-200 bg-blue-50 p-4 md:col-span-2 xl:col-span-4">
                         <div class="mb-3">
                             <h2 class="text-lg font-black text-slate-950">Import Form with Signatures</h2>
                             <p class="text-xs font-semibold text-slate-500">Required only for import players. Capture both signed import form pages using your camera.</p>
@@ -633,6 +649,14 @@
                 canvas: document.getElementById("parentPage2Canvas"),
                 preview: document.getElementById("parentPage2Preview"),
                 placeholder: document.getElementById("parentPage2Placeholder"),
+                blob: null,
+                stream: null
+            },
+            parentPage3: {
+                label: "Parent Consent - Page 3 - ID with Signature",
+                canvas: document.getElementById("parentPage3Canvas"),
+                preview: document.getElementById("parentPage3Preview"),
+                placeholder: document.getElementById("parentPage3Placeholder"),
                 blob: null,
                 stream: null
             },
@@ -1359,6 +1383,7 @@
                 && Boolean(gameScope)
                 && (isFacultySelection() || Boolean(cameras.parentPage1.blob))
                 && (isFacultySelection() || Boolean(cameras.parentPage2.blob))
+                && (isFacultySelection() || Boolean(cameras.parentPage3.blob))
                 && (isFacultySelection() || Boolean(cameras.medical.blob))
                 && (!isImport || Boolean(importCollegeSelect.value))
                 && (isFacultySelection() || !isImport || (Boolean(cameras.importFormPage1.blob) && Boolean(cameras.importFormPage2.blob)))
@@ -1462,6 +1487,7 @@
             if (isFaculty) {
                 resetCameraCapture("parentPage1");
                 resetCameraCapture("parentPage2");
+                resetCameraCapture("parentPage3");
                 resetCameraCapture("medical");
             }
 
@@ -1668,8 +1694,8 @@
                 return;
             }
 
-            if (!isFaculty && (!cameras.parentPage1.blob || !cameras.parentPage2.blob || !cameras.medical.blob)) {
-                setAlert("Please take a picture of Parent Consent Page 1, Parent Consent Page 2, and the Medical Certificate before registering.");
+            if (!isFaculty && (!cameras.parentPage1.blob || !cameras.parentPage2.blob || !cameras.parentPage3.blob || !cameras.medical.blob)) {
+                setAlert("Please take a picture of Parent Consent Page 1, Parent Consent Page 2, Parent Consent Page 3 ID with Signature, and the Medical Certificate before registering.");
                 return;
             }
 
@@ -1740,6 +1766,7 @@
                 const minorSportIds = requiresMinor ? joinSelectionValues(selectedMinorSports, "id") : null;
                 const parentConsentPage1Url = isFaculty ? null : await uploadDocument(participantId, "parent-consent-page-1", cameras.parentPage1.blob);
                 const parentConsentPage2Url = isFaculty ? null : await uploadDocument(participantId, "parent-consent-page-2", cameras.parentPage2.blob);
+                const parentConsentPage3Url = isFaculty ? null : await uploadDocument(participantId, "parent-consent-page-3-id-with-signature", cameras.parentPage3.blob);
                 const medicalCertificateUrl = isFaculty ? null : await uploadDocument(participantId, "medical-certificate", cameras.medical.blob);
                 const importFormPage1Url = !isFaculty && isImport
                     ? await uploadDocument(participantId, "import-form-with-signatures-page-1", cameras.importFormPage1.blob)
@@ -1777,7 +1804,8 @@
                     import_form_photo: importFormPhotoValue,
                     parent_consent_photo: isFaculty ? null : JSON.stringify({
                         page1: parentConsentPage1Url,
-                        page2: parentConsentPage2Url
+                        page2: parentConsentPage2Url,
+                        page3: parentConsentPage3Url
                     }),
                     medical_certificate_photo: medicalCertificateUrl,
                     status: "pending",
