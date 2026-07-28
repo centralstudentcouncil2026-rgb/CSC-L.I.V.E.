@@ -6060,12 +6060,67 @@
                 return statusOrder[normalizeParticipantStatus(status)] ?? 99;
             }
 
-            function sortParticipantsByStatus(participants) {
+            function getParticipantGameScopeSortRank(participant) {
+                const scopeOrder = {
+                    major: 0,
+                    minor: 1,
+                    both: 2
+                };
+                const scope = String(getParticipantGameScope(participant)).trim().toLowerCase();
+                return scopeOrder[scope] ?? 99;
+            }
+
+            function compareParticipantText(a, b) {
+                return String(a || "").localeCompare(String(b || ""), undefined, {
+                    sensitivity: "base",
+                    numeric: true
+                });
+            }
+
+            function getParticipantSportSortName(participant) {
+                const scope = String(getParticipantGameScope(participant)).trim().toLowerCase();
+
+                if (scope === "minor") {
+                    return getParticipantMinorSportName(participant);
+                }
+
+                if (scope === "both") {
+                    return `${getParticipantMajorSportName(participant)} ${getParticipantMinorSportName(participant)}`;
+                }
+
+                return getParticipantMajorSportName(participant);
+            }
+
+            function sortParticipantsForAdmin(participants) {
                 return [...participants].sort((a, b) => {
                     const statusDiff = getParticipantStatusSortRank(a.status) - getParticipantStatusSortRank(b.status);
 
                     if (statusDiff !== 0) {
                         return statusDiff;
+                    }
+
+                    const teamDiff = compareParticipantText(getParticipantTeamName(a), getParticipantTeamName(b));
+
+                    if (teamDiff !== 0) {
+                        return teamDiff;
+                    }
+
+                    const scopeDiff = getParticipantGameScopeSortRank(a) - getParticipantGameScopeSortRank(b);
+
+                    if (scopeDiff !== 0) {
+                        return scopeDiff;
+                    }
+
+                    const sportDiff = compareParticipantText(getParticipantSportSortName(a), getParticipantSportSortName(b));
+
+                    if (sportDiff !== 0) {
+                        return sportDiff;
+                    }
+
+                    const nameDiff = compareParticipantText(getParticipantDisplayName(a), getParticipantDisplayName(b));
+
+                    if (nameDiff !== 0) {
+                        return nameDiff;
                     }
 
                     return new Date(b.created_at || 0) - new Date(a.created_at || 0);
@@ -7130,7 +7185,7 @@
 
             function renderParticipants() {
                 participantsTableBody.innerHTML = "";
-                const filteredParticipants = sortParticipantsByStatus(getFilteredParticipants());
+                const filteredParticipants = sortParticipantsForAdmin(getFilteredParticipants());
 
                 if (participantsData.length === 0) {
                     participantsTableBody.innerHTML = `
