@@ -3284,6 +3284,61 @@
                 return sport?.sport_name || getAssignedSportName(account) || "No game assigned";
             }
 
+            function getAccountAssignedSportSortLabel(account) {
+                return getAccountAssignedSportLabel(account).trim();
+            }
+
+            function compareAccountText(a, b) {
+                return String(a || "").localeCompare(String(b || ""), undefined, {
+                    sensitivity: "base",
+                    numeric: true
+                });
+            }
+
+            function getAccountStatusSortRank(status) {
+                const statusOrder = {
+                    pending: 0,
+                    hold: 1,
+                    approved: 2,
+                    suspended: 3,
+                    rejected: 4
+                };
+
+                return statusOrder[normalizeAccountStatus(status)] ?? 99;
+            }
+
+            function sortAccountsByAssignedGame(accounts) {
+                return [...accounts].sort((a, b) => {
+                    const aAssigned = getAccountAssignedSportSortLabel(a);
+                    const bAssigned = getAccountAssignedSportSortLabel(b);
+                    const assignmentDiff = Number(aAssigned === "No game assigned") - Number(bAssigned === "No game assigned");
+
+                    if (assignmentDiff !== 0) {
+                        return assignmentDiff;
+                    }
+
+                    const gameDiff = compareAccountText(aAssigned, bAssigned);
+
+                    if (gameDiff !== 0) {
+                        return gameDiff;
+                    }
+
+                    const statusDiff = getAccountStatusSortRank(a.approval_status) - getAccountStatusSortRank(b.approval_status);
+
+                    if (statusDiff !== 0) {
+                        return statusDiff;
+                    }
+
+                    const nameDiff = compareAccountText(a.full_name || a.email, b.full_name || b.email);
+
+                    if (nameDiff !== 0) {
+                        return nameDiff;
+                    }
+
+                    return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+                });
+            }
+
             function isOverallCommitteeAssignment(account) {
                 return getAssignedSportId(account) === OVERALL_COMMITTEE_SPORT_ID
                     || getAssignedSportName(account).toLowerCase() === OVERALL_COMMITTEE_SPORT_NAME.toLowerCase();
@@ -8042,7 +8097,7 @@
 
                 accountApprovalsTableBody.innerHTML = "";
 
-                accountApprovalsData.forEach(account => {
+                sortAccountsByAssignedGame(accountApprovalsData).forEach(account => {
                     const status = normalizeAccountStatus(account.approval_status);
                     const isAccepted = status === "approved";
                     const isHeld = status === "hold";
