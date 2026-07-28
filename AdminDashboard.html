@@ -7518,7 +7518,9 @@
                 }
 
                 participantReviewStatus.className = "mt-3 text-sm font-bold text-green-700";
-                participantReviewStatus.textContent = "Participant review updated.";
+                participantReviewStatus.textContent = normalizedStatus === "rejected"
+                    ? "Participant review updated. This participant may register again; the new submission will replace this rejected record and return to pending."
+                    : "Participant review updated.";
                 await Promise.all([
                     loadParticipants(),
                     loadAdminOverviewCounts()

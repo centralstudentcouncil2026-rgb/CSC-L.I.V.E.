@@ -1545,6 +1545,45 @@
             return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
         }
 
+        function isRejectedRegistration(registration) {
+            return String(registration?.status || "").trim().toLowerCase() === "rejected";
+        }
+
+        async function findExistingRegistrationByIdNumber(idNumber) {
+            const normalizedIdNumber = String(idNumber || "").trim();
+
+            if (!normalizedIdNumber) {
+                return null;
+            }
+
+            const selectColumns = "id, status, student_id, id_number";
+            const { data: studentMatches, error: studentLookupError } = await supabase
+                .from(PARTICIPANTS_TABLE)
+                .select(selectColumns)
+                .eq("student_id", normalizedIdNumber)
+                .limit(1);
+
+            if (studentLookupError) {
+                throw studentLookupError;
+            }
+
+            if (studentMatches?.length) {
+                return studentMatches[0];
+            }
+
+            const { data: idNumberMatches, error: idNumberLookupError } = await supabase
+                .from(PARTICIPANTS_TABLE)
+                .select(selectColumns)
+                .eq("id_number", normalizedIdNumber)
+                .limit(1);
+
+            if (idNumberLookupError) {
+                throw idNumberLookupError;
+            }
+
+            return idNumberMatches?.[0] || null;
+        }
+
         async function uploadDocument(participantId, type, blob) {
             const path = `participants/${participantId}/${type}.jpg`;
             const { error } = await supabase.storage
@@ -1679,7 +1718,6 @@
                 return;
             }
 
-            const participantId = getParticipantId();
             isSubmittingRegistration = true;
             submitButton.disabled = true;
             submitButton.textContent = "Submitting registration...";
@@ -1687,6 +1725,13 @@
             try {
                 const fullName = document.getElementById("fullName").value.trim();
                 const idNumber = document.getElementById("idNumber").value.trim();
+                const existingRegistration = await findExistingRegistrationByIdNumber(idNumber);
+
+                if (existingRegistration && !isRejectedRegistration(existingRegistration)) {
+                    throw new Error(`A registration with ID Number ${idNumber} already exists. Please check your ID number or contact the CSC admin.`);
+                }
+
+                const participantId = existingRegistration?.id || getParticipantId();
                 const homeCollege = getHomeCollegeSelection();
                 const playableCollege = getPlayableCollegeSelection(isImport);
                 const majorSportName = requiresMajor ? joinSelectionValues(selectedMajorSports, "name") : "";
@@ -1736,15 +1781,24 @@
                     }),
                     medical_certificate_photo: medicalCertificateUrl,
                     status: "pending",
+                    reviewed_by: null,
+                    reviewed_by_name: null,
+                    reviewed_at: null,
+                    rejection_reason: null,
                     created_at: new Date().toISOString()
                 };
 
-                const { error } = await supabase
-                    .from(PARTICIPANTS_TABLE)
-                    .insert([participantRecord]);
+                const saveResult = existingRegistration
+                    ? await supabase
+                        .from(PARTICIPANTS_TABLE)
+                        .update(participantRecord)
+                        .eq("id", existingRegistration.id)
+                    : await supabase
+                        .from(PARTICIPANTS_TABLE)
+                        .insert([participantRecord]);
 
-                if (error) {
-                    throw error;
+                if (saveResult.error) {
+                    throw saveResult.error;
                 }
 
                 form.reset();
