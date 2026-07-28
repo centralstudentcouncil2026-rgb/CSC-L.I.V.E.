@@ -3140,8 +3140,23 @@
                     return Boolean(creatorValue && currentUserValues.includes(creatorValue));
                 }
 
+                function isMatchAssignedToCurrentUser(match) {
+                    if (!match || !currentUser) {
+                        return false;
+                    }
+
+                    if (canCurrentUserScheduleAllSports()) {
+                        return true;
+                    }
+
+                    return isSportVisibleForCurrentUser({
+                        id: match.sport_id || match.sport?.id,
+                        sport_name: match.sport?.sport_name || match.sport_name || ""
+                    });
+                }
+
                 function canManageMatch(match) {
-                    return isCurrentUserAdmin() || isMatchOwner(match);
+                    return isCurrentUserAdmin() || isMatchOwner(match) || isMatchAssignedToCurrentUser(match);
                 }
 
                 function showPermissionDenied() {
@@ -3157,9 +3172,33 @@
                     return false;
                 }
 
-                function applyOwnershipFilter(query) {
+                function getCurrentUserManageableSportIds() {
+                    if (canCurrentUserScheduleAllSports()) {
+                        return [];
+                    }
+
+                    const assignedSportId = Number(currentUser?.assignedSportId);
+                    const visibleSportIds = registeredSportsData
+                        .filter(isSportVisibleForCurrentUser)
+                        .map(sport => Number(sport.id))
+                        .filter(id => Number.isFinite(id));
+
+                    if (Number.isFinite(assignedSportId)) {
+                        visibleSportIds.push(assignedSportId);
+                    }
+
+                    return Array.from(new Set(visibleSportIds));
+                }
+
+                function applyMatchManagementFilter(query) {
                     if (isCurrentUserAdmin()) {
                         return query;
+                    }
+
+                    const manageableSportIds = getCurrentUserManageableSportIds();
+
+                    if (manageableSportIds.length > 0) {
+                        return query.in("sport_id", manageableSportIds);
                     }
 
                     const creatorKeys = getCurrentUserCreatorKeys();
@@ -3181,7 +3220,7 @@
                         query = query.eq("status", options.status);
                     }
 
-                    query = applyOwnershipFilter(query);
+                    query = applyMatchManagementFilter(query);
 
                     const { data, error } = await query
                         .select("id")
@@ -3204,7 +3243,7 @@
                         .delete()
                         .eq("id", matchId);
 
-                    query = applyOwnershipFilter(query);
+                    query = applyMatchManagementFilter(query);
 
                     const { data, error } = await query
                         .select("id")
@@ -3255,9 +3294,11 @@
                     const creatorRole = match.created_by_role ? ` • ${getRoleLabel(match.created_by_role)}` : "";
                     const accessText = isCurrentUserAdmin()
                         ? "Admin full access"
-                        : canManage
+                        : isMatchOwner(match)
                             ? "You created this match"
-                            : "View only";
+                            : canManage
+                                ? "Shared sport access"
+                                : "View only";
 
                     return `${escapeHTML(creatorName)}${escapeHTML(creatorRole)} â€¢ ${escapeHTML(accessText)}`;
                 }
