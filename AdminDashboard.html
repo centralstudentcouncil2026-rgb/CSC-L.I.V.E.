@@ -1739,40 +1739,51 @@
                         </p>
                     </div>
 
-                    <div class="flex flex-wrap items-center gap-3">
-                        <div class="flex items-center gap-2">
-                            <label for="participantTeamFilter" class="text-sm font-semibold text-gray-700">
+                    <div class="grid w-full grid-cols-2 gap-3 md:w-auto md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.25fr)_auto_auto] md:items-end">
+                        <div class="min-w-0">
+                            <label for="participantTeamFilter" class="block text-xs font-semibold uppercase tracking-wide text-gray-700">
                                 Team
                             </label>
                             <select
                                 id="participantTeamFilter"
-                                class="min-w-[180px] rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                                class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-2 py-2 text-xs font-semibold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 sm:text-sm">
                                 <option value="">All Teams</option>
                             </select>
                         </div>
 
-                        <div class="flex items-center gap-2">
-                            <label for="participantSportFilter" class="text-sm font-semibold text-gray-700">
+                        <div class="min-w-0">
+                            <label for="participantSportFilter" class="block text-xs font-semibold uppercase tracking-wide text-gray-700">
                                 Sports
                             </label>
                             <select
                                 id="participantSportFilter"
-                                class="min-w-[200px] rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                                class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-2 py-2 text-xs font-semibold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 sm:text-sm">
                                 <option value="">All Sports</option>
                             </select>
+                        </div>
+
+                        <div class="col-span-2 min-w-0 md:col-span-1">
+                            <label for="participantSearchInput" class="block text-xs font-semibold uppercase tracking-wide text-gray-700">
+                                Search
+                            </label>
+                            <input
+                                type="search"
+                                id="participantSearchInput"
+                                placeholder="Name or ID number"
+                                class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800 outline-none placeholder:text-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
                         </div>
 
                         <button
                             type="button"
                             id="printParticipantsButton"
-                            class="px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg font-medium transition">
+                            class="flex h-10 items-center justify-center rounded-lg bg-gray-800 px-4 text-sm font-medium text-white transition hover:bg-gray-900 md:mt-5">
                             Print List
                         </button>
 
                         <button 
                             type="button"
                             id="openParticipantModal"
-                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition">
+                            class="flex h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition hover:bg-blue-700 md:mt-5">
                             + Add Participant
                         </button>
                     </div>
@@ -2898,6 +2909,7 @@
             const participantsTableBody = document.getElementById("participantsTableBody");
             const participantTeamFilter = document.getElementById("participantTeamFilter");
             const participantSportFilter = document.getElementById("participantSportFilter");
+            const participantSearchInput = document.getElementById("participantSearchInput");
             const participantDetailsModal = document.getElementById("participantDetailsModal");
             const participantDetailsTitle = document.getElementById("participantDetailsTitle");
             const participantDetailsContent = document.getElementById("participantDetailsContent");
@@ -6652,6 +6664,10 @@
                 return normalizeParticipantSport(participantSportFilter?.value || "");
             }
 
+            function getParticipantSearchValue() {
+                return normalizeComparableValue(participantSearchInput?.value || "");
+            }
+
             function participantHasSport(participant, selectedSport) {
                 if (!selectedSport) {
                     return true;
@@ -6666,11 +6682,29 @@
                 return sportNames.includes(normalizedSelectedSport);
             }
 
+            function participantMatchesSearch(participant, searchValue) {
+                if (!searchValue) {
+                    return true;
+                }
+
+                const searchableValues = [
+                    getParticipantDisplayName(participant),
+                    participant.name,
+                    participant.full_name,
+                    getParticipantIdNumber(participant),
+                    participant.id_number,
+                    participant.student_id
+                ];
+
+                return searchableValues.some(value => normalizeComparableValue(value).includes(searchValue));
+            }
+
             function getFilteredParticipants() {
                 const selectedTeam = getParticipantTeamFilterValue();
                 const selectedSport = getParticipantSportFilterValue();
+                const searchValue = getParticipantSearchValue();
 
-                if (!selectedTeam && !selectedSport) {
+                if (!selectedTeam && !selectedSport && !searchValue) {
                     return participantsData;
                 }
 
@@ -6678,8 +6712,9 @@
                     const matchesTeam = !selectedTeam
                         || normalizeParticipantTeam(getParticipantTeamName(participant)).toLowerCase() === selectedTeam.toLowerCase();
                     const matchesSport = participantHasSport(participant, selectedSport);
+                    const matchesSearch = participantMatchesSearch(participant, searchValue);
 
-                    return matchesTeam && matchesSport;
+                    return matchesTeam && matchesSport && matchesSearch;
                 });
             }
 
@@ -9050,6 +9085,7 @@
             });
             participantTeamFilter.addEventListener("change", renderParticipants);
             participantSportFilter.addEventListener("change", renderParticipants);
+            participantSearchInput.addEventListener("input", renderParticipants);
             printParticipantsButton.addEventListener("click", printFilteredParticipants);
             printBestPlayersButton.addEventListener("click", printBestPlayers);
             printCollegeHistoryButton.addEventListener("click", printCollegeHistory);
