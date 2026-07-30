@@ -2638,9 +2638,9 @@
     <div
         id="participantImageViewerModal"
         class="dashboard-modal-overlay fixed inset-0 z-[1100] hidden items-center justify-center bg-black bg-opacity-80 p-4">
-        <div class="relative max-h-[94vh] w-full max-w-5xl">
+        <div class="relative flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-slate-950 shadow-2xl">
             <button type="button" id="closeParticipantImageViewer" class="absolute right-2 top-2 z-10 rounded-full bg-white px-3 py-1 text-2xl font-black leading-none text-gray-900 shadow">&times;</button>
-            <img id="participantImageViewerImage" alt="Participant document preview" class="mx-auto max-h-[94vh] w-auto max-w-full rounded-2xl bg-white object-contain shadow-2xl">
+            <div id="participantImageViewerGallery" class="max-h-[94vh] space-y-6 overflow-y-auto scroll-smooth snap-y snap-mandatory px-3 py-12 sm:px-6"></div>
         </div>
     </div>
 
@@ -2917,7 +2917,7 @@
             const participantRejectionReason = document.getElementById("participantRejectionReason");
             const participantReviewStatus = document.getElementById("participantReviewStatus");
             const participantImageViewerModal = document.getElementById("participantImageViewerModal");
-            const participantImageViewerImage = document.getElementById("participantImageViewerImage");
+            const participantImageViewerGallery = document.getElementById("participantImageViewerGallery");
             const closeParticipantImageViewer = document.getElementById("closeParticipantImageViewer");
             const printParticipantsButton = document.getElementById("printParticipantsButton");
             const attendanceForm = document.getElementById("attendanceForm");
@@ -7657,7 +7657,7 @@
 
             let activeParticipantDetailsId = null;
 
-            function renderParticipantDocumentCard(label, url) {
+            function renderParticipantDocumentCard(label, url, index = "") {
                 if (!url) {
                     return `
                         <div class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 text-sm font-semibold text-gray-500">
@@ -7668,9 +7668,9 @@
 
                 return `
                     <div class="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 shadow-sm">
-                        <div class="bg-slate-100 p-2">
-                            <img src="${escapeHTML(url)}" alt="${escapeHTML(label)}" class="mx-auto max-h-[72vh] w-full rounded-xl bg-white object-contain">
-                        </div>
+                        <button type="button" data-participant-document-index="${escapeHTML(index)}" class="participant-document-preview block w-full bg-slate-100 p-2 text-left hover:ring-4 hover:ring-blue-100">
+                            <img src="${escapeHTML(url)}" alt="${escapeHTML(label)}" class="h-56 w-full rounded-xl bg-white object-cover">
+                        </button>
                         <label class="flex cursor-pointer items-start gap-3 px-4 py-3 text-sm font-black text-gray-800">
                             <input
                                 type="checkbox"
@@ -7684,20 +7684,92 @@
                 `;
             }
 
-            function renderParticipantDocumentCards(label, urls) {
-                const list = Array.isArray(urls) ? urls.filter(Boolean) : [];
+            function collectParticipantDocumentItems(participant) {
+                const items = [];
 
-                if (!list.length) {
-                    return renderParticipantDocumentCard(label, "");
+                function appendDocuments(label, urls) {
+                    const list = Array.isArray(urls) ? urls.filter(Boolean) : [];
+
+                    if (!list.length) {
+                        items.push({ label, url: "" });
+                        return;
+                    }
+
+                    list.forEach((url, index) => {
+                        items.push({
+                            label: list.length > 1 ? `${label} - Page ${index + 1}` : label,
+                            url
+                        });
+                    });
                 }
 
-                return list.map((url, index) => {
-                    const pageLabel = list.length > 1 ? `${label} - Page ${index + 1}` : label;
-                    return renderParticipantDocumentCard(pageLabel, url);
-                }).join("");
+                appendDocuments("Parent Consent Photo", getParticipantPhotoUrls(participant, "parent_consent_photo"));
+                appendDocuments("Medical Certificate Photo", getParticipantPhotoUrls(participant, "medical_certificate_photo"));
+
+                if (isParticipantImport(participant)) {
+                    appendDocuments("Import Form with Signatures", getParticipantPhotoUrls(participant, "import_form_photo"));
+                }
+
+                return items;
+            }
+
+            function renderParticipantDocumentCards(items) {
+                return items.map((item, index) => renderParticipantDocumentCard(item.label, item.url, index)).join("");
+            }
+
+            function getSubmittedParticipantDocumentItems(items) {
+                return items.filter(item => item.url);
+            }
+
+            function renderParticipantImageViewerGallery(items) {
+                return getSubmittedParticipantDocumentItems(items).map((item, index) => `
+                    <section class="participant-image-viewer-item snap-start" data-participant-viewer-index="${index}">
+                        <p class="mb-2 text-sm font-black uppercase tracking-widest text-white">${escapeHTML(item.label)}</p>
+                        <img src="${escapeHTML(item.url)}" alt="${escapeHTML(item.label)}" class="mx-auto max-h-[82vh] w-auto max-w-full rounded-2xl bg-white object-contain shadow-2xl">
+                    </section>
+                `).join("");
+            }
+
+            function scrollParticipantImageViewerToIndex(index) {
+                const target = participantImageViewerGallery.querySelector(`[data-participant-viewer-index="${index}"]`);
+
+                if (target) {
+                    requestAnimationFrame(() => {
+                        target.scrollIntoView({ block: "start" });
+                    });
+                }
+            }
+
+            function getSubmittedParticipantDocumentIndex(items, clickedIndex) {
+                const clickedUrl = items[clickedIndex]?.url || "";
+
+                if (!clickedUrl) {
+                    return 0;
+                }
+
+                return getSubmittedParticipantDocumentItems(items).findIndex(item => item.url === clickedUrl);
+            }
+
+            function openParticipantImageViewer(items, clickedIndex = 0) {
+                const submittedItems = getSubmittedParticipantDocumentItems(items);
+
+                if (!submittedItems.length) return;
+
+                participantImageViewerGallery.innerHTML = renderParticipantImageViewerGallery(items);
+                participantImageViewerGallery.scrollTop = 0;
+                participantImageViewerModal.classList.remove("hidden");
+                participantImageViewerModal.classList.add("flex");
+                scrollParticipantImageViewerToIndex(Math.max(getSubmittedParticipantDocumentIndex(items, Number(clickedIndex)), 0));
+            }
+
+            function closeParticipantImageViewerFunction() {
+                participantImageViewerModal.classList.add("hidden");
+                participantImageViewerModal.classList.remove("flex");
+                participantImageViewerGallery.innerHTML = "";
             }
 
             function openParticipantDetailsModal(participant) {
+                const participantDocumentItems = collectParticipantDocumentItems(participant);
                 activeParticipantDetailsId = participant.id;
                 participantDetailsTitle.textContent = getParticipantDisplayName(participant);
                 participantRejectionReason.value = participant.rejection_reason || "";
@@ -7742,14 +7814,14 @@
                             </button>
                         </div>
                     </div>
-                    <div class="rounded-2xl border border-gray-200 bg-white p-3">
-                        <div class="max-h-[78vh] space-y-4 overflow-y-auto pr-1">
-                            ${renderParticipantDocumentCards("Parent Consent Photo", getParticipantPhotoUrls(participant, "parent_consent_photo"))}
-                            ${renderParticipantDocumentCards("Medical Certificate Photo", getParticipantPhotoUrls(participant, "medical_certificate_photo"))}
-                            ${isParticipantImport(participant) ? renderParticipantDocumentCards("Import Form with Signatures", getParticipantPhotoUrls(participant, "import_form_photo")) : ""}
-                        </div>
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        ${renderParticipantDocumentCards(participantDocumentItems)}
                     </div>
                 `;
+
+                participantDetailsContent.querySelectorAll(".participant-document-preview").forEach(button => {
+                    button.addEventListener("click", () => openParticipantImageViewer(participantDocumentItems, button.dataset.participantDocumentIndex));
+                });
 
                 participantDetailsContent.querySelector("#printSelectedParticipantDocuments")?.addEventListener("click", () => {
                     printSelectedParticipantDocuments(participant);
@@ -7765,19 +7837,6 @@
                 activeParticipantDetailsId = null;
                 participantDetailsContent.innerHTML = "";
                 participantReviewStatus.textContent = "";
-            }
-
-            function openParticipantImageViewer(url) {
-                if (!url) return;
-                participantImageViewerImage.src = url;
-                participantImageViewerModal.classList.remove("hidden");
-                participantImageViewerModal.classList.add("flex");
-            }
-
-            function closeParticipantImageViewerFunction() {
-                participantImageViewerModal.classList.add("hidden");
-                participantImageViewerModal.classList.remove("flex");
-                participantImageViewerImage.removeAttribute("src");
             }
 
             function getSelectedParticipantDocumentPrintItems() {
