@@ -7668,9 +7668,9 @@
 
                 return `
                     <div class="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 shadow-sm">
-                        <button type="button" data-participant-image-url="${escapeHTML(url)}" class="participant-document-preview block w-full text-left hover:ring-4 hover:ring-blue-100">
-                            <img src="${escapeHTML(url)}" alt="${escapeHTML(label)}" class="h-56 w-full object-cover">
-                        </button>
+                        <div class="bg-slate-100 p-2">
+                            <img src="${escapeHTML(url)}" alt="${escapeHTML(label)}" class="mx-auto max-h-[72vh] w-full rounded-xl bg-white object-contain">
+                        </div>
                         <label class="flex cursor-pointer items-start gap-3 px-4 py-3 text-sm font-black text-gray-800">
                             <input
                                 type="checkbox"
@@ -7742,16 +7742,14 @@
                             </button>
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        ${renderParticipantDocumentCards("Parent Consent Photo", getParticipantPhotoUrls(participant, "parent_consent_photo"))}
-                        ${renderParticipantDocumentCards("Medical Certificate Photo", getParticipantPhotoUrls(participant, "medical_certificate_photo"))}
-                        ${isParticipantImport(participant) ? renderParticipantDocumentCards("Import Form with Signatures", getParticipantPhotoUrls(participant, "import_form_photo")) : ""}
+                    <div class="rounded-2xl border border-gray-200 bg-white p-3">
+                        <div class="max-h-[78vh] space-y-4 overflow-y-auto pr-1">
+                            ${renderParticipantDocumentCards("Parent Consent Photo", getParticipantPhotoUrls(participant, "parent_consent_photo"))}
+                            ${renderParticipantDocumentCards("Medical Certificate Photo", getParticipantPhotoUrls(participant, "medical_certificate_photo"))}
+                            ${isParticipantImport(participant) ? renderParticipantDocumentCards("Import Form with Signatures", getParticipantPhotoUrls(participant, "import_form_photo")) : ""}
+                        </div>
                     </div>
                 `;
-
-                participantDetailsContent.querySelectorAll(".participant-document-preview").forEach(button => {
-                    button.addEventListener("click", () => openParticipantImageViewer(button.dataset.participantImageUrl));
-                });
 
                 participantDetailsContent.querySelector("#printSelectedParticipantDocuments")?.addEventListener("click", () => {
                     printSelectedParticipantDocuments(participant);
