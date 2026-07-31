@@ -10,6 +10,15 @@ for select
 to anon, authenticated
 using (true);
 
+drop policy if exists "Public can submit participant registrations" on public.participants;
+create policy "Public can submit participant registrations"
+on public.participants
+for insert
+to anon, authenticated
+with check (
+    lower(coalesce(status, 'pending')) = 'pending'
+);
+
 drop policy if exists "Public can resubmit rejected participant registrations" on public.participants;
 create policy "Public can resubmit rejected participant registrations"
 on public.participants
@@ -17,6 +26,16 @@ for update
 to anon, authenticated
 using (lower(coalesce(status, 'pending')) = 'rejected')
 with check (lower(coalesce(status, 'pending')) = 'pending');
+
+drop policy if exists "Public can upload participant documents" on storage.objects;
+create policy "Public can upload participant documents"
+on storage.objects
+for insert
+to anon, authenticated
+with check (
+    bucket_id = 'participant-documents'
+    and name like 'participants/%'
+);
 
 drop policy if exists "Public can update participant documents" on storage.objects;
 create policy "Public can update participant documents"
