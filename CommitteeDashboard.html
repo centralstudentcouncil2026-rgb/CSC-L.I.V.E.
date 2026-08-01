@@ -2358,14 +2358,84 @@
 
             const COMMITTEE_ACTIVE_TAB_KEY = 'committeeDashboardActiveTab';
             const COMMITTEE_SESSION_STARTED_KEY = 'committeeDashboardSessionStarted';
+            const COMMITTEE_ALWAYS_ALLOWED_TABS = new Set(['overview', 'contacts', 'about']);
+            const COMMITTEE_TAB_ACCESS_MAP = {
+                leaderboard: 'leaderboard',
+                verifyattendance: 'participants',
+                matches: 'games',
+                contacts: 'communications'
+            };
+
+            function normalizeCommitteeAccessValue(value) {
+                return String(value ?? '').trim().toLowerCase();
+            }
+
+            function parseCommitteeAllowedTabs(value) {
+                if (Array.isArray(value)) {
+                    return value.map(normalizeCommitteeAccessValue).filter(Boolean);
+                }
+
+                if (typeof value === 'string' && value.trim()) {
+                    try {
+                        return parseCommitteeAllowedTabs(JSON.parse(value));
+                    } catch (error) {
+                        return value.split(',').map(normalizeCommitteeAccessValue).filter(Boolean);
+                    }
+                }
+
+                return [];
+            }
+
+            function getStoredCommitteeAccessUser() {
+                try {
+                    return JSON.parse(sessionStorage.getItem('user') || 'null');
+                } catch (error) {
+                    return null;
+                }
+            }
+
+            function getEffectiveCommitteeTabs(userData = getStoredCommitteeAccessUser()) {
+                const allowedTabs = new Set(COMMITTEE_ALWAYS_ALLOWED_TABS);
+                const profileAllowedTabs = new Set(parseCommitteeAllowedTabs(userData?.allowedTabs || userData?.allowed_tabs));
+
+                Object.entries(COMMITTEE_TAB_ACCESS_MAP).forEach(([committeeTab, profileTab]) => {
+                    if (profileAllowedTabs.has(profileTab)) {
+                        allowedTabs.add(committeeTab);
+                    }
+                });
+
+                return allowedTabs;
+            }
+
+            function canAccessCommitteeTab(tabName, userData = getStoredCommitteeAccessUser()) {
+                return getEffectiveCommitteeTabs(userData).has(normalizeCommitteeAccessValue(tabName));
+            }
+
+            function applyCommitteeTabAccess(userData = getStoredCommitteeAccessUser()) {
+                const allowedTabs = getEffectiveCommitteeTabs(userData);
+
+                document.querySelectorAll('.tab-btn[data-tab]').forEach(button => {
+                    const tabName = normalizeCommitteeAccessValue(button.dataset.tab);
+                    const canAccess = allowedTabs.has(tabName);
+                    button.classList.toggle('hidden', !canAccess);
+                    button.disabled = !canAccess;
+                    button.setAttribute('aria-hidden', canAccess ? 'false' : 'true');
+                });
+            }
 
             function getValidCommitteeTabName(tabName) {
-                return document.getElementById(tabName) && document.querySelector(`[data-tab="${tabName}"]`)
-                    ? tabName
+                const normalizedTabName = normalizeCommitteeAccessValue(tabName);
+                const tabButton = Array.from(document.querySelectorAll('.tab-btn[data-tab]'))
+                    .find(button => normalizeCommitteeAccessValue(button.dataset.tab) === normalizedTabName);
+                const resolvedTabName = tabButton?.dataset.tab || normalizedTabName;
+
+                return document.getElementById(resolvedTabName) && tabButton && canAccessCommitteeTab(normalizedTabName)
+                    ? resolvedTabName
                     : 'overview';
             }
 
             function switchTab(tabName, options = {}) {
+                applyCommitteeTabAccess();
                 const selectedTabName = getValidCommitteeTabName(tabName);
 
                 document.querySelectorAll('.tab-content').forEach(tab => {
@@ -2978,6 +3048,7 @@
                         assignedSportId: String(userData.assignedSportId || userData.assigned_sport_id || userData.assigned_game_id || userData.sport_id || "").trim(),
                         assignedSportName: String(userData.assignedSportName || userData.assigned_sport_name || userData.assigned_game_name || userData.assigned_sport || userData.sport_name || userData.sport || "").trim(),
                         approvalStatus: normalizeComparableValue(userData.approvalStatus || userData.approval_status || "approved"),
+                        allowedTabs: parseCommitteeAllowedTabs(userData.allowedTabs || userData.allowed_tabs),
                         loginTime: userData.loginTime || new Date().toISOString(),
                         authProvider: userData.authProvider || "supabase"
                     };
@@ -3031,6 +3102,7 @@
                             assigned_sport_id: profile.assigned_sport_id || profile.assigned_game_id || profile.sport_id || "",
                             assigned_sport_name: profile.assigned_sport_name || profile.assigned_game_name || profile.assigned_sport || profile.sport_name || profile.sport || "",
                             approvalStatus: profile.approval_status,
+                            allowedTabs: profile.allowed_tabs,
                             loginTime: new Date().toISOString(),
                             authProvider: "supabase"
                         });
@@ -3049,6 +3121,12 @@
                     if (typeof window.renderAccountIdentity === "function") {
                         window.renderAccountIdentity(currentUser);
                     }
+
+                    applyCommitteeTabAccess(currentUser);
+                    switchTab(getValidCommitteeTabName(localStorage.getItem(COMMITTEE_ACTIVE_TAB_KEY) || "overview"), {
+                        closeSidebar: false,
+                        persist: false
+                    });
 
                     return currentUser;
                 }

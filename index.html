@@ -958,6 +958,7 @@
                 mobileNumber: profile?.mobile_number || user.user_metadata?.mobile_number || "",
                 role: finalRole,
                 approvalStatus: normalizeApprovalStatus(profile.approval_status),
+                allowedTabs: Array.isArray(profile?.allowed_tabs) ? profile.allowed_tabs : [],
                 loginTime: new Date().toISOString(),
                 authProvider: "supabase"
             };
