@@ -727,6 +727,7 @@
             const TEAMS_TABLE = "sports_leaderboard";
             const PARTICIPANTS_TABLE = "participants";
             const ATTENDANCE_TABLE = "attendance";
+            const ATTENDANCE_SETTINGS_TABLE = "attendance_settings";
             const ATTENDANCE_POINTS_VIEW = "attendance_point_history";
             const MATCHES_TABLE = "scheduled_matches";
             const GAME_HISTORY_TABLE = "game_history";
@@ -1818,10 +1819,12 @@
                         registeredTeamAliases.set(`id:${teamId}`, teamStat);
                     }
 
-                    const normalizedTeamName = normalizeText(teamName);
-                    if (normalizedTeamName) {
-                        registeredTeamAliases.set(`name:${normalizedTeamName}`, teamStat);
-                    }
+                    [teamName, getCollegeTeamAlias(teamName)].forEach(alias => {
+                        const normalizedTeamName = normalizeText(alias);
+                        if (normalizedTeamName) {
+                            registeredTeamAliases.set(`name:${normalizedTeamName}`, teamStat);
+                        }
+                    });
                 }
 
                 function getRegisteredTeamStat(teamId, teamName) {
@@ -1832,9 +1835,12 @@
                         }
                     }
 
-                    const normalizedTeamName = normalizeText(teamName);
-                    if (normalizedTeamName) {
-                        return registeredTeamAliases.get(`name:${normalizedTeamName}`) || null;
+                    for (const alias of [teamName, getCollegeTeamAlias(teamName)]) {
+                        const normalizedTeamName = normalizeText(alias);
+                        if (normalizedTeamName) {
+                            const team = registeredTeamAliases.get(`name:${normalizedTeamName}`);
+                            if (team) return team;
+                        }
                     }
 
                     return null;
@@ -2826,6 +2832,9 @@
                     await loadStats();
                 })
                 .on("postgres_changes", { event: "*", schema: "public", table: ATTENDANCE_TABLE }, () => {
+                    scheduleLiveLeaderboardReload(0, { force: true });
+                })
+                .on("postgres_changes", { event: "*", schema: "public", table: ATTENDANCE_SETTINGS_TABLE }, () => {
                     scheduleLiveLeaderboardReload(0, { force: true });
                 })
                 .on("postgres_changes", { event: "*", schema: "public", table: MATCHES_TABLE }, () => {
