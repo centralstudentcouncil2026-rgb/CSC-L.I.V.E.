@@ -306,11 +306,15 @@ select
         ac.registered_player_count * coalesce((ns.parameters ->> 'registered_player_points')::numeric, 5)
         + ac.student_player_count * coalesce((ns.parameters ->> 'student_player_points')::numeric, 2)
         + case
+            when coalesce(nullif(ns.parameters ->> 'faculty_points', '')::numeric, 5) > 0
+            then ac.faculty_count * coalesce(nullif(ns.parameters ->> 'faculty_points', '')::numeric, 5)
             when coalesce(college_totals.total_faculty, 0) > 0
             then (ac.faculty_count::numeric / nullif(college_totals.total_faculty, 0)) * 100
             else 0
           end
         + case
+            when coalesce(nullif(ns.parameters ->> 'faculty_points', '')::numeric, 5) > 0
+            then ac.department_chair_count * coalesce(nullif(ns.parameters ->> 'faculty_points', '')::numeric, 5)
             when coalesce(college_totals.total_department_chairs, 0) > 0
             then (ac.department_chair_count::numeric / nullif(college_totals.total_department_chairs, 0)) * 100
             else 0
