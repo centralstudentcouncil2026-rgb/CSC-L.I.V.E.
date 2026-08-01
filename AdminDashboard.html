@@ -1871,8 +1871,8 @@
                                 </div>
 
                                 <div class="rounded-xl border border-blue-200 bg-white p-3">
-                                    <h4 class="mb-3 text-xs font-black uppercase tracking-wide text-blue-900">Opening Program Computation</h4>
-                                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                    <h4 class="mb-3 text-xs font-black uppercase tracking-wide text-blue-900">Attendance Computation Parameters</h4>
+                                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                                         <label class="block">
                                             <span class="mb-1 block text-xs font-bold text-blue-900">Registered Player Points</span>
                                             <input id="openingPlayerPoints" type="number" min="0" step="0.01" value="5" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
@@ -1885,22 +1885,6 @@
                                             <span class="mb-1 block text-xs font-bold text-blue-900">Student From College Points</span>
                                             <input id="openingStudentPoints" type="number" min="0" step="0.01" value="1" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
                                         </label>
-                                    </div>
-                                    <p class="mt-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-900">
-                                        Faculty and Department Chair formulas use a fixed base of 100.
-                                    </p>
-                                </div>
-
-                                <div class="rounded-xl border border-blue-200 bg-white p-3">
-                                    <h4 class="mb-3 text-xs font-black uppercase tracking-wide text-blue-900">College Totals For Percentage Computation</h4>
-                                    <div id="attendanceCollegeTotalsList" class="space-y-3">
-                                        <p class="text-xs font-semibold text-slate-500">Loading colleges...</p>
-                                    </div>
-                                </div>
-
-                                <div class="rounded-xl border border-blue-200 bg-white p-3">
-                                    <h4 class="mb-3 text-xs font-black uppercase tracking-wide text-blue-900">Sunday Devotional / Game Attendance</h4>
-                                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                         <label class="block">
                                             <span class="mb-1 block text-xs font-bold text-blue-900">Faculty Points</span>
                                             <input id="sundayFacultyPoints" type="number" min="0" step="0.01" value="5" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
@@ -1917,6 +1901,16 @@
                                             <span class="mb-1 block text-xs font-bold text-blue-900">Sponsor Game Attendance Points</span>
                                             <input id="gameSponsorPoints" type="number" min="0" step="0.01" value="15" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
                                         </label>
+                                    </div>
+                                    <p class="mt-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-900">
+                                        Faculty and Department Chair formulas use a fixed base of 100.
+                                    </p>
+
+                                    <div class="mt-4 rounded-xl border border-blue-100 bg-blue-50/60 p-3">
+                                        <h5 class="mb-3 text-xs font-black uppercase tracking-wide text-blue-900">College Totals For Percentage Computation</h5>
+                                        <div id="attendanceCollegeTotalsList" class="space-y-3">
+                                            <p class="text-xs font-semibold text-slate-500">Loading colleges...</p>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -3360,6 +3354,18 @@
 
             function getDefaultAttendancePointSettings() {
                 return {
+                    parameters: {
+                        registered_player_points: 5,
+                        faculty_formula_base: 100,
+                        department_chair_formula_base: 100,
+                        dean_points: 50,
+                        student_from_college_points: 1,
+                        faculty_points: 5,
+                        sponsor_points: 5,
+                        student_player_points: 2,
+                        sponsor_game_attendance_points: 15,
+                        college_totals: {}
+                    },
                     opening_program: {
                         registered_player_points: 5,
                         faculty_formula_base: 100,
@@ -3382,19 +3388,50 @@
             function normalizeAttendancePointSettings(value) {
                 const defaults = getDefaultAttendancePointSettings();
                 const source = value && typeof value === "object" ? value : {};
+                const sourceParameters = {
+                    ...(source.parameters || {}),
+                    registered_player_points: source.parameters?.registered_player_points ?? source.opening_program?.registered_player_points,
+                    faculty_formula_base: 100,
+                    department_chair_formula_base: 100,
+                    dean_points: source.parameters?.dean_points ?? source.opening_program?.dean_points,
+                    student_from_college_points: source.parameters?.student_from_college_points ?? source.opening_program?.student_from_college_points,
+                    faculty_points: source.parameters?.faculty_points ?? source.sunday_devotional?.faculty_points,
+                    sponsor_points: source.parameters?.sponsor_points ?? source.sunday_devotional?.sponsor_points,
+                    student_player_points: source.parameters?.student_player_points ?? source.sunday_devotional?.student_player_points,
+                    sponsor_game_attendance_points: source.parameters?.sponsor_game_attendance_points ?? source.game_attendance?.sponsor_points,
+                    college_totals: source.parameters?.college_totals ?? source.opening_program?.college_totals
+                };
+                const parameters = {
+                    ...defaults.parameters,
+                    ...sourceParameters,
+                    faculty_formula_base: 100,
+                    department_chair_formula_base: 100,
+                    college_totals: sourceParameters.college_totals || {}
+                };
 
                 return {
+                    parameters,
                     opening_program: {
                         ...defaults.opening_program,
-                        ...(source.opening_program || {})
+                        ...(source.opening_program || {}),
+                        registered_player_points: parameters.registered_player_points,
+                        faculty_formula_base: 100,
+                        department_chair_formula_base: 100,
+                        dean_points: parameters.dean_points,
+                        student_from_college_points: parameters.student_from_college_points,
+                        college_totals: parameters.college_totals
                     },
                     sunday_devotional: {
                         ...defaults.sunday_devotional,
-                        ...(source.sunday_devotional || {})
+                        ...(source.sunday_devotional || {}),
+                        faculty_points: parameters.faculty_points,
+                        sponsor_points: parameters.sponsor_points,
+                        student_player_points: parameters.student_player_points
                     },
                     game_attendance: {
                         ...defaults.game_attendance,
-                        ...(source.game_attendance || {})
+                        ...(source.game_attendance || {}),
+                        sponsor_points: parameters.sponsor_game_attendance_points
                     }
                 };
             }
@@ -3463,38 +3500,52 @@
 
             function getAttendancePointSettingsFromForm() {
                 const defaults = getDefaultAttendancePointSettings();
+                const parameters = {
+                    registered_player_points: getNumericInputValue(openingPlayerPoints, defaults.parameters.registered_player_points),
+                    faculty_formula_base: 100,
+                    department_chair_formula_base: 100,
+                    dean_points: getNumericInputValue(openingDeanPoints, defaults.parameters.dean_points),
+                    student_from_college_points: getNumericInputValue(openingStudentPoints, defaults.parameters.student_from_college_points),
+                    faculty_points: getNumericInputValue(sundayFacultyPoints, defaults.parameters.faculty_points),
+                    sponsor_points: getNumericInputValue(sundaySponsorPoints, defaults.parameters.sponsor_points),
+                    student_player_points: getNumericInputValue(sundayStudentPlayerPoints, defaults.parameters.student_player_points),
+                    sponsor_game_attendance_points: getNumericInputValue(gameSponsorPoints, defaults.parameters.sponsor_game_attendance_points),
+                    college_totals: getAttendanceCollegeTotalsFromForm()
+                };
 
                 return {
+                    parameters,
                     opening_program: {
-                        registered_player_points: getNumericInputValue(openingPlayerPoints, defaults.opening_program.registered_player_points),
+                        registered_player_points: parameters.registered_player_points,
                         faculty_formula_base: 100,
                         department_chair_formula_base: 100,
-                        dean_points: getNumericInputValue(openingDeanPoints, defaults.opening_program.dean_points),
-                        student_from_college_points: getNumericInputValue(openingStudentPoints, defaults.opening_program.student_from_college_points),
-                        college_totals: getAttendanceCollegeTotalsFromForm()
+                        dean_points: parameters.dean_points,
+                        student_from_college_points: parameters.student_from_college_points,
+                        college_totals: parameters.college_totals
                     },
                     sunday_devotional: {
-                        faculty_points: getNumericInputValue(sundayFacultyPoints, defaults.sunday_devotional.faculty_points),
-                        sponsor_points: getNumericInputValue(sundaySponsorPoints, defaults.sunday_devotional.sponsor_points),
-                        student_player_points: getNumericInputValue(sundayStudentPlayerPoints, defaults.sunday_devotional.student_player_points)
+                        faculty_points: parameters.faculty_points,
+                        sponsor_points: parameters.sponsor_points,
+                        student_player_points: parameters.student_player_points
                     },
                     game_attendance: {
-                        sponsor_points: getNumericInputValue(gameSponsorPoints, defaults.game_attendance.sponsor_points)
+                        sponsor_points: parameters.sponsor_game_attendance_points
                     }
                 };
             }
 
             function setAttendancePointSettingsForm(settingsValue) {
                 const settings = normalizeAttendancePointSettings(settingsValue);
+                const parameters = settings.parameters;
 
-                if (openingPlayerPoints) openingPlayerPoints.value = settings.opening_program.registered_player_points;
-                if (openingDeanPoints) openingDeanPoints.value = settings.opening_program.dean_points;
-                if (openingStudentPoints) openingStudentPoints.value = settings.opening_program.student_from_college_points;
-                if (sundayFacultyPoints) sundayFacultyPoints.value = settings.sunday_devotional.faculty_points;
-                if (sundaySponsorPoints) sundaySponsorPoints.value = settings.sunday_devotional.sponsor_points;
-                if (sundayStudentPlayerPoints) sundayStudentPlayerPoints.value = settings.sunday_devotional.student_player_points;
-                if (gameSponsorPoints) gameSponsorPoints.value = settings.game_attendance.sponsor_points;
-                renderAttendanceCollegeTotals(settings.opening_program.college_totals);
+                if (openingPlayerPoints) openingPlayerPoints.value = parameters.registered_player_points;
+                if (openingDeanPoints) openingDeanPoints.value = parameters.dean_points;
+                if (openingStudentPoints) openingStudentPoints.value = parameters.student_from_college_points;
+                if (sundayFacultyPoints) sundayFacultyPoints.value = parameters.faculty_points;
+                if (sundaySponsorPoints) sundaySponsorPoints.value = parameters.sponsor_points;
+                if (sundayStudentPlayerPoints) sundayStudentPlayerPoints.value = parameters.student_player_points;
+                if (gameSponsorPoints) gameSponsorPoints.value = parameters.sponsor_game_attendance_points;
+                renderAttendanceCollegeTotals(parameters.college_totals);
             }
 
             function getStoredAdminUser() {
