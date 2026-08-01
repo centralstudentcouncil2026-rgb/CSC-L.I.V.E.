@@ -8,14 +8,15 @@ create table if not exists public.attendance_settings (
     opened_at timestamptz not null default now(),
     closes_at timestamptz not null default (now() + interval '480 minutes'),
     session_type text not null default 'regular',
-    session_title text not null default 'Regular Day',
+    session_title text not null default 'Regular Attendance',
     point_settings jsonb not null default '{
         "opening_program": {
             "registered_player_points": 5,
             "faculty_formula_base": 100,
             "department_chair_formula_base": 100,
             "dean_points": 50,
-            "student_from_college_points": 1
+            "student_from_college_points": 1,
+            "college_totals": {}
         },
         "sunday_devotional": {
             "faculty_points": 5,
@@ -34,14 +35,40 @@ create table if not exists public.attendance_settings (
 
 alter table public.attendance_settings
     add column if not exists session_type text not null default 'regular',
-    add column if not exists session_title text not null default 'Regular Day',
+    add column if not exists session_title text not null default 'Regular Attendance',
     add column if not exists point_settings jsonb not null default '{
         "opening_program": {
             "registered_player_points": 5,
             "faculty_formula_base": 100,
             "department_chair_formula_base": 100,
             "dean_points": 50,
-            "student_from_college_points": 1
+            "student_from_college_points": 1,
+            "college_totals": {}
+        },
+        "sunday_devotional": {
+            "faculty_points": 5,
+            "sponsor_points": 5,
+            "student_player_points": 2
+        },
+        "game_attendance": {
+            "sponsor_points": 15
+        }
+    }'::jsonb;
+
+alter table public.attendance_settings
+    alter column session_title set default 'Regular Attendance';
+
+alter table public.attendance
+    add column if not exists attendance_session_type text not null default 'regular',
+    add column if not exists attendance_session_title text not null default 'Regular Attendance',
+    add column if not exists attendance_point_settings jsonb not null default '{
+        "opening_program": {
+            "registered_player_points": 5,
+            "faculty_formula_base": 100,
+            "department_chair_formula_base": 100,
+            "dean_points": 50,
+            "student_from_college_points": 1,
+            "college_totals": {}
         },
         "sunday_devotional": {
             "faculty_points": 5,
@@ -54,25 +81,31 @@ alter table public.attendance_settings
     }'::jsonb;
 
 alter table public.attendance
-    add column if not exists attendance_session_type text not null default 'regular',
-    add column if not exists attendance_session_title text not null default 'Regular Day',
-    add column if not exists attendance_point_settings jsonb not null default '{
-        "opening_program": {
-            "registered_player_points": 5,
-            "faculty_formula_base": 100,
-            "department_chair_formula_base": 100,
-            "dean_points": 50,
-            "student_from_college_points": 1
-        },
-        "sunday_devotional": {
-            "faculty_points": 5,
-            "sponsor_points": 5,
-            "student_player_points": 2
-        },
-        "game_attendance": {
-            "sponsor_points": 15
-        }
-    }'::jsonb;
+    alter column attendance_session_title set default 'Regular Attendance';
+
+update public.attendance_settings
+set session_title = 'Regular Attendance'
+where session_title = 'Regular Day';
+
+update public.attendance
+set attendance_session_title = 'Regular Attendance'
+where attendance_session_title = 'Regular Day';
+
+update public.attendance_settings
+set point_settings = jsonb_set(
+    coalesce(point_settings, '{}'::jsonb),
+    '{opening_program,college_totals}',
+    coalesce(point_settings #> '{opening_program,college_totals}', '{}'::jsonb),
+    true
+);
+
+update public.attendance
+set attendance_point_settings = jsonb_set(
+    coalesce(attendance_point_settings, '{}'::jsonb),
+    '{opening_program,college_totals}',
+    coalesce(attendance_point_settings #> '{opening_program,college_totals}', '{}'::jsonb),
+    true
+);
 
 update public.attendance_settings
 set opened_at = now() - interval '1 day',
