@@ -89,7 +89,7 @@ on conflict (id) do nothing;
 alter table public.attendance
     add column if not exists attendance_session_type text not null default 'regular',
     add column if not exists attendance_session_title text not null default 'Regular Attendance',
-    add column if not exists attendance_category text not null default 'student_from_college',
+    add column if not exists attendance_category text not null default 'student_player',
     add column if not exists attendance_point_settings jsonb not null default '{
         "parameters": {
             "registered_player_points": 5,
@@ -125,15 +125,20 @@ alter table public.attendance
     alter column attendance_session_title set default 'Regular Attendance';
 
 alter table public.attendance
-    alter column attendance_category set default 'student_from_college';
+    alter column attendance_category set default 'student_player';
 
 update public.attendance
 set attendance_category = case
     when participant_id is not null then 'registered_player'
-    else 'student_from_college'
+    else 'student_player'
 end
 where attendance_category is null
    or attendance_category = '';
+
+update public.attendance
+set attendance_category = 'student_player'
+where participant_id is null
+  and attendance_category = 'student_from_college';
 
 alter table public.attendance
     drop constraint if exists attendance_category_allowed;
@@ -276,8 +281,8 @@ attendance_counts as (
         coalesce(nullif(home_college, ''), nullif(team, '')) as team,
         max(attendance_session_title) as session_title,
         count(*) filter (where lower(coalesce(status, 'present')) = 'present') as total_present,
-        count(*) filter (where lower(coalesce(status, 'present')) = 'present' and attendance_category = 'registered_player') as registered_player_count,
-        count(*) filter (where lower(coalesce(status, 'present')) = 'present' and attendance_category = 'student_player') as student_player_count,
+        count(*) filter (where lower(coalesce(status, 'present')) = 'present' and participant_id is not null and attendance_category = 'registered_player') as registered_player_count,
+        count(*) filter (where lower(coalesce(status, 'present')) = 'present' and participant_id is null and attendance_category = 'student_player') as student_player_count,
         count(*) filter (where lower(coalesce(status, 'present')) = 'present' and attendance_category = 'faculty') as faculty_count,
         count(*) filter (where lower(coalesce(status, 'present')) = 'present' and attendance_category = 'department_chair') as department_chair_count,
         count(*) filter (where lower(coalesce(status, 'present')) = 'present' and attendance_category = 'dean') as dean_count,

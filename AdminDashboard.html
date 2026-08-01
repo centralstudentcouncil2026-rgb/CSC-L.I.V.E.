@@ -1899,7 +1899,7 @@
                                             <input id="sundayFacultyPoints" type="number" min="0" step="0.01" value="5" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
                                         </label>
                                         <label class="flex h-full flex-col">
-                                            <span class="mb-1 block min-h-0 text-xs font-bold text-blue-900 xl:min-h-[2.5rem]">Student Player Points</span>
+                                            <span class="mb-1 block min-h-0 text-xs font-bold text-blue-900 xl:min-h-[2.5rem]">Student Attendee Points</span>
                                             <input id="sundayStudentPlayerPoints" type="number" min="0" step="0.01" value="2" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
                                         </label>
                                         <label class="flex h-full flex-col">
@@ -3568,7 +3568,7 @@
                 const labels = {
                     auto: "Auto",
                     registered_player: "Registered Player",
-                    student_player: "Student Player",
+                    student_player: "Student Attendee",
                     faculty: "Faculty",
                     department_chair: "Department Chair",
                     dean: "Dean",
@@ -3581,7 +3581,7 @@
             }
 
             function resolveAttendanceCategory(participant) {
-                return participant ? "registered_player" : "student_from_college";
+                return participant ? "registered_player" : "student_player";
             }
 
             function setAttendancePointSettingsForm(settingsValue) {
