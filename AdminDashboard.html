@@ -5071,14 +5071,18 @@
                 }
             }
 
-            function renderAttendanceSettingsStatus(message = "") {
-                if (!attendanceSessionDate || !attendanceStartTime || !attendanceOpenUntil || !attendanceSettingsStatus) {
+            function isAttendanceSettingsFormEditing() {
+                const activeElement = document.activeElement;
+                const isFocusedInsideSettings = Boolean(activeElement && attendanceSettingsForm?.contains(activeElement));
+                const isDirty = attendanceSettingsForm?.dataset.autoRefreshDirty === "true";
+
+                return Boolean(isFocusedInsideSettings || isDirty);
+            }
+
+            function syncAttendanceSettingsFormFromSettings(settings, dateValue, sessionTitle) {
+                if (isAttendanceSettingsFormEditing()) {
                     return;
                 }
-
-                const settings = activeAttendanceSettings;
-                const dateValue = getAttendanceSessionDate();
-                const sessionTitle = settings?.session_title || attendanceSessionTitle?.value || "Regular Attendance";
 
                 attendanceSessionDate.value = dateValue;
                 attendanceStartTime.value = settings?.opened_at && isAttendanceSessionFromCurrentDay(settings)
@@ -5089,6 +5093,18 @@
                     : "";
                 if (attendanceSessionTitle) attendanceSessionTitle.value = sessionTitle;
                 setAttendancePointSettingsForm(settings?.point_settings);
+            }
+
+            function renderAttendanceSettingsStatus(message = "") {
+                if (!attendanceSessionDate || !attendanceStartTime || !attendanceOpenUntil || !attendanceSettingsStatus) {
+                    return;
+                }
+
+                const settings = activeAttendanceSettings;
+                const dateValue = getAttendanceSessionDate();
+                const sessionTitle = settings?.session_title || attendanceSessionTitle?.value || "Regular Attendance";
+
+                syncAttendanceSettingsFormFromSettings(settings, dateValue, sessionTitle);
 
                 if (message) {
                     attendanceSettingsStatus.className = "rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-900";
@@ -5200,6 +5216,7 @@
                 }
 
                 activeAttendanceSettings = data || payload;
+                attendanceSettingsForm?.removeAttribute("data-auto-refresh-dirty");
                 renderAttendanceSettingsStatus();
                 await loadAdminOverviewCounts();
                 showDashboardToast("Attendance session saved.");
