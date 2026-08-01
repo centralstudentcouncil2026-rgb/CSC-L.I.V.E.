@@ -6460,6 +6460,20 @@
                 return "bg-red-100 text-red-800";
             }
 
+            function getParticipantStatusRowClass(status) {
+                const normalizedStatus = normalizeParticipantStatus(status);
+
+                if (normalizedStatus === "approved") {
+                    return "border-green-200 bg-green-50/70 hover:bg-green-100";
+                }
+
+                if (normalizedStatus === "rejected") {
+                    return "border-red-200 bg-red-50/70 hover:bg-red-100";
+                }
+
+                return "border-yellow-200 bg-yellow-50/80 hover:bg-yellow-100";
+            }
+
             function normalizeParticipantStatus(status) {
                 return normalizeComparableValue(status || "pending");
             }
@@ -7648,7 +7662,7 @@
 
                 filteredParticipants.forEach(participant => {
                     const row = document.createElement("tr");
-                    row.className = "participant-row cursor-pointer border-b border-gray-100 hover:bg-blue-50";
+                    row.className = `participant-row cursor-pointer border-b ${getParticipantStatusRowClass(participant.status)}`;
                     row.dataset.participantId = participant.id;
 
                     row.innerHTML = `
