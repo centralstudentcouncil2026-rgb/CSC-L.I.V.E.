@@ -1840,7 +1840,7 @@
                             </div>
 
                             <form id="attendanceSettingsForm" class="mb-5 hidden space-y-4 rounded-xl border border-blue-100 bg-blue-50 p-4">
-                                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
                                     <div>
                                         <label for="attendanceSessionDate" class="mb-1 block text-xs font-black uppercase tracking-wide text-blue-900">Attendance Date</label>
                                         <input
@@ -1851,7 +1851,16 @@
                                     </div>
 
                                     <div>
-                                        <label for="attendanceOpenUntil" class="mb-1 block text-xs font-black uppercase tracking-wide text-blue-900">Open Until</label>
+                                        <label for="attendanceStartTime" class="mb-1 block text-xs font-black uppercase tracking-wide text-blue-900">Start Time</label>
+                                        <input
+                                            id="attendanceStartTime"
+                                            type="time"
+                                            required
+                                            class="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-bold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                                    </div>
+
+                                    <div>
+                                        <label for="attendanceOpenUntil" class="mb-1 block text-xs font-black uppercase tracking-wide text-blue-900">End Time</label>
                                         <input
                                             id="attendanceOpenUntil"
                                             type="time"
@@ -1872,33 +1881,33 @@
 
                                 <div class="rounded-xl border border-blue-200 bg-white p-3">
                                     <h4 class="mb-3 text-xs font-black uppercase tracking-wide text-blue-900">Attendance Computation Parameters</h4>
-                                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                                        <label class="block">
-                                            <span class="mb-1 block text-xs font-bold text-blue-900">Registered Player Points</span>
+                                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                                        <label class="flex h-full flex-col">
+                                            <span class="mb-1 block min-h-0 text-xs font-bold text-blue-900 xl:min-h-[2.5rem]">Registered Player Points</span>
                                             <input id="openingPlayerPoints" type="number" min="0" step="0.01" value="5" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
                                         </label>
-                                        <label class="block">
-                                            <span class="mb-1 block text-xs font-bold text-blue-900">Dean Points</span>
+                                        <label class="flex h-full flex-col">
+                                            <span class="mb-1 block min-h-0 text-xs font-bold text-blue-900 xl:min-h-[2.5rem]">Dean Points</span>
                                             <input id="openingDeanPoints" type="number" min="0" step="0.01" value="50" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
                                         </label>
-                                        <label class="block">
-                                            <span class="mb-1 block text-xs font-bold text-blue-900">Student From College Points</span>
+                                        <label class="flex h-full flex-col">
+                                            <span class="mb-1 block min-h-0 text-xs font-bold text-blue-900 xl:min-h-[2.5rem]">Student From College Points</span>
                                             <input id="openingStudentPoints" type="number" min="0" step="0.01" value="1" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
                                         </label>
-                                        <label class="block">
-                                            <span class="mb-1 block text-xs font-bold text-blue-900">Faculty Points</span>
+                                        <label class="flex h-full flex-col">
+                                            <span class="mb-1 block min-h-0 text-xs font-bold text-blue-900 xl:min-h-[2.5rem]">Faculty Points</span>
                                             <input id="sundayFacultyPoints" type="number" min="0" step="0.01" value="5" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
                                         </label>
-                                        <label class="block">
-                                            <span class="mb-1 block text-xs font-bold text-blue-900">Sponsor Points</span>
+                                        <label class="flex h-full flex-col">
+                                            <span class="mb-1 block min-h-0 text-xs font-bold text-blue-900 xl:min-h-[2.5rem]">Sponsor Points</span>
                                             <input id="sundaySponsorPoints" type="number" min="0" step="0.01" value="5" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
                                         </label>
-                                        <label class="block">
-                                            <span class="mb-1 block text-xs font-bold text-blue-900">Student Player Points</span>
+                                        <label class="flex h-full flex-col">
+                                            <span class="mb-1 block min-h-0 text-xs font-bold text-blue-900 xl:min-h-[2.5rem]">Student Player Points</span>
                                             <input id="sundayStudentPlayerPoints" type="number" min="0" step="0.01" value="2" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
                                         </label>
-                                        <label class="block">
-                                            <span class="mb-1 block text-xs font-bold text-blue-900">Sponsor Game Attendance Points</span>
+                                        <label class="flex h-full flex-col">
+                                            <span class="mb-1 block min-h-0 text-xs font-bold text-blue-900 xl:min-h-[2.5rem]">Sponsor Game Attendance Points</span>
                                             <input id="gameSponsorPoints" type="number" min="0" step="0.01" value="15" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
                                         </label>
                                     </div>
@@ -3068,6 +3077,7 @@
             const attendanceSettingsForm = document.getElementById("attendanceSettingsForm");
             const attendanceSettingsToggle = document.getElementById("attendanceSettingsToggle");
             const attendanceSessionDate = document.getElementById("attendanceSessionDate");
+            const attendanceStartTime = document.getElementById("attendanceStartTime");
             const attendanceOpenUntil = document.getElementById("attendanceOpenUntil");
             const attendanceSessionTitle = document.getElementById("attendanceSessionTitle");
             const attendanceCollegeTotalsList = document.getElementById("attendanceCollegeTotalsList");
@@ -3296,6 +3306,23 @@
                 return Number.isNaN(parsed.getTime()) ? null : parsed;
             }
 
+            function getAttendanceStartDateTime(attendanceDate, startTime) {
+                if (!attendanceDate || !startTime) {
+                    return null;
+                }
+
+                const parsed = new Date(`${attendanceDate}T${startTime}:00`);
+                return Number.isNaN(parsed.getTime()) ? null : parsed;
+            }
+
+            function getAttendanceSessionStartsAt(settings = activeAttendanceSettings) {
+                if (settings?.opened_at) {
+                    return new Date(settings.opened_at);
+                }
+
+                return null;
+            }
+
             function getAttendanceSessionClosesAt(settings = activeAttendanceSettings) {
                 if (settings?.closes_at) {
                     return new Date(settings.closes_at);
@@ -3321,14 +3348,21 @@
                 }
 
                 const closesAt = getAttendanceSessionClosesAt(settings);
-                return Boolean(closesAt && Date.now() <= closesAt.getTime());
+                const startsAt = getAttendanceSessionStartsAt(settings);
+                const now = Date.now();
+                return Boolean(startsAt && closesAt && now >= startsAt.getTime() && now <= closesAt.getTime());
             }
 
             function getAttendanceSessionRemainingText(settings = activeAttendanceSettings) {
                 const closesAt = getAttendanceSessionClosesAt(settings);
+                const startsAt = getAttendanceSessionStartsAt(settings);
 
                 if (!closesAt || Number.isNaN(closesAt.getTime())) {
                     return "No closing time set";
+                }
+
+                if (startsAt && Date.now() < startsAt.getTime()) {
+                    return `Starts ${startsAt.toLocaleString()}, closes ${closesAt.toLocaleString()}`;
                 }
 
                 const remainingMs = closesAt.getTime() - Date.now();
@@ -5050,7 +5084,7 @@
             }
 
             function renderAttendanceSettingsStatus(message = "") {
-                if (!attendanceSessionDate || !attendanceOpenUntil || !attendanceSettingsStatus) {
+                if (!attendanceSessionDate || !attendanceStartTime || !attendanceOpenUntil || !attendanceSettingsStatus) {
                     return;
                 }
 
@@ -5059,6 +5093,9 @@
                 const sessionTitle = settings?.session_title || attendanceSessionTitle?.value || "Regular Attendance";
 
                 attendanceSessionDate.value = dateValue;
+                attendanceStartTime.value = settings?.opened_at && isAttendanceSessionFromCurrentDay(settings)
+                    ? getTimeInputValueFromDate(settings.opened_at)
+                    : "";
                 attendanceOpenUntil.value = settings?.closes_at && isAttendanceSessionFromCurrentDay(settings)
                     ? getTimeInputValueFromDate(settings.closes_at)
                     : "";
@@ -5073,21 +5110,25 @@
 
                 if (!settings) {
                     attendanceSettingsStatus.className = "rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-900";
-                    attendanceSettingsStatus.textContent = "No shared attendance session is open. Open Settings, set the date and open-until time, then save.";
+                    attendanceSettingsStatus.textContent = "No shared attendance session is open. Open Settings, set the date, start time, and end time, then save.";
                     return;
                 }
 
                 if (!isAttendanceSessionFromCurrentDay(settings)) {
                     attendanceSettingsStatus.className = "rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-900";
-                    attendanceSettingsStatus.textContent = "Attendance session reset for a new day. Open Settings and save today's date and open-until time.";
+                    attendanceSettingsStatus.textContent = "Attendance session reset for a new day. Open Settings and save today's date, start time, and end time.";
                     return;
                 }
 
                 const open = isAttendanceSessionOpen(settings);
+                const startsAt = getAttendanceSessionStartsAt(settings);
+                const isScheduled = startsAt && Date.now() < startsAt.getTime();
                 attendanceSettingsStatus.className = open
                     ? "rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-bold text-green-900"
+                    : isScheduled
+                        ? "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-900"
                     : "rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-900";
-                attendanceSettingsStatus.textContent = `${open ? "Open" : "Closed"} for ${settings.attendance_date}. ${settings.session_title || "Regular Attendance"}. ${getAttendanceSessionRemainingText(settings)}`;
+                attendanceSettingsStatus.textContent = `${open ? "Open" : isScheduled ? "Scheduled" : "Closed"} for ${settings.attendance_date}. ${settings.session_title || "Regular Attendance"}. ${getAttendanceSessionRemainingText(settings)}`;
             }
 
             async function loadAttendanceSettings() {
@@ -5117,15 +5158,21 @@
                 event.preventDefault();
 
                 const attendanceDate = attendanceSessionDate.value || getLocalISODate();
-                const openedAt = new Date();
+                const openedAt = getAttendanceStartDateTime(attendanceDate, attendanceStartTime.value);
                 const closesAt = getAttendanceCloseDateTime(attendanceDate, attendanceOpenUntil.value);
                 const adminUser = getStoredAdminUser();
                 const sessionType = "regular";
                 const sessionTitle = String(attendanceSessionTitle?.value || "").trim() || "Regular Attendance";
                 const pointSettings = getAttendancePointSettingsFromForm();
 
+                if (!openedAt) {
+                    renderAttendanceSettingsStatus("Please select when attendance should start.");
+                    attendanceStartTime.focus();
+                    return;
+                }
+
                 if (!closesAt || closesAt.getTime() <= openedAt.getTime()) {
-                    renderAttendanceSettingsStatus("Please select an open-until time later than the current time.");
+                    renderAttendanceSettingsStatus("Please select an end time later than the start time.");
                     attendanceOpenUntil.focus();
                     return;
                 }
@@ -9780,6 +9827,7 @@
             printAttendanceDate.value = getLocalISODate();
             printCommitteeMatchesDate.value = "";
             attendanceSessionDate.value = getLocalISODate();
+            attendanceStartTime.value = "";
             attendanceOpenUntil.value = "";
             attendanceSettingsToggle.addEventListener("click", function () {
                 attendanceSettingsForm.classList.toggle("hidden");
