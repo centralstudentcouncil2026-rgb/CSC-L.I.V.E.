@@ -1895,12 +1895,8 @@
                                             <input id="openingStudentPoints" type="number" min="0" step="0.01" value="1" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
                                         </label>
                                         <label class="flex h-full flex-col">
-                                            <span class="mb-1 block min-h-0 text-xs font-bold text-blue-900 xl:min-h-[2.5rem]">Faculty Points</span>
+                                            <span class="mb-1 block min-h-0 text-xs font-bold text-blue-900 xl:min-h-[2.5rem]">Faculty / Sponsor Points</span>
                                             <input id="sundayFacultyPoints" type="number" min="0" step="0.01" value="5" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
-                                        </label>
-                                        <label class="flex h-full flex-col">
-                                            <span class="mb-1 block min-h-0 text-xs font-bold text-blue-900 xl:min-h-[2.5rem]">Sponsor Points</span>
-                                            <input id="sundaySponsorPoints" type="number" min="0" step="0.01" value="5" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
                                         </label>
                                         <label class="flex h-full flex-col">
                                             <span class="mb-1 block min-h-0 text-xs font-bold text-blue-900 xl:min-h-[2.5rem]">Student Player Points</span>
@@ -3085,7 +3081,6 @@
             const openingDeanPoints = document.getElementById("openingDeanPoints");
             const openingStudentPoints = document.getElementById("openingStudentPoints");
             const sundayFacultyPoints = document.getElementById("sundayFacultyPoints");
-            const sundaySponsorPoints = document.getElementById("sundaySponsorPoints");
             const sundayStudentPlayerPoints = document.getElementById("sundayStudentPlayerPoints");
             const gameSponsorPoints = document.getElementById("gameSponsorPoints");
             const attendanceSettingsSaveButton = document.getElementById("attendanceSettingsSaveButton");
@@ -3542,7 +3537,7 @@
                     dean_points: getNumericInputValue(openingDeanPoints, defaults.parameters.dean_points),
                     student_from_college_points: getNumericInputValue(openingStudentPoints, defaults.parameters.student_from_college_points),
                     faculty_points: getNumericInputValue(sundayFacultyPoints, defaults.parameters.faculty_points),
-                    sponsor_points: getNumericInputValue(sundaySponsorPoints, defaults.parameters.sponsor_points),
+                    sponsor_points: getNumericInputValue(sundayFacultyPoints, defaults.parameters.sponsor_points),
                     student_player_points: getNumericInputValue(sundayStudentPlayerPoints, defaults.parameters.student_player_points),
                     sponsor_game_attendance_points: getNumericInputValue(gameSponsorPoints, defaults.parameters.sponsor_game_attendance_points),
                     college_totals: getAttendanceCollegeTotalsFromForm()
@@ -3597,7 +3592,6 @@
                 if (openingDeanPoints) openingDeanPoints.value = parameters.dean_points;
                 if (openingStudentPoints) openingStudentPoints.value = parameters.student_from_college_points;
                 if (sundayFacultyPoints) sundayFacultyPoints.value = parameters.faculty_points;
-                if (sundaySponsorPoints) sundaySponsorPoints.value = parameters.sponsor_points;
                 if (sundayStudentPlayerPoints) sundayStudentPlayerPoints.value = parameters.student_player_points;
                 if (gameSponsorPoints) gameSponsorPoints.value = parameters.sponsor_game_attendance_points;
                 renderAttendanceCollegeTotals(parameters.college_totals);
