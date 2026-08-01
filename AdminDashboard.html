@@ -1891,16 +1891,12 @@
                                             <input id="openingDeanPoints" type="number" min="0" step="0.01" value="50" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
                                         </label>
                                         <label class="flex h-full flex-col">
-                                            <span class="mb-1 block min-h-0 text-xs font-bold text-blue-900 xl:min-h-[2.5rem]">Student From College Points</span>
-                                            <input id="openingStudentPoints" type="number" min="0" step="0.01" value="1" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
+                                            <span class="mb-1 block min-h-0 text-xs font-bold text-blue-900 xl:min-h-[2.5rem]">Student Attendee Points</span>
+                                            <input id="openingStudentPoints" type="number" min="0" step="0.01" value="2" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
                                         </label>
                                         <label class="flex h-full flex-col">
                                             <span class="mb-1 block min-h-0 text-xs font-bold text-blue-900 xl:min-h-[2.5rem]">Faculty / Sponsor Points</span>
                                             <input id="sundayFacultyPoints" type="number" min="0" step="0.01" value="5" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
-                                        </label>
-                                        <label class="flex h-full flex-col">
-                                            <span class="mb-1 block min-h-0 text-xs font-bold text-blue-900 xl:min-h-[2.5rem]">Student Attendee Points</span>
-                                            <input id="sundayStudentPlayerPoints" type="number" min="0" step="0.01" value="2" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
                                         </label>
                                         <label class="flex h-full flex-col">
                                             <span class="mb-1 block min-h-0 text-xs font-bold text-blue-900 xl:min-h-[2.5rem]">Sponsor Game Attendance Points</span>
@@ -3081,7 +3077,6 @@
             const openingDeanPoints = document.getElementById("openingDeanPoints");
             const openingStudentPoints = document.getElementById("openingStudentPoints");
             const sundayFacultyPoints = document.getElementById("sundayFacultyPoints");
-            const sundayStudentPlayerPoints = document.getElementById("sundayStudentPlayerPoints");
             const gameSponsorPoints = document.getElementById("gameSponsorPoints");
             const attendanceSettingsSaveButton = document.getElementById("attendanceSettingsSaveButton");
             const attendanceSettingsStatus = document.getElementById("attendanceSettingsStatus");
@@ -3389,7 +3384,7 @@
                         faculty_formula_base: 100,
                         department_chair_formula_base: 100,
                         dean_points: 50,
-                        student_from_college_points: 1,
+                        student_from_college_points: 2,
                         faculty_points: 5,
                         sponsor_points: 5,
                         student_player_points: 2,
@@ -3401,7 +3396,7 @@
                         faculty_formula_base: 100,
                         department_chair_formula_base: 100,
                         dean_points: 50,
-                        student_from_college_points: 1,
+                        student_from_college_points: 2,
                         college_totals: {}
                     },
                     sunday_devotional: {
@@ -3424,7 +3419,7 @@
                     faculty_formula_base: 100,
                     department_chair_formula_base: 100,
                     dean_points: source.parameters?.dean_points ?? source.opening_program?.dean_points,
-                    student_from_college_points: source.parameters?.student_from_college_points ?? source.opening_program?.student_from_college_points,
+                    student_from_college_points: source.parameters?.student_player_points ?? source.parameters?.student_from_college_points ?? source.opening_program?.student_from_college_points,
                     faculty_points: source.parameters?.faculty_points ?? source.sunday_devotional?.faculty_points,
                     sponsor_points: source.parameters?.sponsor_points ?? source.sunday_devotional?.sponsor_points,
                     student_player_points: source.parameters?.student_player_points ?? source.sunday_devotional?.student_player_points,
@@ -3535,10 +3530,10 @@
                     faculty_formula_base: 100,
                     department_chair_formula_base: 100,
                     dean_points: getNumericInputValue(openingDeanPoints, defaults.parameters.dean_points),
-                    student_from_college_points: getNumericInputValue(openingStudentPoints, defaults.parameters.student_from_college_points),
+                    student_from_college_points: getNumericInputValue(openingStudentPoints, defaults.parameters.student_player_points),
                     faculty_points: getNumericInputValue(sundayFacultyPoints, defaults.parameters.faculty_points),
                     sponsor_points: getNumericInputValue(sundayFacultyPoints, defaults.parameters.sponsor_points),
-                    student_player_points: getNumericInputValue(sundayStudentPlayerPoints, defaults.parameters.student_player_points),
+                    student_player_points: getNumericInputValue(openingStudentPoints, defaults.parameters.student_player_points),
                     sponsor_game_attendance_points: getNumericInputValue(gameSponsorPoints, defaults.parameters.sponsor_game_attendance_points),
                     college_totals: getAttendanceCollegeTotalsFromForm()
                 };
@@ -3590,9 +3585,8 @@
 
                 if (openingPlayerPoints) openingPlayerPoints.value = parameters.registered_player_points;
                 if (openingDeanPoints) openingDeanPoints.value = parameters.dean_points;
-                if (openingStudentPoints) openingStudentPoints.value = parameters.student_from_college_points;
+                if (openingStudentPoints) openingStudentPoints.value = parameters.student_player_points || parameters.student_from_college_points;
                 if (sundayFacultyPoints) sundayFacultyPoints.value = parameters.faculty_points;
-                if (sundayStudentPlayerPoints) sundayStudentPlayerPoints.value = parameters.student_player_points;
                 if (gameSponsorPoints) gameSponsorPoints.value = parameters.sponsor_game_attendance_points;
                 renderAttendanceCollegeTotals(parameters.college_totals);
             }

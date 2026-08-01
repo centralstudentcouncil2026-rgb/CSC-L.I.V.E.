@@ -15,7 +15,7 @@ create table if not exists public.attendance_settings (
             "faculty_formula_base": 100,
             "department_chair_formula_base": 100,
             "dean_points": 50,
-            "student_from_college_points": 1,
+            "student_from_college_points": 2,
             "faculty_points": 5,
             "sponsor_points": 5,
             "student_player_points": 2,
@@ -27,7 +27,7 @@ create table if not exists public.attendance_settings (
             "faculty_formula_base": 100,
             "department_chair_formula_base": 100,
             "dean_points": 50,
-            "student_from_college_points": 1,
+            "student_from_college_points": 2,
             "college_totals": {}
         },
         "sunday_devotional": {
@@ -54,7 +54,7 @@ alter table public.attendance_settings
             "faculty_formula_base": 100,
             "department_chair_formula_base": 100,
             "dean_points": 50,
-            "student_from_college_points": 1,
+            "student_from_college_points": 2,
             "faculty_points": 5,
             "sponsor_points": 5,
             "student_player_points": 2,
@@ -66,7 +66,7 @@ alter table public.attendance_settings
             "faculty_formula_base": 100,
             "department_chair_formula_base": 100,
             "dean_points": 50,
-            "student_from_college_points": 1,
+            "student_from_college_points": 2,
             "college_totals": {}
         },
         "sunday_devotional": {
@@ -96,7 +96,7 @@ alter table public.attendance
             "faculty_formula_base": 100,
             "department_chair_formula_base": 100,
             "dean_points": 50,
-            "student_from_college_points": 1,
+            "student_from_college_points": 2,
             "faculty_points": 5,
             "sponsor_points": 5,
             "student_player_points": 2,
@@ -108,7 +108,7 @@ alter table public.attendance
             "faculty_formula_base": 100,
             "department_chair_formula_base": 100,
             "dean_points": 50,
-            "student_from_college_points": 1,
+            "student_from_college_points": 2,
             "college_totals": {}
         },
         "sunday_devotional": {
@@ -181,10 +181,10 @@ set point_settings = jsonb_set(
         'faculty_formula_base', '100'::jsonb,
         'department_chair_formula_base', '100'::jsonb,
         'dean_points', coalesce(point_settings #> '{parameters,dean_points}', point_settings #> '{opening_program,dean_points}', '50'::jsonb),
-        'student_from_college_points', coalesce(point_settings #> '{parameters,student_from_college_points}', point_settings #> '{opening_program,student_from_college_points}', '1'::jsonb),
+        'student_from_college_points', coalesce(point_settings #> '{parameters,student_player_points}', point_settings #> '{parameters,student_from_college_points}', point_settings #> '{opening_program,student_from_college_points}', '2'::jsonb),
         'faculty_points', coalesce(point_settings #> '{parameters,faculty_points}', point_settings #> '{sunday_devotional,faculty_points}', '5'::jsonb),
         'sponsor_points', coalesce(point_settings #> '{parameters,sponsor_points}', point_settings #> '{sunday_devotional,sponsor_points}', '5'::jsonb),
-        'student_player_points', coalesce(point_settings #> '{parameters,student_player_points}', point_settings #> '{sunday_devotional,student_player_points}', '2'::jsonb),
+        'student_player_points', coalesce(point_settings #> '{parameters,student_player_points}', point_settings #> '{parameters,student_from_college_points}', point_settings #> '{sunday_devotional,student_player_points}', '2'::jsonb),
         'sponsor_game_attendance_points', coalesce(point_settings #> '{parameters,sponsor_game_attendance_points}', point_settings #> '{game_attendance,sponsor_points}', '15'::jsonb),
         'college_totals', coalesce(point_settings #> '{parameters,college_totals}', point_settings #> '{opening_program,college_totals}', '{}'::jsonb)
     ),
@@ -208,10 +208,10 @@ set attendance_point_settings = jsonb_set(
         'faculty_formula_base', '100'::jsonb,
         'department_chair_formula_base', '100'::jsonb,
         'dean_points', coalesce(attendance_point_settings #> '{parameters,dean_points}', attendance_point_settings #> '{opening_program,dean_points}', '50'::jsonb),
-        'student_from_college_points', coalesce(attendance_point_settings #> '{parameters,student_from_college_points}', attendance_point_settings #> '{opening_program,student_from_college_points}', '1'::jsonb),
+        'student_from_college_points', coalesce(attendance_point_settings #> '{parameters,student_player_points}', attendance_point_settings #> '{parameters,student_from_college_points}', attendance_point_settings #> '{opening_program,student_from_college_points}', '2'::jsonb),
         'faculty_points', coalesce(attendance_point_settings #> '{parameters,faculty_points}', attendance_point_settings #> '{sunday_devotional,faculty_points}', '5'::jsonb),
         'sponsor_points', coalesce(attendance_point_settings #> '{parameters,sponsor_points}', attendance_point_settings #> '{sunday_devotional,sponsor_points}', '5'::jsonb),
-        'student_player_points', coalesce(attendance_point_settings #> '{parameters,student_player_points}', attendance_point_settings #> '{sunday_devotional,student_player_points}', '2'::jsonb),
+        'student_player_points', coalesce(attendance_point_settings #> '{parameters,student_player_points}', attendance_point_settings #> '{parameters,student_from_college_points}', attendance_point_settings #> '{sunday_devotional,student_player_points}', '2'::jsonb),
         'sponsor_game_attendance_points', coalesce(attendance_point_settings #> '{parameters,sponsor_game_attendance_points}', attendance_point_settings #> '{game_attendance,sponsor_points}', '15'::jsonb),
         'college_totals', coalesce(attendance_point_settings #> '{parameters,college_totals}', attendance_point_settings #> '{opening_program,college_totals}', '{}'::jsonb)
     ),
@@ -266,10 +266,10 @@ normalized_settings as (
             'faculty_formula_base', '100'::jsonb,
             'department_chair_formula_base', '100'::jsonb,
             'dean_points', coalesce(point_settings #> '{parameters,dean_points}', point_settings #> '{opening_program,dean_points}', '50'::jsonb),
-            'student_from_college_points', coalesce(point_settings #> '{parameters,student_from_college_points}', point_settings #> '{opening_program,student_from_college_points}', '1'::jsonb),
+            'student_from_college_points', coalesce(point_settings #> '{parameters,student_player_points}', point_settings #> '{parameters,student_from_college_points}', point_settings #> '{opening_program,student_from_college_points}', '2'::jsonb),
             'faculty_points', coalesce(point_settings #> '{parameters,faculty_points}', point_settings #> '{sunday_devotional,faculty_points}', '5'::jsonb),
             'sponsor_points', coalesce(point_settings #> '{parameters,sponsor_points}', point_settings #> '{sunday_devotional,sponsor_points}', '5'::jsonb),
-            'student_player_points', coalesce(point_settings #> '{parameters,student_player_points}', point_settings #> '{sunday_devotional,student_player_points}', '2'::jsonb),
+            'student_player_points', coalesce(point_settings #> '{parameters,student_player_points}', point_settings #> '{parameters,student_from_college_points}', point_settings #> '{sunday_devotional,student_player_points}', '2'::jsonb),
             'sponsor_game_attendance_points', coalesce(point_settings #> '{parameters,sponsor_game_attendance_points}', point_settings #> '{game_attendance,sponsor_points}', '15'::jsonb),
             'college_totals', coalesce(point_settings #> '{parameters,college_totals}', point_settings #> '{opening_program,college_totals}', '{}'::jsonb)
         ) as parameters
@@ -282,7 +282,7 @@ attendance_counts as (
         max(attendance_session_title) as session_title,
         count(*) filter (where lower(coalesce(status, 'present')) = 'present') as total_present,
         count(*) filter (where lower(coalesce(status, 'present')) = 'present' and participant_id is not null and attendance_category = 'registered_player') as registered_player_count,
-        count(*) filter (where lower(coalesce(status, 'present')) = 'present' and participant_id is null and attendance_category = 'student_player') as student_player_count,
+        count(*) filter (where lower(coalesce(status, 'present')) = 'present' and participant_id is null and attendance_category in ('student_player', 'student_from_college')) as student_player_count,
         count(*) filter (where lower(coalesce(status, 'present')) = 'present' and attendance_category = 'faculty') as faculty_count,
         count(*) filter (where lower(coalesce(status, 'present')) = 'present' and attendance_category = 'department_chair') as department_chair_count,
         count(*) filter (where lower(coalesce(status, 'present')) = 'present' and attendance_category = 'dean') as dean_count,
@@ -325,7 +325,6 @@ select
             else 0
           end
         + ac.dean_count * coalesce((ns.parameters ->> 'dean_points')::numeric, 50)
-        + ac.student_from_college_count * coalesce((ns.parameters ->> 'student_from_college_points')::numeric, 1)
         + ac.sponsor_count * coalesce((ns.parameters ->> 'sponsor_points')::numeric, 5)
         + ac.sponsor_game_attendance_count * coalesce((ns.parameters ->> 'sponsor_game_attendance_points')::numeric, 15)
     )::numeric(12, 2) as total_points
