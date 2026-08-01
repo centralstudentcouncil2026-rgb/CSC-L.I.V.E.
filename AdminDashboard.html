@@ -1925,6 +1925,26 @@
 
                             <form id="attendanceForm" class="space-y-4">
                                 <div>
+                                    <label for="attendanceCategory" class="block text-sm font-medium text-gray-700 mb-1">
+                                        Attendance Type
+                                    </label>
+
+                                    <select
+                                        id="attendanceCategory"
+                                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 outline-none">
+                                        <option value="auto">Auto: registered player or student</option>
+                                        <option value="registered_player">Registered Player</option>
+                                        <option value="student_player">Student Player</option>
+                                        <option value="faculty">Faculty</option>
+                                        <option value="department_chair">Department Chair</option>
+                                        <option value="dean">Dean</option>
+                                        <option value="student_from_college">Student From College</option>
+                                        <option value="sponsor">Sponsor</option>
+                                        <option value="sponsor_game_attendance">Sponsor Game Attendance</option>
+                                    </select>
+                                </div>
+
+                                <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">
                                         RFID or ID Number
                                     </label>
@@ -2975,6 +2995,7 @@
             const SPORTS_TABLE = "sports";
             const ATTENDANCE_TABLE = "attendance";
             const ATTENDANCE_SETTINGS_TABLE = "attendance_settings";
+            const ATTENDANCE_POINTS_VIEW = "attendance_point_history";
             const RFID_PROFILES_TABLE = "rfid_profiles";
             const GAME_HISTORY_TABLE = "game_history";
             const BASKETBALL_STATS_TABLE = "basketball_match_player_stats";
@@ -3079,6 +3100,7 @@
             const gameSponsorPoints = document.getElementById("gameSponsorPoints");
             const attendanceSettingsSaveButton = document.getElementById("attendanceSettingsSaveButton");
             const attendanceSettingsStatus = document.getElementById("attendanceSettingsStatus");
+            const attendanceCategory = document.getElementById("attendanceCategory");
             const attendanceStudentId = document.getElementById("attendanceStudentId");
             const attendanceResult = document.getElementById("attendanceResult");
             const attendanceEmptyState = document.getElementById("attendanceEmptyState");
@@ -3532,6 +3554,32 @@
                         sponsor_points: parameters.sponsor_game_attendance_points
                     }
                 };
+            }
+
+            function getAttendanceCategoryLabel(value) {
+                const labels = {
+                    auto: "Auto",
+                    registered_player: "Registered Player",
+                    student_player: "Student Player",
+                    faculty: "Faculty",
+                    department_chair: "Department Chair",
+                    dean: "Dean",
+                    student_from_college: "Student From College",
+                    sponsor: "Sponsor",
+                    sponsor_game_attendance: "Sponsor Game Attendance"
+                };
+
+                return labels[value] || labels.student_from_college;
+            }
+
+            function resolveAttendanceCategory(participant) {
+                const selectedCategory = String(attendanceCategory?.value || "auto").trim();
+
+                if (selectedCategory && selectedCategory !== "auto") {
+                    return selectedCategory;
+                }
+
+                return participant ? "registered_player" : "student_from_college";
             }
 
             function setAttendancePointSettingsForm(settingsValue) {
@@ -5615,11 +5663,11 @@
                     .upsert([recordWithProfile], {
                         onConflict: "student_id,attendance_date"
                     })
-                    .select("id, participant_id, student_id, participant_name, team, home_college, status, attendance_date, checked_at, attendance_session_type, attendance_session_title, attendance_point_settings")
+                    .select("id, participant_id, student_id, participant_name, team, home_college, status, attendance_date, checked_at, attendance_session_type, attendance_session_title, attendance_category, attendance_point_settings")
                     .single();
 
                 const profileColumnError = result.error
-                    && /attendance_rfid_value|attendance_course|attendance_source|attendance_session_type|attendance_session_title|attendance_point_settings|column|schema cache/i.test(result.error.message || "");
+                    && /attendance_rfid_value|attendance_course|attendance_source|attendance_session_type|attendance_session_title|attendance_category|attendance_point_settings|column|schema cache/i.test(result.error.message || "");
 
                 if (profileColumnError && Object.keys(optionalProfileData).length) {
                     result = await supabase
@@ -7583,6 +7631,15 @@
                 }
 
                 const historyRows = (await loadPrintGameHistory()).filter(history => historyIncludesTeam(history, teamName));
+                const { data: attendancePointRows, error: attendancePointError } = await supabase
+                    .from(ATTENDANCE_POINTS_VIEW)
+                    .select("*")
+                    .eq("team", teamName);
+
+                if (attendancePointError) {
+                    console.warn("Printable attendance points warning:", attendancePointError.message || attendancePointError);
+                }
+
                 let totalPoints = 0;
                 const rows = historyRows.map(history => {
                     const points = getHistoryPointsForTeam(history, teamName);
@@ -7595,6 +7652,17 @@
                         getHistoryWinLossAgainstOpponent(history, teamName),
                         formatDateTime(history.match_time || history.created_at)
                     ];
+                });
+                (attendancePointError ? [] : (attendancePointRows || [])).forEach(row => {
+                    const points = Number(row.total_points || 0);
+                    totalPoints += points;
+                    rows.push([
+                        row.session_title || "Attendance",
+                        "Attendance merit",
+                        String(points),
+                        "Merit",
+                        row.attendance_date || ""
+                    ]);
                 });
 
                 openPrintReport(
@@ -9475,6 +9543,7 @@
                         ? (participant.home_college || participant.team || "")
                         : (aupProfile?.college || "");
                     const attendanceCourse = participant ? "" : (aupProfile?.course || "");
+                    const attendanceCategoryValue = resolveAttendanceCategory(participant);
 
                     if (!participant && !aupProfile) {
                         showAttendanceResult("error", `
@@ -9497,6 +9566,7 @@
                         checked_at: new Date().toISOString(),
                         attendance_session_type: activeAttendanceSettings?.session_type || "regular",
                         attendance_session_title: activeAttendanceSettings?.session_title || "Regular Attendance",
+                        attendance_category: attendanceCategoryValue,
                         attendance_point_settings: normalizeAttendancePointSettings(activeAttendanceSettings?.point_settings)
                     };
                     const optionalProfileData = aupProfile ? {
@@ -9515,23 +9585,21 @@
                     }
 
                     const attendanceDate = savedAttendance?.attendance_date || configuredAttendanceDate;
-                    let attendanceBonusNotice = "";
+                    let attendancePointsNotice = "";
 
                     if (attendanceCollege) {
-                        const { count: teamAttendanceCount, error: teamAttendanceError } = await supabase
-                            .from(ATTENDANCE_TABLE)
-                            .select("student_id", { count: "exact", head: true })
+                        const { data: teamAttendancePoints, error: teamAttendanceError } = await supabase
+                            .from("attendance_point_history")
+                            .select("total_points, total_present, registered_player_count, student_player_count, faculty_count, department_chair_count, dean_count, student_from_college_count, sponsor_count, sponsor_game_attendance_count")
                             .eq("attendance_date", attendanceDate)
-                            .eq("home_college", attendanceCollege)
-                            .eq("status", "Present");
+                            .eq("team", attendanceCollege)
+                            .maybeSingle();
 
                         if (teamAttendanceError) {
-                            console.warn("Unable to count team attendance bonus:", teamAttendanceError.message || teamAttendanceError);
-                        } else {
-                            const remainingAttendance = Math.max(0, 100 - Number(teamAttendanceCount || 0));
-                            attendanceBonusNotice = Number(teamAttendanceCount || 0) >= 100
-                                ? `<p class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-bold text-blue-800">Daily home college attendance bonus active: ${escapeHTML(attendanceCollege)} has ${Number(teamAttendanceCount || 0).toLocaleString()} present records for ${escapeHTML(attendanceDate)}, so +5 points will be added to the leaderboard.</p>`
-                                : `<p class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800">${escapeHTML(attendanceCollege)} has ${Number(teamAttendanceCount || 0).toLocaleString()}/100 present records for ${escapeHTML(attendanceDate)}. ${remainingAttendance.toLocaleString()} more needed for the +5 daily home college bonus.</p>`;
+                            console.warn("Unable to load attendance point summary:", teamAttendanceError.message || teamAttendanceError);
+                            attendancePointsNotice = `<p class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800">Attendance was saved. Run the attendance scoring SQL so this date can show computed leaderboard points.</p>`;
+                        } else if (teamAttendancePoints) {
+                            attendancePointsNotice = `<p class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-bold text-blue-800">${escapeHTML(attendanceCollege)} has ${Number(teamAttendancePoints.total_present || 0).toLocaleString()} present record(s) for ${escapeHTML(attendanceDate)}. Current computed attendance merit: +${Number(teamAttendancePoints.total_points || 0).toLocaleString()} points.</p>`;
                         }
                     }
 
@@ -9564,6 +9632,11 @@
                                 </div>
 
                                 <div>
+                                    <p class="text-xs uppercase tracking-wide text-green-700">Attendance Type</p>
+                                    <p class="font-semibold">${escapeHTML(getAttendanceCategoryLabel(savedAttendance?.attendance_category || attendanceCategoryValue))}</p>
+                                </div>
+
+                                <div>
                                     <p class="text-xs uppercase tracking-wide text-green-700">Attendance Date</p>
                                     <p class="font-semibold">${escapeHTML(attendanceDate)}</p>
                                 </div>
@@ -9579,7 +9652,7 @@
                                 </div>
                             </div>
 
-                            ${attendanceBonusNotice}
+                            ${attendancePointsNotice}
 
                             <p class="text-xs text-green-700">Ready for the next attendance check. Enter another RFID / ID number or close this window.</p>
                         </div>

@@ -2602,6 +2602,7 @@
                 const TEAMS_TABLE = "sports_leaderboard";
                 const PARTICIPANTS_TABLE = "participants";
                 const ATTENDANCE_TABLE = "attendance";
+                const ATTENDANCE_POINTS_VIEW = "attendance_point_history";
                 const MATCHES_TABLE = "scheduled_matches";
                 const GAME_HISTORY_TABLE = "game_history";
                 const BASKETBALL_STATS_TABLE = "basketball_match_player_stats";
@@ -5455,13 +5456,13 @@
                         Leaderboard source of truth:
                         - Teams are listed from sports_leaderboard only to get the registered team names.
                         - Points, wins, and losses are computed directly from game_history.
-                        - Attendance adds a derived +5 bonus per team/day with 100+ present records.
+                        - Attendance points are computed from attendance_point_history using the current shared parameters.
                         - It does NOT read sports_leaderboard.points / wins / losses anymore.
                     */
                 const [
                     { data: teams, error: teamsError },
                     { data: historyRows, error: historyError },
-                    { data: attendanceRows, error: attendanceError }
+                    { data: attendancePointRows, error: attendancePointError }
                 ] = await Promise.all([
                     supabase
                         .from(TEAMS_TABLE)
@@ -5473,12 +5474,12 @@
                         .select("*"),
 
                     supabase
-                        .from(ATTENDANCE_TABLE)
-                        .select("student_id, participant_id, team, home_college, status, attendance_date, checked_at")
+                        .from(ATTENDANCE_POINTS_VIEW)
+                        .select("*")
                 ]);
 
-                    if (attendanceError) {
-                        console.warn("Leaderboard attendance bonus warning:", attendanceError.message || attendanceError);
+                    if (attendancePointError) {
+                        console.warn("Leaderboard attendance points warning:", attendancePointError.message || attendancePointError);
                     }
 
                     if (teamsError) {
@@ -5571,54 +5572,15 @@
                     return 0;
                 }
 
-                function getAttendanceBonusDate(row) {
-                    if (row.attendance_date) {
-                        return String(row.attendance_date).slice(0, 10);
-                    }
-
-                    if (row.checked_at) {
-                        return String(row.checked_at).slice(0, 10);
-                    }
-
-                    return "";
-                }
-
-                function buildAttendanceBonusRows(attendanceRows) {
-                    const groups = new Map();
-
-                    (attendanceRows || []).forEach(row => {
-                        const team = String(row.home_college || row.team || "").trim();
-                        const date = getAttendanceBonusDate(row);
-
-                        if (!team || !date || normalizeStatus(row.status || "Present") !== "present") {
-                            return;
-                        }
-
-                        const key = `${team.toLowerCase()}|${date}`;
-                        if (!groups.has(key)) {
-                            groups.set(key, {
-                                team,
-                                date,
-                                students: new Set()
-                            });
-                        }
-
-                        const studentKey = String(row.student_id || row.participant_id || "").trim();
-                        if (!studentKey) {
-                            return;
-                        }
-
-                        groups.get(key).students.add(studentKey);
-                    });
-
-                    return [...groups.values()]
-                        .filter(group => group.students.size >= 100)
-                        .map(group => ({
-                            team: group.team,
-                            date: group.date,
-                            attendanceCount: group.students.size,
-                            points: 5
-                        }));
+                function buildAttendancePointRows(attendanceRows) {
+                    return (attendanceRows || [])
+                        .map(row => ({
+                            ...row,
+                            team: String(row.team || row.home_college || "").trim(),
+                            date: row.attendance_date || row.date || "",
+                            points: Number(row.total_points || row.points || 0)
+                        }))
+                        .filter(row => row.team && row.date && Number.isFinite(row.points));
                 }
 
                 function registerTeamAliases(teamId, teamName, teamStat) {
@@ -5692,10 +5654,10 @@
                         }
                     });
 
-                    buildAttendanceBonusRows(attendanceError ? [] : (attendanceRows || [])).forEach(bonus => {
-                        const team = getRegisteredTeamStat(null, bonus.team);
+                    buildAttendancePointRows(attendancePointError ? [] : (attendancePointRows || [])).forEach(attendancePoints => {
+                        const team = getRegisteredTeamStat(null, attendancePoints.team);
                         if (team) {
-                            team.points += bonus.points;
+                            team.points += attendancePoints.points;
                         }
                     });
 
@@ -5848,11 +5810,23 @@
                         </div>
                     `;
 
-                    const { data, error } = await supabase
-                        .from(GAME_HISTORY_TABLE)
-                        .select("*")
-                        .or(`winner_team_id.eq.${teamId},loser_team_id.eq.${teamId}`)
-                        .order("declared_at", { ascending: false });
+                    const [
+                        { data, error },
+                        { data: attendancePointRows, error: attendancePointError }
+                    ] = await Promise.all([
+                        supabase
+                            .from(GAME_HISTORY_TABLE)
+                            .select("*")
+                            .or(`winner_team_id.eq.${teamId},loser_team_id.eq.${teamId}`)
+                            .order("declared_at", { ascending: false }),
+                        supabase
+                            .from(ATTENDANCE_POINTS_VIEW)
+                            .select("*")
+                    ]);
+
+                    if (attendancePointError) {
+                        console.warn("Attendance merit history warning:", attendancePointError.message || attendancePointError);
+                    }
 
                     if (error) {
                         console.error("History error:", error.message || error);
@@ -5864,7 +5838,19 @@
                         return;
                     }
 
-                    if (!data || data.length === 0) {
+                    const normalizeAttendancePointRows = rows => (rows || [])
+                        .map(row => ({
+                            ...row,
+                            team: String(row.team || row.home_college || "").trim(),
+                            date: row.attendance_date || row.date || "",
+                            points: Number(row.total_points || row.points || 0)
+                        }))
+                        .filter(row => row.team && row.date && Number.isFinite(row.points));
+                    const attendanceHistory = normalizeAttendancePointRows(attendancePointError ? [] : (attendancePointRows || []))
+                        .filter(row => String(row.team || "").trim().toLowerCase() === String(teamName || "").trim().toLowerCase() && Number(row.points || 0) > 0)
+                        .sort((a, b) => new Date(b.attendance_date || b.date || 0) - new Date(a.attendance_date || a.date || 0));
+
+                    if ((!data || data.length === 0) && attendanceHistory.length === 0) {
                         historyContent.innerHTML = `
                             <div class="text-center py-10 text-gray-500">
                                 No game history found for this team.
@@ -5875,7 +5861,7 @@
 
                     historyContent.innerHTML = "";
 
-                    const sortedHistory = [...data].sort((a, b) => {
+                    const sortedHistory = [...(data || [])].sort((a, b) => {
                         const aIsWin = Number(a.winner_team_id) === Number(teamId) ? 1 : 0;
                         const bIsWin = Number(b.winner_team_id) === Number(teamId) ? 1 : 0;
 
@@ -5914,9 +5900,13 @@
 
                         return { merit: 0, meritRemarks: "", demerit: 0, demeritRemarks: "" };
                     };
-                    const meritTotal = sortedHistory.reduce((sum, game) => sum + getTeamAdjustments(game).merit, 0);
+                    const meritTotal = sortedHistory.reduce((sum, game) => sum + getTeamAdjustments(game).merit, 0)
+                        + attendanceHistory.reduce((sum, row) => sum + (Number(row.points) || 0), 0);
                     const demeritTotal = sortedHistory.reduce((sum, game) => sum + getTeamAdjustments(game).demerit, 0);
-                    const historyCategories = [...new Set(sortedHistory.map(getHistorySportName).filter(Boolean))]
+                    const historyCategories = [...new Set([
+                        ...sortedHistory.map(getHistorySportName).filter(Boolean),
+                        ...(attendanceHistory.length ? ["Attendance"] : [])
+                    ])]
                         .sort((a, b) => a.localeCompare(b));
                     const hasAdjustmentRecord = (game, adjustmentFilter) => {
                         const adjustments = getTeamAdjustments(game);
@@ -5935,15 +5925,44 @@
                         } else if (adjustmentFilter === "Demerit") {
                             visibleHistory = visibleHistory.filter(game => hasAdjustmentRecord(game, "Demerit"));
                         }
+                        const visibleAttendanceHistory = (category === "All" || category === "Attendance") && adjustmentFilter !== "Demerit"
+                            ? attendanceHistory
+                            : [];
 
-                        if (visibleHistory.length === 0) {
+                        if (visibleHistory.length === 0 && visibleAttendanceHistory.length === 0) {
                             const emptyMessage = adjustmentFilter === "All"
                                 ? "No game history found for this category."
                                 : `No ${adjustmentFilter.toLowerCase()} history or remarks found for this category.`;
                             return `<div class="text-center py-10 text-gray-500">${emptyMessage}</div>`;
                         }
 
-                        return visibleHistory.map(game => {
+                        const attendanceCards = visibleAttendanceHistory.map(row => `
+                            <div class="border rounded-xl p-4 mb-4 border-emerald-200 bg-emerald-50 text-emerald-900">
+                                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-3">
+                                    <div>
+                                        <p class="text-xs font-bold uppercase tracking-widest text-emerald-700">Attendance Merit</p>
+                                        <h3 class="font-bold text-lg text-gray-800">${escapeHTML(row.session_title || row.attendance_session_title || "Attendance")}</h3>
+                                    </div>
+                                    <span class="inline-flex w-fit items-center px-3 py-1 rounded-full bg-white/80 text-sm font-bold">Merit</span>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                                    <div class="rounded-xl border border-white bg-white/80 p-3">
+                                        <p class="text-gray-600">Points Given</p>
+                                        <p class="text-xl font-black">+${Number(row.points || 0).toLocaleString()}</p>
+                                    </div>
+                                    <div class="rounded-xl border border-white bg-white/80 p-3">
+                                        <p class="text-gray-600">Attendance Date</p>
+                                        <p class="font-semibold">${escapeHTML(row.attendance_date || row.date || "-")}</p>
+                                    </div>
+                                    <div class="sm:col-span-2 rounded-xl border border-white bg-white/80 p-3">
+                                        <p class="text-gray-600">Attendance Records</p>
+                                        <p class="font-semibold">${Number(row.total_present || 0).toLocaleString()} present record(s)</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `);
+
+                        const gameCards = visibleHistory.map(game => {
                             const isWinner = Number(game.winner_team_id) === Number(teamId);
                             const opponent = isWinner ? game.loser_team_name : game.winner_team_name;
                             const resultLabel = isWinner ? "Victory" : "Defeated";
@@ -6050,7 +6069,9 @@
                                     </div>
                                 </div>
                             `;
-                        }).join("");
+                        });
+
+                        return [...attendanceCards, ...gameCards].join("");
                     }
 
                     historyContent.innerHTML = `
