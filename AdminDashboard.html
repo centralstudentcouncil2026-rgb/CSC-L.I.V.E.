@@ -3575,6 +3575,21 @@
                 return labels[value] || labels.student_from_college;
             }
 
+            function getCollegeTeamAlias(value) {
+                const rawValue = String(value || "").trim();
+                const normalizedValue = rawValue.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+                const aliases = {
+                    "college of science engineering and technology": "CSET",
+                    "college of nursing": "CON",
+                    "college of business": "COB",
+                    "college of arts and humanities": "CAH",
+                    "college of theology": "COT",
+                    "college of health": "COH"
+                };
+
+                return aliases[normalizedValue] || rawValue;
+            }
+
             function resolveAttendanceCategory(participant) {
                 return participant ? "registered_player" : "student_player";
             }
@@ -7658,8 +7673,7 @@
                 const historyRows = (await loadPrintGameHistory()).filter(history => historyIncludesTeam(history, teamName));
                 const { data: attendancePointRows, error: attendancePointError } = await supabase
                     .from(ATTENDANCE_POINTS_VIEW)
-                    .select("*")
-                    .eq("team", teamName);
+                    .select("*");
 
                 if (attendancePointError) {
                     console.warn("Printable attendance points warning:", attendancePointError.message || attendancePointError);
@@ -7678,7 +7692,9 @@
                         formatDateTime(history.match_time || history.created_at)
                     ];
                 });
-                (attendancePointError ? [] : (attendancePointRows || [])).forEach(row => {
+                (attendancePointError ? [] : (attendancePointRows || []))
+                    .filter(row => String(getCollegeTeamAlias(row.team)).trim().toLowerCase() === String(teamName).trim().toLowerCase())
+                    .forEach(row => {
                     const points = Number(row.total_points || 0);
                     totalPoints += points;
                     rows.push([
@@ -9564,9 +9580,10 @@
                     const { participant, aupProfile } = await resolveAttendanceParticipant(scannedValue);
                     const participantName = participant?.full_name || participant?.name || aupProfile?.name || "";
                     const attendanceStudentIdValue = participant?.student_id || aupProfile?.studentId || scannedValue;
-                    const attendanceCollege = participant
+                    const rawAttendanceCollege = participant
                         ? (participant.home_college || participant.team || "")
                         : (aupProfile?.college || "");
+                    const attendanceCollege = getCollegeTeamAlias(rawAttendanceCollege);
                     const attendanceCourse = participant ? "" : (aupProfile?.course || "");
                     const attendanceCategoryValue = resolveAttendanceCategory(participant);
 

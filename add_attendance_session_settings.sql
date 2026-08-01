@@ -278,7 +278,15 @@ normalized_settings as (
 attendance_counts as (
     select
         attendance_date,
-        coalesce(nullif(home_college, ''), nullif(team, '')) as team,
+        case btrim(lower(regexp_replace(coalesce(nullif(home_college, ''), nullif(team, '')), '[^a-zA-Z0-9]+', ' ', 'g')))
+            when 'college of science engineering and technology' then 'CSET'
+            when 'college of nursing' then 'CON'
+            when 'college of business' then 'COB'
+            when 'college of arts and humanities' then 'CAH'
+            when 'college of theology' then 'COT'
+            when 'college of health' then 'COH'
+            else coalesce(nullif(home_college, ''), nullif(team, ''))
+        end as team,
         max(attendance_session_title) as session_title,
         count(*) filter (where lower(coalesce(status, 'present')) = 'present') as total_present,
         count(*) filter (where lower(coalesce(status, 'present')) = 'present' and participant_id is not null and attendance_category = 'registered_player') as registered_player_count,
@@ -290,7 +298,16 @@ attendance_counts as (
         count(*) filter (where lower(coalesce(status, 'present')) = 'present' and attendance_category = 'sponsor') as sponsor_count,
         count(*) filter (where lower(coalesce(status, 'present')) = 'present' and attendance_category = 'sponsor_game_attendance') as sponsor_game_attendance_count
     from public.attendance
-    group by attendance_date, coalesce(nullif(home_college, ''), nullif(team, ''))
+    group by attendance_date,
+        case btrim(lower(regexp_replace(coalesce(nullif(home_college, ''), nullif(team, '')), '[^a-zA-Z0-9]+', ' ', 'g')))
+            when 'college of science engineering and technology' then 'CSET'
+            when 'college of nursing' then 'CON'
+            when 'college of business' then 'COB'
+            when 'college of arts and humanities' then 'CAH'
+            when 'college of theology' then 'COT'
+            when 'college of health' then 'COH'
+            else coalesce(nullif(home_college, ''), nullif(team, ''))
+        end
 )
 select
     ac.attendance_date,

@@ -5576,11 +5576,26 @@
                     return (attendanceRows || [])
                         .map(row => ({
                             ...row,
-                            team: String(row.team || row.home_college || "").trim(),
+                            team: getCollegeTeamAlias(row.team || row.home_college || ""),
                             date: row.attendance_date || row.date || "",
                             points: Number(row.total_points || row.points || 0)
                         }))
                         .filter(row => row.team && row.date && Number.isFinite(row.points));
+                }
+
+                function getCollegeTeamAlias(value) {
+                    const rawValue = String(value || "").trim();
+                    const normalizedValue = rawValue.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+                    const aliases = {
+                        "college of science engineering and technology": "CSET",
+                        "college of nursing": "CON",
+                        "college of business": "COB",
+                        "college of arts and humanities": "CAH",
+                        "college of theology": "COT",
+                        "college of health": "COH"
+                    };
+
+                    return aliases[normalizedValue] || rawValue;
                 }
 
                 function registerTeamAliases(teamId, teamName, teamStat) {
@@ -5841,7 +5856,7 @@
                     const normalizeAttendancePointRows = rows => (rows || [])
                         .map(row => ({
                             ...row,
-                            team: String(row.team || row.home_college || "").trim(),
+                            team: getCollegeTeamAlias(row.team || row.home_college || ""),
                             date: row.attendance_date || row.date || "",
                             points: Number(row.total_points || row.points || 0)
                         }))
