@@ -286,6 +286,7 @@ attendance_counts as (
             when 'college of theology' then 'COT'
             when 'college of health' then 'COH'
             when 'college of medicine' then 'COM'
+            when 'college of teacher education' then 'CTE'
             when 'college of teachers education' then 'CTE'
             when 'college of dentistry' then 'COD'
             else coalesce(nullif(home_college, ''), nullif(team, ''))
@@ -310,6 +311,7 @@ attendance_counts as (
             when 'college of theology' then 'COT'
             when 'college of health' then 'COH'
             when 'college of medicine' then 'COM'
+            when 'college of teacher education' then 'CTE'
             when 'college of teachers education' then 'CTE'
             when 'college of dentistry' then 'COD'
             else coalesce(nullif(home_college, ''), nullif(team, ''))
