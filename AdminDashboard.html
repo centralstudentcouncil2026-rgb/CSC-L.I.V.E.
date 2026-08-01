@@ -3595,7 +3595,9 @@
             }
 
             function resolveAttendanceCategory(participant) {
-                return participant ? "registered_player" : "student_player";
+                return String(participant?.status || "").trim().toLowerCase() === "approved"
+                    ? "registered_player"
+                    : "student_player";
             }
 
             function setAttendancePointSettingsForm(settingsValue) {

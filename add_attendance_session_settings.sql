@@ -277,8 +277,8 @@ normalized_settings as (
 ),
 attendance_counts as (
     select
-        attendance_date,
-        case btrim(lower(regexp_replace(coalesce(nullif(home_college, ''), nullif(team, '')), '[^a-zA-Z0-9]+', ' ', 'g')))
+        a.attendance_date,
+        case btrim(lower(regexp_replace(coalesce(nullif(a.home_college, ''), nullif(a.team, '')), '[^a-zA-Z0-9]+', ' ', 'g')))
             when 'college of science engineering and technology' then 'CSET'
             when 'college of nursing' then 'CON'
             when 'college of business' then 'COB'
@@ -289,21 +289,35 @@ attendance_counts as (
             when 'college of teacher education' then 'CTE'
             when 'college of teachers education' then 'CTE'
             when 'college of dentistry' then 'COD'
-            else coalesce(nullif(home_college, ''), nullif(team, ''))
+            else coalesce(nullif(a.home_college, ''), nullif(a.team, ''))
         end as team,
-        max(attendance_session_title) as session_title,
-        count(*) filter (where lower(coalesce(status, 'present')) = 'present') as total_present,
-        count(*) filter (where lower(coalesce(status, 'present')) = 'present' and participant_id is not null and attendance_category = 'registered_player') as registered_player_count,
-        count(*) filter (where lower(coalesce(status, 'present')) = 'present' and participant_id is null and attendance_category in ('student_player', 'student_from_college')) as student_player_count,
-        count(*) filter (where lower(coalesce(status, 'present')) = 'present' and attendance_category = 'faculty') as faculty_count,
-        count(*) filter (where lower(coalesce(status, 'present')) = 'present' and attendance_category = 'department_chair') as department_chair_count,
-        count(*) filter (where lower(coalesce(status, 'present')) = 'present' and attendance_category = 'dean') as dean_count,
-        count(*) filter (where lower(coalesce(status, 'present')) = 'present' and attendance_category = 'student_from_college') as student_from_college_count,
-        count(*) filter (where lower(coalesce(status, 'present')) = 'present' and attendance_category = 'sponsor') as sponsor_count,
-        count(*) filter (where lower(coalesce(status, 'present')) = 'present' and attendance_category = 'sponsor_game_attendance') as sponsor_game_attendance_count
-    from public.attendance
-    group by attendance_date,
-        case btrim(lower(regexp_replace(coalesce(nullif(home_college, ''), nullif(team, '')), '[^a-zA-Z0-9]+', ' ', 'g')))
+        max(a.attendance_session_title) as session_title,
+        count(*) filter (where lower(coalesce(a.status, 'present')) = 'present') as total_present,
+        count(*) filter (
+            where lower(coalesce(a.status, 'present')) = 'present'
+              and a.participant_id is not null
+              and lower(coalesce(p.status, '')) = 'approved'
+              and a.attendance_category = 'registered_player'
+        ) as registered_player_count,
+        count(*) filter (
+            where lower(coalesce(a.status, 'present')) = 'present'
+              and (
+                  a.participant_id is null
+                  or lower(coalesce(p.status, '')) <> 'approved'
+                  or a.attendance_category in ('student_player', 'student_from_college')
+              )
+        ) as student_player_count,
+        count(*) filter (where lower(coalesce(a.status, 'present')) = 'present' and a.attendance_category = 'faculty') as faculty_count,
+        count(*) filter (where lower(coalesce(a.status, 'present')) = 'present' and a.attendance_category = 'department_chair') as department_chair_count,
+        count(*) filter (where lower(coalesce(a.status, 'present')) = 'present' and a.attendance_category = 'dean') as dean_count,
+        count(*) filter (where lower(coalesce(a.status, 'present')) = 'present' and a.attendance_category = 'student_from_college') as student_from_college_count,
+        count(*) filter (where lower(coalesce(a.status, 'present')) = 'present' and a.attendance_category = 'sponsor') as sponsor_count,
+        count(*) filter (where lower(coalesce(a.status, 'present')) = 'present' and a.attendance_category = 'sponsor_game_attendance') as sponsor_game_attendance_count
+    from public.attendance a
+    left join public.participants p
+        on p.id::text = a.participant_id::text
+    group by a.attendance_date,
+        case btrim(lower(regexp_replace(coalesce(nullif(a.home_college, ''), nullif(a.team, '')), '[^a-zA-Z0-9]+', ' ', 'g')))
             when 'college of science engineering and technology' then 'CSET'
             when 'college of nursing' then 'CON'
             when 'college of business' then 'COB'
@@ -314,7 +328,7 @@ attendance_counts as (
             when 'college of teacher education' then 'CTE'
             when 'college of teachers education' then 'CTE'
             when 'college of dentistry' then 'COD'
-            else coalesce(nullif(home_college, ''), nullif(team, ''))
+            else coalesce(nullif(a.home_college, ''), nullif(a.team, ''))
         end
 )
 select
