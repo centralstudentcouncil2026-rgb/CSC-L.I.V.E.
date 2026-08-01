@@ -2690,18 +2690,7 @@
             participants: 'Participants',
             attendance: 'Attendance Checker',
             announcements: 'Announcements',
-            accounts: 'Account Approvals',
-            leaderboard: 'Leaderboard'
-        };
-        const COMMITTEE_CONTROLLED_TABS = [
-            'leaderboard',
-            'participants',
-            'games'
-        ];
-        const COMMITTEE_TAB_ACCESS_LABELS = {
-            leaderboard: 'Leaderboard',
-            participants: 'Participant Checker',
-            games: 'Matches'
+            accounts: 'Account Approvals'
         };
 
         function normalizeAdminAccessValue(value) {
@@ -8538,21 +8527,8 @@
                     return [...RESTRICTED_ADMIN_TABS];
                 }
 
-                const controllableTabs = getAccountControllableTabs(account);
                 return parseAdminAllowedTabs(account?.allowed_tabs || account?.allowedTabs)
-                    .filter(tab => controllableTabs.includes(tab));
-            }
-
-            function getAccountControllableTabs(account) {
-                return normalizeComparableValue(account?.role) === "committee"
-                    ? COMMITTEE_CONTROLLED_TABS
-                    : RESTRICTED_ADMIN_TABS;
-            }
-
-            function getAccountTabAccessLabel(account, tab) {
-                return normalizeComparableValue(account?.role) === "committee"
-                    ? (COMMITTEE_TAB_ACCESS_LABELS[tab] || ADMIN_TAB_ACCESS_LABELS[tab] || tab)
-                    : (ADMIN_TAB_ACCESS_LABELS[tab] || tab);
+                    .filter(tab => RESTRICTED_ADMIN_TABS.includes(tab));
             }
 
             function renderAccountTabAccessSummary(account) {
@@ -8566,7 +8542,7 @@
                     <div class="flex max-w-[260px] flex-wrap gap-1">
                         ${allowedTabs.map(tab => `
                             <span class="rounded-full bg-indigo-50 px-2 py-1 text-[11px] font-bold text-indigo-700">
-                                ${escapeHTML(getAccountTabAccessLabel(account, tab))}
+                                ${escapeHTML(ADMIN_TAB_ACCESS_LABELS[tab] || tab)}
                             </span>
                         `).join("")}
                     </div>
@@ -8577,8 +8553,16 @@
                 const adminUser = getStoredAdminUser();
                 const canAssignTabs = isAdminTabAccessOwner(adminUser);
                 const accountIsOwner = isAdminTabAccessOwner(account);
-                const controllableTabs = getAccountControllableTabs(account);
+                const accountIsCommittee = normalizeComparableValue(account?.role) === "committee";
                 const allowedTabs = new Set(getAccountAllowedRestrictedTabs(account));
+
+                if (accountIsCommittee) {
+                    return `
+                        <div class="min-w-[220px] space-y-2">
+                            <span class="text-xs font-semibold text-gray-500">Committee dashboard tabs are all available.</span>
+                        </div>
+                    `;
+                }
 
                 if (!canAssignTabs || accountIsOwner) {
                     return `
@@ -8592,7 +8576,7 @@
 
                 return `
                     <div class="grid min-w-[240px] grid-cols-1 gap-1">
-                        ${controllableTabs.map(tab => `
+                        ${RESTRICTED_ADMIN_TABS.map(tab => `
                             <label class="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs font-semibold text-gray-700">
                                 <input
                                     type="checkbox"
@@ -8600,7 +8584,7 @@
                                     data-account-id="${escapeHTML(account.id)}"
                                     data-tab-id="${escapeHTML(tab)}"
                                     ${allowedTabs.has(tab) ? "checked" : ""}>
-                                <span>${escapeHTML(getAccountTabAccessLabel(account, tab))}</span>
+                                <span>${escapeHTML(ADMIN_TAB_ACCESS_LABELS[tab] || tab)}</span>
                             </label>
                         `).join("")}
                     </div>
@@ -8765,11 +8749,10 @@
                     return;
                 }
 
-                const controllableTabs = getAccountControllableTabs(account);
                 const checkedTabs = Array.from(document.querySelectorAll(".account-tab-access-checkbox:checked"))
                     .filter(item => String(item.dataset.accountId) === String(accountId))
                     .map(item => normalizeAdminAccessValue(item.dataset.tabId))
-                    .filter(tab => controllableTabs.includes(tab));
+                    .filter(tab => RESTRICTED_ADMIN_TABS.includes(tab));
                 const allowedTabs = Array.from(new Set(checkedTabs));
                 checkbox.disabled = true;
 

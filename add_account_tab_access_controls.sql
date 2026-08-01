@@ -32,7 +32,7 @@ begin
     select coalesce(jsonb_agg(distinct tab_name), '[]'::jsonb)
     into cleaned_tabs
     from jsonb_array_elements_text(coalesce(allowed_tabs, '[]'::jsonb)) as allowed_tab(tab_name)
-    where tab_name in ('teams', 'games', 'participants', 'attendance', 'announcements', 'accounts', 'leaderboard');
+    where tab_name in ('teams', 'games', 'participants', 'attendance', 'announcements', 'accounts');
 
     update public.user_profiles
     set allowed_tabs = cleaned_tabs
