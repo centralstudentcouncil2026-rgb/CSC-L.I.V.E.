@@ -2013,13 +2013,14 @@
                     </div>
 
                     <div class="responsive-table-card overflow-x-auto">
-                        <table class="w-full min-w-[1040px]">
+                        <table class="w-full min-w-[1320px]">
                             <thead>
                                 <tr class="border-b border-gray-200">
                                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Account</th>
                                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Mobile</th>
                                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Role</th>
                                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Assigned Game</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Tab Access</th>
                                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
                                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Registered</th>
                                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Reviewed</th>
@@ -2028,7 +2029,7 @@
                             </thead>
                             <tbody id="accountApprovalsTableBody">
                                 <tr>
-                                    <td colspan="7" class="py-6 px-4 text-center text-gray-500">Loading account approvals...</td>
+                                    <td colspan="9" class="py-6 px-4 text-center text-gray-500">Loading account approvals...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2673,14 +2674,102 @@
 
         const ADMIN_ACTIVE_TAB_KEY = 'adminDashboardActiveTab';
         const ADMIN_SESSION_STARTED_KEY = 'adminDashboardSessionStarted';
+        const ADMIN_TAB_ACCESS_OWNER_EMAIL = 'centralstudentcouncil2026@gmail.com';
+        const ALWAYS_ALLOWED_ADMIN_TABS = new Set(['overview', 'feedback', 'communications', 'prints', 'about']);
+        const RESTRICTED_ADMIN_TABS = [
+            'teams',
+            'games',
+            'participants',
+            'attendance',
+            'announcements',
+            'accounts'
+        ];
+        const ADMIN_TAB_ACCESS_LABELS = {
+            teams: 'Manage Teams',
+            games: 'Manage Games',
+            participants: 'Participants',
+            attendance: 'Attendance Checker',
+            announcements: 'Announcements',
+            accounts: 'Account Approvals'
+        };
+
+        function normalizeAdminAccessValue(value) {
+            return String(value ?? '').trim().toLowerCase();
+        }
+
+        function parseAdminAllowedTabs(value) {
+            if (Array.isArray(value)) {
+                return value.map(normalizeAdminAccessValue).filter(Boolean);
+            }
+
+            if (typeof value === 'string' && value.trim()) {
+                try {
+                    const parsed = JSON.parse(value);
+                    return parseAdminAllowedTabs(parsed);
+                } catch (error) {
+                    return value.split(',').map(normalizeAdminAccessValue).filter(Boolean);
+                }
+            }
+
+            return [];
+        }
+
+        function getStoredAdminAccessUser() {
+            try {
+                return JSON.parse(sessionStorage.getItem('user') || 'null');
+            } catch (error) {
+                return null;
+            }
+        }
+
+        function isAdminTabAccessOwner(userData = getStoredAdminAccessUser()) {
+            return normalizeAdminAccessValue(userData?.email) === ADMIN_TAB_ACCESS_OWNER_EMAIL;
+        }
+
+        function getEffectiveAllowedAdminTabs(userData = getStoredAdminAccessUser()) {
+            const allowedTabs = new Set(ALWAYS_ALLOWED_ADMIN_TABS);
+
+            if (isAdminTabAccessOwner(userData)) {
+                RESTRICTED_ADMIN_TABS.forEach(tab => allowedTabs.add(tab));
+                return allowedTabs;
+            }
+
+            parseAdminAllowedTabs(userData?.allowedTabs || userData?.allowed_tabs).forEach(tab => {
+                if (RESTRICTED_ADMIN_TABS.includes(tab)) {
+                    allowedTabs.add(tab);
+                }
+            });
+
+            return allowedTabs;
+        }
+
+        function canAccessAdminTab(tabName, userData = getStoredAdminAccessUser()) {
+            return getEffectiveAllowedAdminTabs(userData).has(normalizeAdminAccessValue(tabName));
+        }
+
+        function applyAdminTabAccess(userData = getStoredAdminAccessUser()) {
+            const allowedTabs = getEffectiveAllowedAdminTabs(userData);
+
+            document.querySelectorAll('.tab-btn[data-tab]').forEach(button => {
+                const tabName = normalizeAdminAccessValue(button.dataset.tab);
+                const canAccess = allowedTabs.has(tabName);
+                button.classList.toggle('hidden', !canAccess);
+                button.disabled = !canAccess;
+                button.setAttribute('aria-hidden', canAccess ? 'false' : 'true');
+            });
+        }
 
         function getValidAdminTabName(tabName) {
-            return document.getElementById(tabName) && document.querySelector(`[data-tab="${tabName}"]`)
-                ? tabName
+            const normalizedTabName = normalizeAdminAccessValue(tabName);
+            return document.getElementById(normalizedTabName)
+                && document.querySelector(`[data-tab="${normalizedTabName}"]`)
+                && canAccessAdminTab(normalizedTabName)
+                ? normalizedTabName
                 : 'overview';
         }
 
         function switchTab(tabName, options = {}) {
+            applyAdminTabAccess();
             const selectedTabName = getValidAdminTabName(tabName);
 
             document.querySelectorAll('.tab-content').forEach(tab => {
@@ -3223,6 +3312,7 @@
                     fullName: userData.fullName || userData.full_name || userData.name || "",
                     role: normalizeComparableValue(userData.role || "admin"),
                     approvalStatus: normalizeComparableValue(userData.approvalStatus || userData.approval_status || "approved"),
+                    allowedTabs: parseAdminAllowedTabs(userData.allowedTabs || userData.allowed_tabs),
                     authProvider: userData.authProvider || "supabase"
                 };
             }
@@ -3292,6 +3382,7 @@
                         fullName: profile.full_name || authUser.user_metadata?.full_name || "",
                         role: profile.role,
                         approvalStatus: profile.approval_status,
+                        allowedTabs: profile.allowed_tabs,
                         authProvider: "supabase"
                     });
 
@@ -3306,6 +3397,7 @@
 
                 currentAdminUser = resolvedUser;
                 renderAdminSidebarIdentity(currentAdminUser);
+                applyAdminTabAccess(currentAdminUser);
                 return currentAdminUser;
             }
 
@@ -8395,7 +8487,7 @@
                     if (accountApprovalsData.length === 0) {
                         accountApprovalsTableBody.innerHTML = `
                             <tr>
-                                <td colspan="8" class="py-6 px-4 text-center text-gray-500">Loading account approvals...</td>
+                                <td colspan="9" class="py-6 px-4 text-center text-gray-500">Loading account approvals...</td>
                             </tr>
                         `;
                     }
@@ -8409,7 +8501,7 @@
                         console.error("Error loading account approvals:", error.message || error);
                         accountApprovalsTableBody.innerHTML = `
                             <tr>
-                                <td colspan="8" class="py-6 px-4 text-center text-red-500 font-semibold">
+                                <td colspan="9" class="py-6 px-4 text-center text-red-500 font-semibold">
                                     Failed to load account approvals. Run the account approval SQL and check your user_profiles policies.
                                 </td>
                             </tr>
@@ -8430,13 +8522,73 @@
                 }
             }
 
+            function getAccountAllowedRestrictedTabs(account) {
+                if (isAdminTabAccessOwner(account)) {
+                    return [...RESTRICTED_ADMIN_TABS];
+                }
+
+                return parseAdminAllowedTabs(account?.allowed_tabs || account?.allowedTabs)
+                    .filter(tab => RESTRICTED_ADMIN_TABS.includes(tab));
+            }
+
+            function renderAccountTabAccessSummary(account) {
+                const allowedTabs = getAccountAllowedRestrictedTabs(account);
+
+                if (!allowedTabs.length) {
+                    return `<span class="text-xs font-semibold text-gray-500">Shared tabs only</span>`;
+                }
+
+                return `
+                    <div class="flex max-w-[260px] flex-wrap gap-1">
+                        ${allowedTabs.map(tab => `
+                            <span class="rounded-full bg-indigo-50 px-2 py-1 text-[11px] font-bold text-indigo-700">
+                                ${escapeHTML(ADMIN_TAB_ACCESS_LABELS[tab] || tab)}
+                            </span>
+                        `).join("")}
+                    </div>
+                `;
+            }
+
+            function renderAccountTabAccessControls(account) {
+                const adminUser = getStoredAdminUser();
+                const canAssignTabs = isAdminTabAccessOwner(adminUser);
+                const accountIsOwner = isAdminTabAccessOwner(account);
+                const allowedTabs = new Set(getAccountAllowedRestrictedTabs(account));
+
+                if (!canAssignTabs || accountIsOwner) {
+                    return `
+                        <div class="min-w-[220px] space-y-2">
+                            ${renderAccountTabAccessSummary(account)}
+                            ${accountIsOwner ? `<p class="text-[11px] font-bold uppercase tracking-wide text-emerald-700">Main access owner</p>` : ""}
+                            ${!canAssignTabs ? `<p class="text-[11px] font-semibold text-gray-500">Only ${ADMIN_TAB_ACCESS_OWNER_EMAIL} can edit tab access.</p>` : ""}
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="grid min-w-[240px] grid-cols-1 gap-1">
+                        ${RESTRICTED_ADMIN_TABS.map(tab => `
+                            <label class="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs font-semibold text-gray-700">
+                                <input
+                                    type="checkbox"
+                                    class="account-tab-access-checkbox h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    data-account-id="${escapeHTML(account.id)}"
+                                    data-tab-id="${escapeHTML(tab)}"
+                                    ${allowedTabs.has(tab) ? "checked" : ""}>
+                                <span>${escapeHTML(ADMIN_TAB_ACCESS_LABELS[tab] || tab)}</span>
+                            </label>
+                        `).join("")}
+                    </div>
+                `;
+            }
+
             function renderAccountApprovals() {
                 if (!accountApprovalsTableBody) return;
 
                 if (accountApprovalsData.length === 0) {
                     accountApprovalsTableBody.innerHTML = `
                         <tr>
-                            <td colspan="8" class="py-6 px-4 text-center text-gray-500">No registered accounts found.</td>
+                            <td colspan="9" class="py-6 px-4 text-center text-gray-500">No registered accounts found.</td>
                         </tr>
                     `;
                     return;
@@ -8475,6 +8627,9 @@
                                     Edit
                                 </button>
                             </div>
+                        </td>
+                        <td class="py-3 px-4">
+                            ${renderAccountTabAccessControls(account)}
                         </td>
                         <td class="py-3 px-4">
                             <span class="inline-flex rounded-full px-3 py-1 text-xs font-bold ${getAccountStatusClass(status)}">
@@ -8542,6 +8697,10 @@
                     button.addEventListener("click", () => openAccountSportEditModal(button.dataset.accountId));
                 });
 
+                document.querySelectorAll(".account-tab-access-checkbox").forEach(checkbox => {
+                    checkbox.addEventListener("change", () => updateAccountTabAccessFromCheckbox(checkbox));
+                });
+
                 document.querySelectorAll(".delete-account-btn").forEach(button => {
                     button.addEventListener("click", () => deleteAccount(button.dataset.accountId, button.dataset.accountEmail));
                 });
@@ -8562,6 +8721,48 @@
                 }
                 accountSportEditModal.classList.remove("hidden");
                 accountSportEditModal.classList.add("flex");
+            }
+
+            async function updateAccountTabAccessFromCheckbox(checkbox) {
+                const adminUser = getStoredAdminUser();
+
+                if (!isAdminTabAccessOwner(adminUser)) {
+                    checkbox.checked = !checkbox.checked;
+                    alert(`Only ${ADMIN_TAB_ACCESS_OWNER_EMAIL} can assign dashboard tab access.`);
+                    return;
+                }
+
+                const accountId = checkbox.dataset.accountId;
+                const account = accountApprovalsData.find(item => String(item.id) === String(accountId));
+
+                if (!account || isAdminTabAccessOwner(account)) {
+                    renderAccountApprovals();
+                    return;
+                }
+
+                const checkedTabs = Array.from(document.querySelectorAll(".account-tab-access-checkbox:checked"))
+                    .filter(item => String(item.dataset.accountId) === String(accountId))
+                    .map(item => normalizeAdminAccessValue(item.dataset.tabId))
+                    .filter(tab => RESTRICTED_ADMIN_TABS.includes(tab));
+                const allowedTabs = Array.from(new Set(checkedTabs));
+                checkbox.disabled = true;
+
+                const { error } = await supabase.rpc("admin_set_account_allowed_tabs", {
+                    target_user_id: accountId,
+                    allowed_tabs: allowedTabs
+                });
+
+                checkbox.disabled = false;
+
+                if (error) {
+                    console.error("Error updating tab access:", error.message || error);
+                    alert("Failed to update tab access. Run the tab access SQL and check the user_profiles policies.");
+                    await loadAccountApprovals();
+                    return;
+                }
+
+                account.allowed_tabs = allowedTabs;
+                showDashboardToast("Tab access updated.");
             }
 
             function closeAccountSportEditModalFunction() {
