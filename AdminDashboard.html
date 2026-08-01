@@ -1860,6 +1860,76 @@
                                     </div>
                                 </div>
 
+                                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                    <div>
+                                        <label for="attendanceSessionType" class="mb-1 block text-xs font-black uppercase tracking-wide text-blue-900">Attendance Day Type</label>
+                                        <select
+                                            id="attendanceSessionType"
+                                            class="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-bold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                                            <option value="regular">Regular Day</option>
+                                            <option value="special_event">Special Event Day</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label for="attendanceSessionTitle" class="mb-1 block text-xs font-black uppercase tracking-wide text-blue-900">Title</label>
+                                        <input
+                                            id="attendanceSessionTitle"
+                                            type="text"
+                                            maxlength="120"
+                                            placeholder="Example: Opening Program"
+                                            class="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-bold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                                    </div>
+                                </div>
+
+                                <div class="rounded-xl border border-blue-200 bg-white p-3">
+                                    <h4 class="mb-3 text-xs font-black uppercase tracking-wide text-blue-900">Opening Program Computation</h4>
+                                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                        <label class="block">
+                                            <span class="mb-1 block text-xs font-bold text-blue-900">Registered Player Points</span>
+                                            <input id="openingPlayerPoints" type="number" min="0" step="0.01" value="5" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
+                                        </label>
+                                        <label class="block">
+                                            <span class="mb-1 block text-xs font-bold text-blue-900">Dean Points</span>
+                                            <input id="openingDeanPoints" type="number" min="0" step="0.01" value="50" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
+                                        </label>
+                                        <label class="block">
+                                            <span class="mb-1 block text-xs font-bold text-blue-900">Student From College Points</span>
+                                            <input id="openingStudentPoints" type="number" min="0" step="0.01" value="1" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
+                                        </label>
+                                        <label class="block">
+                                            <span class="mb-1 block text-xs font-bold text-blue-900">Faculty Formula Base</span>
+                                            <input id="openingFacultyFormulaBase" type="number" min="0" step="0.01" value="100" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
+                                        </label>
+                                        <label class="block sm:col-span-2">
+                                            <span class="mb-1 block text-xs font-bold text-blue-900">Department Chair Formula Base</span>
+                                            <input id="openingChairFormulaBase" type="number" min="0" step="0.01" value="100" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="rounded-xl border border-blue-200 bg-white p-3">
+                                    <h4 class="mb-3 text-xs font-black uppercase tracking-wide text-blue-900">Sunday Devotional / Game Attendance</h4>
+                                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                        <label class="block">
+                                            <span class="mb-1 block text-xs font-bold text-blue-900">Faculty Points</span>
+                                            <input id="sundayFacultyPoints" type="number" min="0" step="0.01" value="5" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
+                                        </label>
+                                        <label class="block">
+                                            <span class="mb-1 block text-xs font-bold text-blue-900">Sponsor Points</span>
+                                            <input id="sundaySponsorPoints" type="number" min="0" step="0.01" value="5" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
+                                        </label>
+                                        <label class="block">
+                                            <span class="mb-1 block text-xs font-bold text-blue-900">Student Player Points</span>
+                                            <input id="sundayStudentPlayerPoints" type="number" min="0" step="0.01" value="2" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
+                                        </label>
+                                        <label class="block">
+                                            <span class="mb-1 block text-xs font-bold text-blue-900">Sponsor Game Attendance Points</span>
+                                            <input id="gameSponsorPoints" type="number" min="0" step="0.01" value="15" class="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold">
+                                        </label>
+                                    </div>
+                                </div>
+
                                 <button
                                     id="attendanceSettingsSaveButton"
                                     type="submit"
@@ -3014,6 +3084,17 @@
             const attendanceSettingsToggle = document.getElementById("attendanceSettingsToggle");
             const attendanceSessionDate = document.getElementById("attendanceSessionDate");
             const attendanceOpenUntil = document.getElementById("attendanceOpenUntil");
+            const attendanceSessionType = document.getElementById("attendanceSessionType");
+            const attendanceSessionTitle = document.getElementById("attendanceSessionTitle");
+            const openingPlayerPoints = document.getElementById("openingPlayerPoints");
+            const openingDeanPoints = document.getElementById("openingDeanPoints");
+            const openingStudentPoints = document.getElementById("openingStudentPoints");
+            const openingFacultyFormulaBase = document.getElementById("openingFacultyFormulaBase");
+            const openingChairFormulaBase = document.getElementById("openingChairFormulaBase");
+            const sundayFacultyPoints = document.getElementById("sundayFacultyPoints");
+            const sundaySponsorPoints = document.getElementById("sundaySponsorPoints");
+            const sundayStudentPlayerPoints = document.getElementById("sundayStudentPlayerPoints");
+            const gameSponsorPoints = document.getElementById("gameSponsorPoints");
             const attendanceSettingsSaveButton = document.getElementById("attendanceSettingsSaveButton");
             const attendanceSettingsStatus = document.getElementById("attendanceSettingsStatus");
             const attendanceStudentId = document.getElementById("attendanceStudentId");
@@ -3287,6 +3368,91 @@
                 }
 
                 return `${parts.join(" ")} remaining, closes ${closesAt.toLocaleString()}`;
+            }
+
+            function getDefaultAttendancePointSettings() {
+                return {
+                    opening_program: {
+                        registered_player_points: 5,
+                        faculty_formula_base: 100,
+                        department_chair_formula_base: 100,
+                        dean_points: 50,
+                        student_from_college_points: 1
+                    },
+                    sunday_devotional: {
+                        faculty_points: 5,
+                        sponsor_points: 5,
+                        student_player_points: 2
+                    },
+                    game_attendance: {
+                        sponsor_points: 15
+                    }
+                };
+            }
+
+            function normalizeAttendancePointSettings(value) {
+                const defaults = getDefaultAttendancePointSettings();
+                const source = value && typeof value === "object" ? value : {};
+
+                return {
+                    opening_program: {
+                        ...defaults.opening_program,
+                        ...(source.opening_program || {})
+                    },
+                    sunday_devotional: {
+                        ...defaults.sunday_devotional,
+                        ...(source.sunday_devotional || {})
+                    },
+                    game_attendance: {
+                        ...defaults.game_attendance,
+                        ...(source.game_attendance || {})
+                    }
+                };
+            }
+
+            function getNumericInputValue(input, fallback) {
+                const value = Number(input?.value);
+                return Number.isFinite(value) ? value : fallback;
+            }
+
+            function getAttendancePointSettingsFromForm() {
+                const defaults = getDefaultAttendancePointSettings();
+
+                return {
+                    opening_program: {
+                        registered_player_points: getNumericInputValue(openingPlayerPoints, defaults.opening_program.registered_player_points),
+                        faculty_formula_base: getNumericInputValue(openingFacultyFormulaBase, defaults.opening_program.faculty_formula_base),
+                        department_chair_formula_base: getNumericInputValue(openingChairFormulaBase, defaults.opening_program.department_chair_formula_base),
+                        dean_points: getNumericInputValue(openingDeanPoints, defaults.opening_program.dean_points),
+                        student_from_college_points: getNumericInputValue(openingStudentPoints, defaults.opening_program.student_from_college_points)
+                    },
+                    sunday_devotional: {
+                        faculty_points: getNumericInputValue(sundayFacultyPoints, defaults.sunday_devotional.faculty_points),
+                        sponsor_points: getNumericInputValue(sundaySponsorPoints, defaults.sunday_devotional.sponsor_points),
+                        student_player_points: getNumericInputValue(sundayStudentPlayerPoints, defaults.sunday_devotional.student_player_points)
+                    },
+                    game_attendance: {
+                        sponsor_points: getNumericInputValue(gameSponsorPoints, defaults.game_attendance.sponsor_points)
+                    }
+                };
+            }
+
+            function setAttendancePointSettingsForm(settingsValue) {
+                const settings = normalizeAttendancePointSettings(settingsValue);
+
+                if (openingPlayerPoints) openingPlayerPoints.value = settings.opening_program.registered_player_points;
+                if (openingDeanPoints) openingDeanPoints.value = settings.opening_program.dean_points;
+                if (openingStudentPoints) openingStudentPoints.value = settings.opening_program.student_from_college_points;
+                if (openingFacultyFormulaBase) openingFacultyFormulaBase.value = settings.opening_program.faculty_formula_base;
+                if (openingChairFormulaBase) openingChairFormulaBase.value = settings.opening_program.department_chair_formula_base;
+                if (sundayFacultyPoints) sundayFacultyPoints.value = settings.sunday_devotional.faculty_points;
+                if (sundaySponsorPoints) sundaySponsorPoints.value = settings.sunday_devotional.sponsor_points;
+                if (sundayStudentPlayerPoints) sundayStudentPlayerPoints.value = settings.sunday_devotional.student_player_points;
+                if (gameSponsorPoints) gameSponsorPoints.value = settings.game_attendance.sponsor_points;
+            }
+
+            function getAttendanceSessionTypeLabel(type) {
+                return String(type || "regular") === "special_event" ? "Special Event Day" : "Regular Day";
             }
 
             function getStoredAdminUser() {
@@ -4776,11 +4942,16 @@
 
                 const settings = activeAttendanceSettings;
                 const dateValue = getAttendanceSessionDate();
+                const sessionType = settings?.session_type || attendanceSessionType?.value || "regular";
+                const sessionTitle = settings?.session_title || attendanceSessionTitle?.value || "";
 
                 attendanceSessionDate.value = dateValue;
                 attendanceOpenUntil.value = settings?.closes_at && isAttendanceSessionFromCurrentDay(settings)
                     ? getTimeInputValueFromDate(settings.closes_at)
                     : "";
+                if (attendanceSessionType) attendanceSessionType.value = sessionType;
+                if (attendanceSessionTitle) attendanceSessionTitle.value = sessionTitle;
+                setAttendancePointSettingsForm(settings?.point_settings);
 
                 if (message) {
                     attendanceSettingsStatus.className = "rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-900";
@@ -4804,7 +4975,7 @@
                 attendanceSettingsStatus.className = open
                     ? "rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-bold text-green-900"
                     : "rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-900";
-                attendanceSettingsStatus.textContent = `${open ? "Open" : "Closed"} for ${settings.attendance_date}. ${getAttendanceSessionRemainingText(settings)}`;
+                attendanceSettingsStatus.textContent = `${open ? "Open" : "Closed"} for ${settings.attendance_date}. ${getAttendanceSessionTypeLabel(settings.session_type)}${settings.session_title ? ` - ${settings.session_title}` : ""}. ${getAttendanceSessionRemainingText(settings)}`;
             }
 
             async function loadAttendanceSettings() {
@@ -4837,10 +5008,19 @@
                 const openedAt = new Date();
                 const closesAt = getAttendanceCloseDateTime(attendanceDate, attendanceOpenUntil.value);
                 const adminUser = getStoredAdminUser();
+                const sessionType = attendanceSessionType?.value || "regular";
+                const sessionTitle = String(attendanceSessionTitle?.value || "").trim();
+                const pointSettings = getAttendancePointSettingsFromForm();
 
                 if (!closesAt || closesAt.getTime() <= openedAt.getTime()) {
                     renderAttendanceSettingsStatus("Please select an open-until time later than the current time.");
                     attendanceOpenUntil.focus();
+                    return;
+                }
+
+                if (sessionType === "special_event" && !sessionTitle) {
+                    renderAttendanceSettingsStatus("Please enter the special event title before saving.");
+                    attendanceSessionTitle.focus();
                     return;
                 }
 
@@ -4855,6 +5035,9 @@
                     duration_minutes: durationMinutes,
                     opened_at: openedAt.toISOString(),
                     closes_at: closesAt.toISOString(),
+                    session_type: sessionType,
+                    session_title: sessionTitle || (sessionType === "regular" ? "Regular Day" : ""),
+                    point_settings: pointSettings,
                     updated_by: adminUser?.id || adminUser?.email || null,
                     updated_by_name: adminUser?.fullName || adminUser?.full_name || adminUser?.email || "Admin",
                     updated_at: openedAt.toISOString()
@@ -5347,16 +5530,25 @@
                     .upsert([recordWithProfile], {
                         onConflict: "student_id,attendance_date"
                     })
-                    .select("id, participant_id, student_id, participant_name, team, home_college, status, attendance_date, checked_at")
+                    .select("id, participant_id, student_id, participant_name, team, home_college, status, attendance_date, checked_at, attendance_session_type, attendance_session_title, attendance_point_settings")
                     .single();
 
                 const profileColumnError = result.error
-                    && /attendance_rfid_value|attendance_course|attendance_source|column|schema cache/i.test(result.error.message || "");
+                    && /attendance_rfid_value|attendance_course|attendance_source|attendance_session_type|attendance_session_title|attendance_point_settings|column|schema cache/i.test(result.error.message || "");
 
                 if (profileColumnError && Object.keys(optionalProfileData).length) {
                     result = await supabase
                         .from(ATTENDANCE_TABLE)
-                        .upsert([attendanceRecord], {
+                        .upsert([{
+                            participant_id: attendanceRecord.participant_id,
+                            student_id: attendanceRecord.student_id,
+                            participant_name: attendanceRecord.participant_name,
+                            team: attendanceRecord.team,
+                            home_college: attendanceRecord.home_college,
+                            status: attendanceRecord.status,
+                            attendance_date: attendanceRecord.attendance_date,
+                            checked_at: attendanceRecord.checked_at
+                        }], {
                             onConflict: "student_id,attendance_date"
                         })
                         .select("id, participant_id, student_id, participant_name, team, home_college, status, attendance_date, checked_at")
@@ -9216,7 +9408,10 @@
                         home_college: attendanceCollege,
                         status: "Present",
                         attendance_date: configuredAttendanceDate,
-                        checked_at: new Date().toISOString()
+                        checked_at: new Date().toISOString(),
+                        attendance_session_type: activeAttendanceSettings?.session_type || "regular",
+                        attendance_session_title: activeAttendanceSettings?.session_title || "Regular Day",
+                        attendance_point_settings: normalizeAttendancePointSettings(activeAttendanceSettings?.point_settings)
                     };
                     const optionalProfileData = aupProfile ? {
                         attendance_rfid_value: aupProfile.rfidValue || scannedValue,
@@ -9285,6 +9480,11 @@
                                 <div>
                                     <p class="text-xs uppercase tracking-wide text-green-700">Attendance Date</p>
                                     <p class="font-semibold">${escapeHTML(attendanceDate)}</p>
+                                </div>
+
+                                <div>
+                                    <p class="text-xs uppercase tracking-wide text-green-700">Session</p>
+                                    <p class="font-semibold">${escapeHTML(getAttendanceSessionTypeLabel(savedAttendance?.attendance_session_type || attendanceRecord.attendance_session_type))}${savedAttendance?.attendance_session_title || attendanceRecord.attendance_session_title ? ` - ${escapeHTML(savedAttendance?.attendance_session_title || attendanceRecord.attendance_session_title)}` : ""}</p>
                                 </div>
 
                                 <div>
