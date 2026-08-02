@@ -1870,13 +1870,16 @@
                                 </div>
 
                                 <div>
-                                    <label for="attendanceSessionTitle" class="mb-1 block text-xs font-black uppercase tracking-wide text-blue-900">Attendance Title</label>
-                                    <input
+                                    <label for="attendanceSessionTitle" class="mb-1 block text-xs font-black uppercase tracking-wide text-blue-900">Attendance Category</label>
+                                    <select
                                         id="attendanceSessionTitle"
-                                        type="text"
-                                        maxlength="120"
-                                        placeholder="Example: Opening Program, Sunday Devotional, Regular Attendance"
+                                        required
                                         class="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-bold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                                        <option value="Morning Session">Morning Session</option>
+                                        <option value="Afternoon Session">Afternoon Session</option>
+                                        <option value="Opening Ceremony">Opening Ceremony</option>
+                                        <option value="Parade">Parade</option>
+                                    </select>
                                 </div>
 
                                 <div class="rounded-xl border border-blue-200 bg-white p-3">
@@ -2976,6 +2979,7 @@
             const SPORTS_TABLE = "sports";
             const ATTENDANCE_TABLE = "attendance";
             const ATTENDANCE_SETTINGS_TABLE = "attendance_settings";
+            const ATTENDANCE_SESSIONS_TABLE = "attendance_sessions";
             const ATTENDANCE_POINTS_VIEW = "attendance_point_history";
             const RFID_PROFILES_TABLE = "rfid_profiles";
             const GAME_HISTORY_TABLE = "game_history";
@@ -3261,7 +3265,18 @@
             }
 
             function getAttendanceSessionDate() {
-                return activeAttendanceSettings?.attendance_date || attendanceSessionDate?.value || getLocalISODate();
+                return attendanceSessionDate?.value || activeAttendanceSettings?.attendance_date || getLocalISODate();
+            }
+
+            const ATTENDANCE_SESSION_CATEGORIES = ["Morning Session", "Afternoon Session", "Opening Ceremony", "Parade"];
+
+            function normalizeAttendanceSessionTitle(value) {
+                const title = String(value || "").trim();
+                return ATTENDANCE_SESSION_CATEGORIES.includes(title) ? title : "Morning Session";
+            }
+
+            function getAttendanceSessionTitle() {
+                return normalizeAttendanceSessionTitle(attendanceSessionTitle?.value || activeAttendanceSettings?.session_title);
             }
 
             function getLocalDateFromValue(value) {
@@ -5112,7 +5127,7 @@
                 attendanceOpenUntil.value = settings?.closes_at && isAttendanceSessionFromCurrentDay(settings)
                     ? getTimeInputValueFromDate(settings.closes_at)
                     : "";
-                if (attendanceSessionTitle) attendanceSessionTitle.value = sessionTitle;
+                if (attendanceSessionTitle) attendanceSessionTitle.value = normalizeAttendanceSessionTitle(sessionTitle);
                 setAttendancePointSettingsForm(settings?.point_settings);
             }
 
@@ -5123,7 +5138,7 @@
 
                 const settings = activeAttendanceSettings;
                 const dateValue = getAttendanceSessionDate();
-                const sessionTitle = settings?.session_title || attendanceSessionTitle?.value || "Regular Attendance";
+                const sessionTitle = normalizeAttendanceSessionTitle(settings?.session_title || attendanceSessionTitle?.value);
 
                 syncAttendanceSettingsFormFromSettings(settings, dateValue, sessionTitle);
 
@@ -5135,7 +5150,7 @@
 
                 if (!settings) {
                     attendanceSettingsStatus.className = "rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-900";
-                    attendanceSettingsStatus.textContent = "No shared attendance session is open. Open Settings, set the date, start time, and end time, then save.";
+                    attendanceSettingsStatus.textContent = "No attendance session is open. Open Settings, choose the category, date, start time, and end time, then save.";
                     return;
                 }
 
@@ -5153,7 +5168,7 @@
                     : isScheduled
                         ? "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-900"
                     : "rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-900";
-                attendanceSettingsStatus.textContent = `${open ? "Open" : isScheduled ? "Scheduled" : "Closed"} for ${settings.attendance_date}. ${settings.session_title || "Regular Attendance"}. ${getAttendanceSessionRemainingText(settings)}`;
+                attendanceSettingsStatus.textContent = `${open ? "Open" : isScheduled ? "Scheduled" : "Closed"} for ${settings.attendance_date}. ${settings.session_title || "Morning Session"}. ${getAttendanceSessionRemainingText(settings)}`;
             }
 
             async function loadAttendanceSettings() {
@@ -5179,6 +5194,35 @@
                 return activeAttendanceSettings;
             }
 
+            async function ensureAttendanceSessionRow(category, attendanceDate, openedAt = null, closesAt = null) {
+                if (!category || !attendanceDate) {
+                    return null;
+                }
+
+                const payload = {
+                    category,
+                    attendance_date: attendanceDate,
+                    start_time: openedAt ? getTimeInputValueFromDate(openedAt) : null,
+                    end_time: closesAt ? getTimeInputValueFromDate(closesAt) : null,
+                    updated_at: new Date().toISOString()
+                };
+
+                const { data, error } = await supabase
+                    .from(ATTENDANCE_SESSIONS_TABLE)
+                    .upsert([payload], {
+                        onConflict: "category,attendance_date"
+                    })
+                    .select("id, category, attendance_date, start_time, end_time")
+                    .single();
+
+                if (error) {
+                    console.warn("Attendance session row could not be synced:", error.message || error);
+                    return null;
+                }
+
+                return data;
+            }
+
             async function saveAttendanceSettings(event) {
                 event.preventDefault();
 
@@ -5187,7 +5231,7 @@
                 const closesAt = getAttendanceCloseDateTime(attendanceDate, attendanceOpenUntil.value);
                 const adminUser = getStoredAdminUser();
                 const sessionType = "regular";
-                const sessionTitle = String(attendanceSessionTitle?.value || "").trim() || "Regular Attendance";
+                const sessionTitle = normalizeAttendanceSessionTitle(attendanceSessionTitle?.value);
                 const pointSettings = getAttendancePointSettingsFromForm();
 
                 if (!openedAt) {
@@ -5237,10 +5281,35 @@
                 }
 
                 activeAttendanceSettings = data || payload;
+                const sessionRow = await ensureAttendanceSessionRow(sessionTitle, attendanceDate, openedAt, closesAt);
+                if (sessionRow?.id) {
+                    activeAttendanceSettings.attendance_session_id = sessionRow.id;
+                }
                 attendanceSettingsForm?.removeAttribute("data-auto-refresh-dirty");
                 renderAttendanceSettingsStatus();
                 await loadAdminOverviewCounts();
                 showDashboardToast("Attendance session saved.");
+            }
+
+            async function handleAttendanceSessionSelectionChange() {
+                const attendanceDate = attendanceSessionDate?.value || getLocalISODate();
+                const sessionTitle = normalizeAttendanceSessionTitle(attendanceSessionTitle?.value);
+                const openedAt = getAttendanceStartDateTime(attendanceDate, attendanceStartTime?.value || "");
+                const closesAt = getAttendanceCloseDateTime(attendanceDate, attendanceOpenUntil?.value || "");
+
+                activeAttendanceSettings = {
+                    ...(activeAttendanceSettings || {}),
+                    attendance_date: attendanceDate,
+                    session_title: sessionTitle
+                };
+
+                const sessionRow = await ensureAttendanceSessionRow(sessionTitle, attendanceDate, openedAt, closesAt);
+                if (sessionRow?.id) {
+                    activeAttendanceSettings.attendance_session_id = sessionRow.id;
+                }
+
+                renderAttendanceSettingsStatus();
+                await loadAdminOverviewCounts();
             }
 
             const AUP_RFID_LOOKUP_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/aup-rfid-lookup?s=`;
@@ -5699,9 +5768,9 @@
             }
 
             async function saveAttendanceRecord(attendanceRecord, optionalProfileData = {}) {
-                const selectWithProfile = "id, participant_id, student_id, participant_name, team, home_college, status, attendance_date, checked_at, attendance_session_type, attendance_session_title, attendance_category, attendance_point_settings";
-                const selectBase = "id, participant_id, student_id, participant_name, team, home_college, status, attendance_date, checked_at";
-                const profileColumnPattern = /attendance_rfid_value|attendance_course|attendance_source|attendance_session_type|attendance_session_title|attendance_category|attendance_point_settings|column|schema cache/i;
+                const selectWithProfile = "id, attendance_session_id, participant_id, student_id, participant_name, team, home_college, status, attendance_date, checked_at, attendance_session_type, attendance_session_title, attendance_category, attendance_point_settings";
+                const selectBase = "id, participant_id, student_id, participant_name, team, home_college, status, attendance_date, attendance_session_title, checked_at";
+                const profileColumnPattern = /attendance_session_id|attendance_rfid_value|attendance_course|attendance_source|attendance_session_type|attendance_session_title|attendance_category|attendance_point_settings|column|schema cache/i;
 
                 async function loadExistingAttendance() {
                     let existingResult = await supabase
@@ -5709,6 +5778,7 @@
                         .select(selectWithProfile)
                         .eq("student_id", attendanceRecord.student_id)
                         .eq("attendance_date", attendanceRecord.attendance_date)
+                        .eq("attendance_session_title", attendanceRecord.attendance_session_title)
                         .maybeSingle();
 
                     if (existingResult.error && profileColumnPattern.test(existingResult.error.message || "")) {
@@ -5717,6 +5787,7 @@
                             .select(selectBase)
                             .eq("student_id", attendanceRecord.student_id)
                             .eq("attendance_date", attendanceRecord.attendance_date)
+                            .eq("attendance_session_title", attendanceRecord.attendance_session_title)
                             .maybeSingle();
                     }
 
@@ -5761,6 +5832,7 @@
                             home_college: attendanceRecord.home_college,
                             status: attendanceRecord.status,
                             attendance_date: attendanceRecord.attendance_date,
+                            attendance_session_title: attendanceRecord.attendance_session_title,
                             checked_at: attendanceRecord.checked_at
                         }])
                         .select(selectBase)
@@ -5988,11 +6060,13 @@
 
             async function loadTodayAttendanceRows() {
                 const attendanceDate = getAttendanceSessionDate();
+                const sessionTitle = getAttendanceSessionTitle();
 
                 const { data, error } = await supabase
                     .from(ATTENDANCE_TABLE)
-                    .select("id, participant_name, student_id, team, status, attendance_date, checked_at")
+                    .select("id, participant_name, student_id, team, status, attendance_date, attendance_session_title, checked_at")
                     .eq("attendance_date", attendanceDate)
+                    .eq("attendance_session_title", sessionTitle)
                     .order("checked_at", { ascending: false });
 
                 if (error) {
@@ -6035,7 +6109,7 @@
                 }
 
                 if (!attendanceRows.length) {
-                    renderEmptyRow(overviewAttendanceBody, 4, `No participant attendance records checked for ${getAttendanceSessionDate()}.`);
+                    renderEmptyRow(overviewAttendanceBody, 4, `No participant attendance records checked for ${getAttendanceSessionTitle()} on ${getAttendanceSessionDate()}.`);
                     return;
                 }
 
@@ -9627,6 +9701,13 @@
                     }
 
                     const configuredAttendanceDate = getAttendanceSessionDate();
+                    const configuredAttendanceTitle = getAttendanceSessionTitle();
+                    const sessionRow = await ensureAttendanceSessionRow(
+                        configuredAttendanceTitle,
+                        configuredAttendanceDate,
+                        getAttendanceSessionStartsAt(),
+                        getAttendanceSessionClosesAt()
+                    );
                     const { participant, aupProfile } = await resolveAttendanceParticipant(scannedValue);
                     const participantName = participant?.full_name || participant?.name || aupProfile?.name || "";
                     const attendanceStudentIdValue = participant?.student_id || aupProfile?.studentId || scannedValue;
@@ -9648,6 +9729,7 @@
                     }
 
                     const attendanceRecord = {
+                        attendance_session_id: sessionRow?.id || activeAttendanceSettings?.attendance_session_id || null,
                         participant_id: participant?.id || null,
                         student_id: attendanceStudentIdValue,
                         participant_name: participantName,
@@ -9657,7 +9739,7 @@
                         attendance_date: configuredAttendanceDate,
                         checked_at: new Date().toISOString(),
                         attendance_session_type: activeAttendanceSettings?.session_type || "regular",
-                        attendance_session_title: activeAttendanceSettings?.session_title || "Regular Attendance",
+                        attendance_session_title: configuredAttendanceTitle,
                         attendance_category: attendanceCategoryValue,
                         attendance_point_settings: normalizeAttendancePointSettings(activeAttendanceSettings?.point_settings)
                     };
@@ -9684,6 +9766,7 @@
                             .from("attendance_point_history")
                             .select("total_points, total_present, registered_player_count, student_player_count, faculty_count, department_chair_count, dean_count, student_from_college_count, sponsor_count, sponsor_game_attendance_count")
                             .eq("attendance_date", attendanceDate)
+                            .eq("session_title", configuredAttendanceTitle)
                             .eq("team", attendanceCollege)
                             .maybeSingle();
 
@@ -9699,7 +9782,7 @@
                         <div class="space-y-3">
                             <div>
                                 <p class="text-lg font-bold">${alreadyRecorded ? "Attendance already recorded." : "Attendance checked."}</p>
-                                <p class="text-sm">${alreadyRecorded ? "This person already has attendance for the selected date, so the first saved record was kept." : `${participant ? "The registered participant" : "The AUP student"} has been marked <strong>Present</strong> in the attendance table.`}</p>
+                                <p class="text-sm">${alreadyRecorded ? `This person already has attendance for ${escapeHTML(configuredAttendanceTitle)} on the selected date, so the first saved record was kept.` : `${participant ? "The registered participant" : "The AUP student"} has been marked <strong>Present</strong> for ${escapeHTML(configuredAttendanceTitle)}.`}</p>
                             </div>
 
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white bg-opacity-70 rounded-lg p-3 border border-green-100">
@@ -9730,7 +9813,7 @@
 
                                 <div>
                                     <p class="text-xs uppercase tracking-wide text-green-700">Session</p>
-                                    <p class="font-semibold">${escapeHTML(savedAttendance?.attendance_session_title || attendanceRecord.attendance_session_title || "Regular Attendance")}</p>
+                                    <p class="font-semibold">${escapeHTML(savedAttendance?.attendance_session_title || attendanceRecord.attendance_session_title || configuredAttendanceTitle)}</p>
                                 </div>
 
                                 <div>
@@ -9904,6 +9987,8 @@
             attendanceSettingsToggle.addEventListener("click", function () {
                 attendanceSettingsForm.classList.toggle("hidden");
             });
+            attendanceSessionDate.addEventListener("change", handleAttendanceSessionSelectionChange);
+            attendanceSessionTitle.addEventListener("change", handleAttendanceSessionSelectionChange);
             attendanceSettingsForm.addEventListener("submit", saveAttendanceSettings);
             attendanceForm.addEventListener("submit", checkAttendance);
             announcementForm.addEventListener("submit", saveAnnouncement);
