@@ -127,6 +127,23 @@ alter table public.attendance
 alter table public.attendance
     alter column attendance_category set default 'student_player';
 
+with ranked_attendance_duplicates as (
+    select
+        ctid,
+        row_number() over (
+            partition by student_id, attendance_date
+            order by checked_at asc nulls last, id asc
+        ) as duplicate_rank
+    from public.attendance
+)
+delete from public.attendance a
+using ranked_attendance_duplicates d
+where a.ctid = d.ctid
+  and d.duplicate_rank > 1;
+
+create unique index if not exists attendance_student_date_unique_idx
+on public.attendance (student_id, attendance_date);
+
 update public.attendance
 set attendance_category = case
     when participant_id is not null then 'registered_player'

@@ -5699,6 +5699,43 @@
             }
 
             async function saveAttendanceRecord(attendanceRecord, optionalProfileData = {}) {
+                const selectWithProfile = "id, participant_id, student_id, participant_name, team, home_college, status, attendance_date, checked_at, attendance_session_type, attendance_session_title, attendance_category, attendance_point_settings";
+                const selectBase = "id, participant_id, student_id, participant_name, team, home_college, status, attendance_date, checked_at";
+                const profileColumnPattern = /attendance_rfid_value|attendance_course|attendance_source|attendance_session_type|attendance_session_title|attendance_category|attendance_point_settings|column|schema cache/i;
+
+                async function loadExistingAttendance() {
+                    let existingResult = await supabase
+                        .from(ATTENDANCE_TABLE)
+                        .select(selectWithProfile)
+                        .eq("student_id", attendanceRecord.student_id)
+                        .eq("attendance_date", attendanceRecord.attendance_date)
+                        .maybeSingle();
+
+                    if (existingResult.error && profileColumnPattern.test(existingResult.error.message || "")) {
+                        existingResult = await supabase
+                            .from(ATTENDANCE_TABLE)
+                            .select(selectBase)
+                            .eq("student_id", attendanceRecord.student_id)
+                            .eq("attendance_date", attendanceRecord.attendance_date)
+                            .maybeSingle();
+                    }
+
+                    return existingResult;
+                }
+
+                const existingResult = await loadExistingAttendance();
+                if (existingResult.error) {
+                    return existingResult;
+                }
+
+                if (existingResult.data) {
+                    return {
+                        data: existingResult.data,
+                        error: null,
+                        alreadyRecorded: true
+                    };
+                }
+
                 const recordWithProfile = {
                     ...attendanceRecord,
                     ...optionalProfileData
@@ -5706,19 +5743,17 @@
 
                 let result = await supabase
                     .from(ATTENDANCE_TABLE)
-                    .upsert([recordWithProfile], {
-                        onConflict: "student_id,attendance_date"
-                    })
-                    .select("id, participant_id, student_id, participant_name, team, home_college, status, attendance_date, checked_at, attendance_session_type, attendance_session_title, attendance_category, attendance_point_settings")
+                    .insert([recordWithProfile])
+                    .select(selectWithProfile)
                     .single();
 
                 const profileColumnError = result.error
-                    && /attendance_rfid_value|attendance_course|attendance_source|attendance_session_type|attendance_session_title|attendance_category|attendance_point_settings|column|schema cache/i.test(result.error.message || "");
+                    && profileColumnPattern.test(result.error.message || "");
 
                 if (profileColumnError && Object.keys(optionalProfileData).length) {
                     result = await supabase
                         .from(ATTENDANCE_TABLE)
-                        .upsert([{
+                        .insert([{
                             participant_id: attendanceRecord.participant_id,
                             student_id: attendanceRecord.student_id,
                             participant_name: attendanceRecord.participant_name,
@@ -5727,11 +5762,20 @@
                             status: attendanceRecord.status,
                             attendance_date: attendanceRecord.attendance_date,
                             checked_at: attendanceRecord.checked_at
-                        }], {
-                            onConflict: "student_id,attendance_date"
-                        })
-                        .select("id, participant_id, student_id, participant_name, team, home_college, status, attendance_date, checked_at")
+                        }])
+                        .select(selectBase)
                         .single();
+                }
+
+                if (result.error && (result.error.code === "23505" || /duplicate|unique/i.test(result.error.message || ""))) {
+                    const duplicateResult = await loadExistingAttendance();
+                    if (!duplicateResult.error && duplicateResult.data) {
+                        return {
+                            data: duplicateResult.data,
+                            error: null,
+                            alreadyRecorded: true
+                        };
+                    }
                 }
 
                 return result;
@@ -9626,7 +9670,7 @@
                         attendance_source: "registered_participant"
                     };
 
-                    const { data: savedAttendance, error: attendanceError } = await saveAttendanceRecord(attendanceRecord, optionalProfileData);
+                    const { data: savedAttendance, error: attendanceError, alreadyRecorded } = await saveAttendanceRecord(attendanceRecord, optionalProfileData);
 
                     if (attendanceError) {
                         throw attendanceError;
@@ -9654,8 +9698,8 @@
                     showAttendanceResult("success", `
                         <div class="space-y-3">
                             <div>
-                                <p class="text-lg font-bold">Attendance checked.</p>
-                                <p class="text-sm">${participant ? "The registered participant" : "The AUP student"} has been marked <strong>Present</strong> in the attendance table.</p>
+                                <p class="text-lg font-bold">${alreadyRecorded ? "Attendance already recorded." : "Attendance checked."}</p>
+                                <p class="text-sm">${alreadyRecorded ? "This person already has attendance for the selected date, so the first saved record was kept." : `${participant ? "The registered participant" : "The AUP student"} has been marked <strong>Present</strong> in the attendance table.`}</p>
                             </div>
 
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white bg-opacity-70 rounded-lg p-3 border border-green-100">
