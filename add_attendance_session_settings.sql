@@ -253,34 +253,63 @@ exception
     when undefined_object then null;
 end $$;
 
-create or replace view public.attendance_point_history as
+drop view if exists public.attendance_leaderboard_points;
+drop view if exists public.attendance_point_history;
+
+insert into public.sports_leaderboard (team)
+select 'Academy'
+where not exists (
+    select 1
+    from public.sports_leaderboard
+    where lower(trim(team)) = 'academy'
+);
+
+insert into public.sports_leaderboard (team)
+select 'Faculty'
+where not exists (
+    select 1
+    from public.sports_leaderboard
+    where lower(trim(team)) = 'faculty'
+);
+
+create view public.attendance_point_history as
 with current_settings as (
-    select coalesce(point_settings, '{}'::jsonb) as point_settings
-    from public.attendance_settings
-    where id = 1
+    select coalesce(
+        (select point_settings from public.attendance_settings where id = 1 limit 1),
+        '{}'::jsonb
+    ) as point_settings
 ),
-normalized_settings as (
+safe_parameters as (
     select
-        jsonb_build_object(
-            'registered_player_points', coalesce(point_settings #> '{parameters,registered_player_points}', point_settings #> '{opening_program,registered_player_points}', '5'::jsonb),
-            'faculty_formula_base', '100'::jsonb,
-            'department_chair_formula_base', '100'::jsonb,
-            'dean_points', coalesce(point_settings #> '{parameters,dean_points}', point_settings #> '{opening_program,dean_points}', '50'::jsonb),
-            'student_from_college_points', coalesce(point_settings #> '{parameters,student_player_points}', point_settings #> '{parameters,student_from_college_points}', point_settings #> '{opening_program,student_from_college_points}', '2'::jsonb),
-            'faculty_points', coalesce(point_settings #> '{parameters,faculty_points}', point_settings #> '{sunday_devotional,faculty_points}', '5'::jsonb),
-            'sponsor_points', coalesce(point_settings #> '{parameters,sponsor_points}', point_settings #> '{sunday_devotional,sponsor_points}', '5'::jsonb),
-            'student_player_points', coalesce(point_settings #> '{parameters,student_player_points}', point_settings #> '{parameters,student_from_college_points}', point_settings #> '{sunday_devotional,student_player_points}', '2'::jsonb),
-            'sponsor_game_attendance_points', coalesce(point_settings #> '{parameters,sponsor_game_attendance_points}', point_settings #> '{game_attendance,sponsor_points}', '15'::jsonb),
-            'college_totals', coalesce(point_settings #> '{parameters,college_totals}', point_settings #> '{opening_program,college_totals}', '{}'::jsonb)
-        ) as parameters
+        case when coalesce(point_settings #>> '{parameters,registered_player_points}', '') ~ '^\d+(\.\d+)?$'
+              and (point_settings #>> '{parameters,registered_player_points}')::numeric between 0 and 1000
+             then (point_settings #>> '{parameters,registered_player_points}')::numeric else 5 end as registered_player_points,
+        case when coalesce(point_settings #>> '{parameters,dean_points}', '') ~ '^\d+(\.\d+)?$'
+              and (point_settings #>> '{parameters,dean_points}')::numeric between 0 and 1000
+             then (point_settings #>> '{parameters,dean_points}')::numeric else 50 end as dean_points,
+        case when coalesce(point_settings #>> '{parameters,faculty_points}', '') ~ '^\d+(\.\d+)?$'
+              and (point_settings #>> '{parameters,faculty_points}')::numeric between 0 and 1000
+             then (point_settings #>> '{parameters,faculty_points}')::numeric else 5 end as faculty_points,
+        case when coalesce(point_settings #>> '{parameters,sponsor_points}', '') ~ '^\d+(\.\d+)?$'
+              and (point_settings #>> '{parameters,sponsor_points}')::numeric between 0 and 1000
+             then (point_settings #>> '{parameters,sponsor_points}')::numeric else 5 end as sponsor_points,
+        case when coalesce(point_settings #>> '{parameters,student_player_points}', '') ~ '^\d+(\.\d+)?$'
+              and (point_settings #>> '{parameters,student_player_points}')::numeric between 0 and 1000
+             then (point_settings #>> '{parameters,student_player_points}')::numeric else 2 end as student_player_points,
+        case when coalesce(point_settings #>> '{parameters,sponsor_game_attendance_points}', '') ~ '^\d+(\.\d+)?$'
+              and (point_settings #>> '{parameters,sponsor_game_attendance_points}')::numeric between 0 and 1000
+             then (point_settings #>> '{parameters,sponsor_game_attendance_points}')::numeric else 15 end as sponsor_game_attendance_points,
+        coalesce(point_settings #> '{parameters,college_totals}', '{}'::jsonb) as college_totals
     from current_settings
 ),
-attendance_counts as (
+normalized_attendance as (
     select
-        a.attendance_date,
+        a.*,
+        p.status as participant_status,
+        p.team as participant_team,
         case btrim(lower(regexp_replace(coalesce(
             case
-                when a.participant_id is not null and lower(coalesce(p.team, '')) = 'faculty' then p.team
+                when a.participant_id is not null and nullif(p.team, '') is not null then p.team
                 else null
             end,
             nullif(a.home_college, ''),
@@ -298,70 +327,48 @@ attendance_counts as (
             when 'college of dentistry' then 'COD'
             when 'academy' then 'Academy'
             when 'faculty' then 'Faculty'
-            else coalesce(
+            else upper(btrim(coalesce(
                 case
-                    when a.participant_id is not null and lower(coalesce(p.team, '')) = 'faculty' then p.team
+                    when a.participant_id is not null and nullif(p.team, '') is not null then p.team
                     else null
                 end,
                 nullif(a.home_college, ''),
                 nullif(a.team, '')
-            )
-        end as team,
-        max(a.attendance_session_title) as session_title,
-        count(*) filter (where lower(coalesce(a.status, 'present')) = 'present') as total_present,
-        count(*) filter (
-            where lower(coalesce(a.status, 'present')) = 'present'
-              and a.participant_id is not null
-              and lower(coalesce(p.status, '')) = 'approved'
-              and a.attendance_category = 'registered_player'
-        ) as registered_player_count,
-        count(*) filter (
-            where lower(coalesce(a.status, 'present')) = 'present'
-              and (
-                  a.participant_id is null
-                  or lower(coalesce(p.status, '')) <> 'approved'
-                  or a.attendance_category in ('student_player', 'student_from_college')
-              )
-        ) as student_player_count,
-        count(*) filter (where lower(coalesce(a.status, 'present')) = 'present' and a.attendance_category = 'faculty') as faculty_count,
-        count(*) filter (where lower(coalesce(a.status, 'present')) = 'present' and a.attendance_category = 'department_chair') as department_chair_count,
-        count(*) filter (where lower(coalesce(a.status, 'present')) = 'present' and a.attendance_category = 'dean') as dean_count,
-        count(*) filter (where lower(coalesce(a.status, 'present')) = 'present' and a.attendance_category = 'student_from_college') as student_from_college_count,
-        count(*) filter (where lower(coalesce(a.status, 'present')) = 'present' and a.attendance_category = 'sponsor') as sponsor_count,
-        count(*) filter (where lower(coalesce(a.status, 'present')) = 'present' and a.attendance_category = 'sponsor_game_attendance') as sponsor_game_attendance_count
+            )))
+        end as normalized_team
     from public.attendance a
     left join public.participants p
         on p.id::text = a.participant_id::text
-    group by a.attendance_date,
-        case btrim(lower(regexp_replace(coalesce(
-            case
-                when a.participant_id is not null and lower(coalesce(p.team, '')) = 'faculty' then p.team
-                else null
-            end,
-            nullif(a.home_college, ''),
-            nullif(a.team, '')
-        ), '[^a-zA-Z0-9]+', ' ', 'g')))
-            when 'college of science engineering and technology' then 'CSET'
-            when 'college of nursing' then 'CON'
-            when 'college of business' then 'COB'
-            when 'college of arts and humanities' then 'CAH'
-            when 'college of theology' then 'COT'
-            when 'college of health' then 'COH'
-            when 'college of medicine' then 'COM'
-            when 'college of teacher education' then 'CTE'
-            when 'college of teachers education' then 'CTE'
-            when 'college of dentistry' then 'COD'
-            when 'academy' then 'Academy'
-            when 'faculty' then 'Faculty'
-            else coalesce(
-                case
-                    when a.participant_id is not null and lower(coalesce(p.team, '')) = 'faculty' then p.team
-                    else null
-                end,
-                nullif(a.home_college, ''),
-                nullif(a.team, '')
-            )
-        end
+),
+attendance_counts as (
+    select
+        na.attendance_date,
+        na.normalized_team as team,
+        max(na.attendance_session_title) as session_title,
+        count(*) filter (where lower(coalesce(na.status, 'present')) = 'present') as total_present,
+        count(*) filter (
+            where lower(coalesce(na.status, 'present')) = 'present'
+              and na.participant_id is not null
+              and lower(coalesce(na.participant_status, '')) = 'approved'
+              and na.attendance_category = 'registered_player'
+        ) as registered_player_count,
+        count(*) filter (
+            where lower(coalesce(na.status, 'present')) = 'present'
+              and (
+                  na.participant_id is null
+                  or lower(coalesce(na.participant_status, '')) <> 'approved'
+                  or na.attendance_category in ('student_player', 'student_from_college')
+              )
+        ) as student_player_count,
+        count(*) filter (where lower(coalesce(na.status, 'present')) = 'present' and na.attendance_category = 'faculty') as faculty_count,
+        count(*) filter (where lower(coalesce(na.status, 'present')) = 'present' and na.attendance_category = 'department_chair') as department_chair_count,
+        count(*) filter (where lower(coalesce(na.status, 'present')) = 'present' and na.attendance_category = 'dean') as dean_count,
+        count(*) filter (where lower(coalesce(na.status, 'present')) = 'present' and na.attendance_category = 'student_from_college') as student_from_college_count,
+        count(*) filter (where lower(coalesce(na.status, 'present')) = 'present' and na.attendance_category = 'sponsor') as sponsor_count,
+        count(*) filter (where lower(coalesce(na.status, 'present')) = 'present' and na.attendance_category = 'sponsor_game_attendance') as sponsor_game_attendance_count
+    from normalized_attendance na
+    where na.normalized_team in ('CAH', 'COB', 'COD', 'COH', 'COM', 'CON', 'COT', 'CSET', 'CTE', 'Academy', 'Faculty')
+    group by na.attendance_date, na.normalized_team
 )
 select
     ac.attendance_date,
@@ -379,47 +386,44 @@ select
     coalesce(college_totals.total_faculty, 0) as total_faculty,
     coalesce(college_totals.total_department_chairs, 0) as total_department_chairs,
     round((
-        ac.registered_player_count * coalesce((ns.parameters ->> 'registered_player_points')::numeric, 5)
-        + ac.student_player_count * coalesce((ns.parameters ->> 'student_player_points')::numeric, 2)
+        ac.registered_player_count * sp.registered_player_points
+        + ac.student_player_count * sp.student_player_points
         + case
-            when coalesce(nullif(ns.parameters ->> 'faculty_points', '')::numeric, 5) > 0
-            then ac.faculty_count * coalesce(nullif(ns.parameters ->> 'faculty_points', '')::numeric, 5)
-            when coalesce(college_totals.total_faculty, 0) > 0
-            then (ac.faculty_count::numeric / nullif(college_totals.total_faculty, 0)) * 100
+            when sp.faculty_points > 0 then ac.faculty_count * sp.faculty_points
+            when coalesce(college_totals.total_faculty, 0) > 0 then (ac.faculty_count::numeric / nullif(college_totals.total_faculty, 0)) * 100
             else 0
           end
         + case
-            when coalesce(nullif(ns.parameters ->> 'faculty_points', '')::numeric, 5) > 0
-            then ac.department_chair_count * coalesce(nullif(ns.parameters ->> 'faculty_points', '')::numeric, 5)
-            when coalesce(college_totals.total_department_chairs, 0) > 0
-            then (ac.department_chair_count::numeric / nullif(college_totals.total_department_chairs, 0)) * 100
+            when sp.faculty_points > 0 then ac.department_chair_count * sp.faculty_points
+            when coalesce(college_totals.total_department_chairs, 0) > 0 then (ac.department_chair_count::numeric / nullif(college_totals.total_department_chairs, 0)) * 100
             else 0
           end
-        + ac.dean_count * coalesce((ns.parameters ->> 'dean_points')::numeric, 50)
-        + ac.sponsor_count * coalesce((ns.parameters ->> 'sponsor_points')::numeric, 5)
-        + ac.sponsor_game_attendance_count * coalesce((ns.parameters ->> 'sponsor_game_attendance_points')::numeric, 15)
+        + ac.dean_count * sp.dean_points
+        + ac.sponsor_count * sp.sponsor_points
+        + ac.sponsor_game_attendance_count * sp.sponsor_game_attendance_points
     ), 2) as total_points
 from attendance_counts ac
-cross join normalized_settings ns
+cross join safe_parameters sp
 left join lateral (
     select
-        coalesce(nullif(value ->> 'total_faculty', '')::numeric, 0) as total_faculty,
-        coalesce(nullif(value ->> 'total_department_chairs', '')::numeric, 0) as total_department_chairs
-    from jsonb_each(coalesce(ns.parameters -> 'college_totals', '{}'::jsonb))
-    where key = ac.team
-       or value ->> 'college_name' = ac.team
+        case when coalesce(value ->> 'total_faculty', '') ~ '^\d+(\.\d+)?$'
+             then least((value ->> 'total_faculty')::numeric, 10000)
+             else 0 end as total_faculty,
+        case when coalesce(value ->> 'total_department_chairs', '') ~ '^\d+(\.\d+)?$'
+             then least((value ->> 'total_department_chairs')::numeric, 10000)
+             else 0 end as total_department_chairs
+    from jsonb_each(coalesce(sp.college_totals, '{}'::jsonb))
+    where key = ac.team or value ->> 'college_name' = ac.team
     limit 1
-) college_totals on true
-where ac.team in ('CAH', 'COB', 'COD', 'COH', 'COM', 'CON', 'COT', 'CSET', 'CTE', 'Academy', 'Faculty');
+) college_totals on true;
 
 grant select on public.attendance_point_history to anon, authenticated;
 
-create or replace view public.attendance_leaderboard_points as
+create view public.attendance_leaderboard_points as
 select
     team,
     round(sum(total_points), 2) as total_points
 from public.attendance_point_history
-where team is not null
 group by team;
 
 grant select on public.attendance_leaderboard_points to anon, authenticated;
