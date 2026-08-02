@@ -278,7 +278,14 @@ normalized_settings as (
 attendance_counts as (
     select
         a.attendance_date,
-        case btrim(lower(regexp_replace(coalesce(nullif(a.home_college, ''), nullif(a.team, '')), '[^a-zA-Z0-9]+', ' ', 'g')))
+        case btrim(lower(regexp_replace(coalesce(
+            case
+                when a.participant_id is not null and lower(coalesce(p.team, '')) = 'faculty' then p.team
+                else null
+            end,
+            nullif(a.home_college, ''),
+            nullif(a.team, '')
+        ), '[^a-zA-Z0-9]+', ' ', 'g')))
             when 'college of science engineering and technology' then 'CSET'
             when 'college of nursing' then 'CON'
             when 'college of business' then 'COB'
@@ -289,7 +296,16 @@ attendance_counts as (
             when 'college of teacher education' then 'CTE'
             when 'college of teachers education' then 'CTE'
             when 'college of dentistry' then 'COD'
-            else coalesce(nullif(a.home_college, ''), nullif(a.team, ''))
+            when 'academy' then 'Academy'
+            when 'faculty' then 'Faculty'
+            else coalesce(
+                case
+                    when a.participant_id is not null and lower(coalesce(p.team, '')) = 'faculty' then p.team
+                    else null
+                end,
+                nullif(a.home_college, ''),
+                nullif(a.team, '')
+            )
         end as team,
         max(a.attendance_session_title) as session_title,
         count(*) filter (where lower(coalesce(a.status, 'present')) = 'present') as total_present,
@@ -317,7 +333,14 @@ attendance_counts as (
     left join public.participants p
         on p.id::text = a.participant_id::text
     group by a.attendance_date,
-        case btrim(lower(regexp_replace(coalesce(nullif(a.home_college, ''), nullif(a.team, '')), '[^a-zA-Z0-9]+', ' ', 'g')))
+        case btrim(lower(regexp_replace(coalesce(
+            case
+                when a.participant_id is not null and lower(coalesce(p.team, '')) = 'faculty' then p.team
+                else null
+            end,
+            nullif(a.home_college, ''),
+            nullif(a.team, '')
+        ), '[^a-zA-Z0-9]+', ' ', 'g')))
             when 'college of science engineering and technology' then 'CSET'
             when 'college of nursing' then 'CON'
             when 'college of business' then 'COB'
@@ -328,7 +351,16 @@ attendance_counts as (
             when 'college of teacher education' then 'CTE'
             when 'college of teachers education' then 'CTE'
             when 'college of dentistry' then 'COD'
-            else coalesce(nullif(a.home_college, ''), nullif(a.team, ''))
+            when 'academy' then 'Academy'
+            when 'faculty' then 'Faculty'
+            else coalesce(
+                case
+                    when a.participant_id is not null and lower(coalesce(p.team, '')) = 'faculty' then p.team
+                    else null
+                end,
+                nullif(a.home_college, ''),
+                nullif(a.team, '')
+            )
         end
 )
 select
@@ -378,7 +410,7 @@ left join lateral (
        or value ->> 'college_name' = ac.team
     limit 1
 ) college_totals on true
-where ac.team is not null;
+where ac.team in ('CAH', 'COB', 'COD', 'COH', 'COM', 'CON', 'COT', 'CSET', 'CTE', 'Academy', 'Faculty');
 
 grant select on public.attendance_point_history to anon, authenticated;
 
