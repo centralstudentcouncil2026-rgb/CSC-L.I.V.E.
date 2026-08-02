@@ -1560,20 +1560,27 @@
                     </div>
 
                     <div class="responsive-table-card p-6 bg-white border-0 shadow-md rounded-lg overflow-x-auto">
-                        <div class="flex items-center justify-between gap-3 mb-4">
+                        <div class="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
                             <div>
-                                <h3 class="text-xl font-bold text-gray-900">Session Attendance Records</h3>
-                                <p class="text-xs text-gray-500">Latest participant attendance checks for the active session date.</p>
+                                <h3 class="text-xl font-bold text-gray-900">College Attendance Stats</h3>
+                                <p class="text-xs text-gray-500">Attendance totals per college for the selected date.</p>
+                            </div>
+                            <div class="shrink-0">
+                                <label for="overviewAttendanceDateFilter" class="mb-1 block text-xs font-black uppercase tracking-wide text-gray-500">Attendance Date</label>
+                                <input
+                                    id="overviewAttendanceDateFilter"
+                                    type="date"
+                                    class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-bold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 sm:w-44">
                             </div>
                         </div>
 
-                        <table class="w-full min-w-[520px]">
+                        <table class="w-full min-w-[680px]">
                             <thead>
                                 <tr class="border-b border-gray-200">
-                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Name</th>
-                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Student ID</th>
-                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Team</th>
-                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Checked</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">College</th>
+                                    <th class="text-right py-3 px-4 font-semibold text-gray-700">Total Attendance</th>
+                                    <th class="text-right py-3 px-4 font-semibold text-gray-700">Morning Session</th>
+                                    <th class="text-right py-3 px-4 font-semibold text-gray-700">Afternoon Session</th>
                                 </tr>
                             </thead>
 
@@ -3005,6 +3012,7 @@
             const adminOverviewLastUpdated = document.getElementById("adminOverviewLastUpdated");
             const overviewMatchStatusBody = document.getElementById("overviewMatchStatusBody");
             const overviewAttendanceBody = document.getElementById("overviewAttendanceBody");
+            const overviewAttendanceDateFilter = document.getElementById("overviewAttendanceDateFilter");
             const overviewRecentMatchesBody = document.getElementById("overviewRecentMatchesBody");
             const overviewTeamSummaryBody = document.getElementById("overviewTeamSummaryBody");
             const overviewSportsSummaryBody = document.getElementById("overviewSportsSummaryBody");
@@ -6058,23 +6066,62 @@
                 return fallback.data || [];
             }
 
-            async function loadTodayAttendanceRows() {
-                const attendanceDate = getAttendanceSessionDate();
-                const sessionTitle = getAttendanceSessionTitle();
+            function getOverviewAttendanceDate() {
+                return overviewAttendanceDateFilter?.value || getAttendanceSessionDate() || getLocalISODate();
+            }
+
+            async function loadOverviewAttendanceStats() {
+                const attendanceDate = getOverviewAttendanceDate();
 
                 const { data, error } = await supabase
                     .from(ATTENDANCE_TABLE)
-                    .select("id, participant_name, student_id, team, status, attendance_date, attendance_session_title, checked_at")
+                    .select("id, student_id, team, home_college, attendance_date, attendance_session_title, status")
                     .eq("attendance_date", attendanceDate)
-                    .eq("attendance_session_title", sessionTitle)
-                    .order("checked_at", { ascending: false });
+                    .order("team", { ascending: true });
 
                 if (error) {
-                    console.error("Error loading today's attendance records:", error.message || error);
+                    console.error("Error loading attendance stats:", error.message || error);
                     return [];
                 }
 
-                return data || [];
+                const collegeStats = new Map();
+
+                (data || [])
+                    .filter(row => String(row.status || "Present").trim().toLowerCase() === "present")
+                    .forEach(row => {
+                        const college = getCollegeTeamAlias(row.team || row.home_college || "Unassigned") || "Unassigned";
+                        const studentKey = String(row.student_id || "").trim() || String(row.id || `${college}-${row.attendance_session_title || ""}`);
+                        const sessionTitle = String(row.attendance_session_title || "").trim();
+
+                        if (!collegeStats.has(college)) {
+                            collegeStats.set(college, {
+                                college,
+                                total: 0,
+                                morningIds: new Set(),
+                                afternoonIds: new Set()
+                            });
+                        }
+
+                        const stat = collegeStats.get(college);
+                        stat.total += 1;
+
+                        if (sessionTitle === "Morning Session") {
+                            stat.morningIds.add(studentKey);
+                        }
+
+                        if (sessionTitle === "Afternoon Session") {
+                            stat.afternoonIds.add(studentKey);
+                        }
+                    });
+
+                return [...collegeStats.values()]
+                    .map(stat => ({
+                        college: stat.college,
+                        total: stat.total,
+                        morning: stat.morningIds.size,
+                        afternoon: stat.afternoonIds.size
+                    }))
+                    .sort((a, b) => a.college.localeCompare(b.college));
             }
 
             function renderOverviewMatchStatus(totalMatches, upcomingMatches, activeGames, completedMatches, todayMatches) {
@@ -6103,22 +6150,22 @@
                 `).join("");
             }
 
-            function renderOverviewAttendance(attendanceRows) {
+            function renderOverviewAttendance(attendanceStats) {
                 if (!overviewAttendanceBody) {
                     return;
                 }
 
-                if (!attendanceRows.length) {
-                    renderEmptyRow(overviewAttendanceBody, 4, `No participant attendance records checked for ${getAttendanceSessionTitle()} on ${getAttendanceSessionDate()}.`);
+                if (!attendanceStats.length) {
+                    renderEmptyRow(overviewAttendanceBody, 4, `No attendance records found for ${getOverviewAttendanceDate()}.`);
                     return;
                 }
 
-                overviewAttendanceBody.innerHTML = attendanceRows.slice(0, 8).map(row => `
+                overviewAttendanceBody.innerHTML = attendanceStats.map(row => `
                     <tr class="border-b border-gray-100 hover:bg-gray-50">
-                        <td class="py-3 px-4 font-medium text-gray-900">${escapeHTML(row.participant_name || "No name")}</td>
-                        <td class="py-3 px-4 text-gray-600">${escapeHTML(row.student_id || "-")}</td>
-                        <td class="py-3 px-4 text-gray-600">${escapeHTML(row.team || "-")}</td>
-                        <td class="py-3 px-4 text-gray-600">${escapeHTML(formatDateTime(row.checked_at))}</td>
+                        <td class="py-3 px-4 font-medium text-gray-900">${escapeHTML(row.college || "Unassigned")}</td>
+                        <td class="py-3 px-4 text-right font-black text-gray-900">${Number(row.total || 0).toLocaleString()}</td>
+                        <td class="py-3 px-4 text-right font-semibold text-blue-700">${Number(row.morning || 0).toLocaleString()}</td>
+                        <td class="py-3 px-4 text-right font-semibold text-amber-700">${Number(row.afternoon || 0).toLocaleString()}</td>
                     </tr>
                 `).join("");
             }
@@ -6387,7 +6434,7 @@
                     sportsResult,
                     participantsResult,
                     matches,
-                    attendanceRows
+                    attendanceStats
                 ] = await Promise.all([
                     supabase
                         .from(TEAMS_TABLE)
@@ -6405,7 +6452,7 @@
                         .order("created_at", { ascending: false }),
 
                     loadOverviewMatches(),
-                    loadTodayAttendanceRows()
+                    loadOverviewAttendanceStats()
                 ]);
 
                 if (teamsResult.error) {
@@ -6465,14 +6512,15 @@
                 setOverviewText(adminApprovedParticipants, approvedParticipants);
                 setOverviewText(adminPendingParticipants, pendingParticipants);
                 setOverviewText(adminRejectedParticipants, rejectedParticipants);
-                setOverviewText(adminTodayAttendance, attendanceRows.length);
+                const selectedDateAttendanceTotal = attendanceStats.reduce((total, row) => total + Number(row.total || 0), 0);
+                setOverviewText(adminTodayAttendance, selectedDateAttendanceTotal);
 
                 if (adminOverviewLastUpdated) {
                     adminOverviewLastUpdated.textContent = `Last updated: ${new Date().toLocaleString()}`;
                 }
 
                 renderOverviewMatchStatus(totalMatches, upcomingMatches, activeGames, completedMatches, todayMatches);
-                renderOverviewAttendance(attendanceRows);
+                renderOverviewAttendance(attendanceStats);
                 renderOverviewRecentMatches(matches);
                 renderOverviewTeamSummary(teams, participants);
                 renderOverviewSportsSummary(sports);
@@ -9981,6 +10029,16 @@
             printBestPlayersDate.value = getLocalISODate();
             printAttendanceDate.value = getLocalISODate();
             printCommitteeMatchesDate.value = "";
+            if (overviewAttendanceDateFilter) {
+                overviewAttendanceDateFilter.value = getLocalISODate();
+                overviewAttendanceDateFilter.addEventListener("change", function () {
+                    if (!overviewAttendanceDateFilter.value) {
+                        overviewAttendanceDateFilter.value = getLocalISODate();
+                    }
+
+                    loadAdminOverviewCounts();
+                });
+            }
             attendanceSessionDate.value = getLocalISODate();
             attendanceStartTime.value = "";
             attendanceOpenUntil.value = "";
