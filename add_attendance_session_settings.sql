@@ -346,7 +346,7 @@ select
     ac.sponsor_game_attendance_count,
     coalesce(college_totals.total_faculty, 0) as total_faculty,
     coalesce(college_totals.total_department_chairs, 0) as total_department_chairs,
-    (
+    round((
         ac.registered_player_count * coalesce((ns.parameters ->> 'registered_player_points')::numeric, 5)
         + ac.student_player_count * coalesce((ns.parameters ->> 'student_player_points')::numeric, 2)
         + case
@@ -366,7 +366,7 @@ select
         + ac.dean_count * coalesce((ns.parameters ->> 'dean_points')::numeric, 50)
         + ac.sponsor_count * coalesce((ns.parameters ->> 'sponsor_points')::numeric, 5)
         + ac.sponsor_game_attendance_count * coalesce((ns.parameters ->> 'sponsor_game_attendance_points')::numeric, 15)
-    )::numeric(12, 2) as total_points
+    ), 2) as total_points
 from attendance_counts ac
 cross join normalized_settings ns
 left join lateral (
@@ -381,3 +381,13 @@ left join lateral (
 where ac.team is not null;
 
 grant select on public.attendance_point_history to anon, authenticated;
+
+create or replace view public.attendance_leaderboard_points as
+select
+    team,
+    round(sum(total_points), 2) as total_points
+from public.attendance_point_history
+where team is not null
+group by team;
+
+grant select on public.attendance_leaderboard_points to anon, authenticated;
