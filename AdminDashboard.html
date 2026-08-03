@@ -1679,18 +1679,19 @@
                 </button>
 
                 <div class="responsive-table-card p-6 bg-white border-0 shadow-md rounded-lg overflow-x-auto">
-                    <table class="w-full">
+                    <table class="w-full min-w-[860px]">
                         <thead>
                             <tr class="border-b border-gray-200">
                                 <th class="text-left py-3 px-4 font-semibold text-gray-700">Team Name</th>
                                 <th class="text-left py-3 px-4 font-semibold text-gray-700">Members</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Team Stats</th>
                                 <th class="text-left py-3 px-4 font-semibold text-gray-700">Actions</th>
                             </tr>
                         </thead>
 
                         <tbody id="teamsTableBody">
                             <tr>
-                                <td colspan="3" class="py-4 px-4 text-gray-600">
+                                <td colspan="4" class="py-4 px-4 text-gray-600">
                                     Loading teams...
                                 </td>
                             </tr>
@@ -2990,6 +2991,7 @@
             const ATTENDANCE_POINTS_VIEW = "attendance_point_history";
             const RFID_PROFILES_TABLE = "rfid_profiles";
             const GAME_HISTORY_TABLE = "game_history";
+            const TEAM_POINT_ADJUSTMENTS_TABLE = "team_point_adjustments";
             const BASKETBALL_STATS_TABLE = "basketball_match_player_stats";
             const STUDENT_FEEDBACK_TABLE = "student_feedback";
             const ANNOUNCEMENTS_TABLE = "announcements";
@@ -6552,11 +6554,183 @@
                 teamId.value = "";
             }
 
+            function createEmptyTeamStats() {
+                return {
+                    points: 0,
+                    wins: 0,
+                    losses: 0,
+                    merit: 0,
+                    demerit: 0
+                };
+            }
+
+            function getTeamHistoryAdjustment(history, teamId, teamName) {
+                const normalizedTeamName = normalizeText(teamName);
+                const isTeamOne = (history.team_one_id && Number(history.team_one_id) === Number(teamId))
+                    || (normalizedTeamName && normalizeText(history.team_one_name) === normalizedTeamName);
+                const isTeamTwo = (history.team_two_id && Number(history.team_two_id) === Number(teamId))
+                    || (normalizedTeamName && normalizeText(history.team_two_name) === normalizedTeamName);
+
+                if (isTeamOne) {
+                    return {
+                        merit: toNumber(history.team_one_merit_points),
+                        demerit: toNumber(history.team_one_demerit_points)
+                    };
+                }
+
+                if (isTeamTwo) {
+                    return {
+                        merit: toNumber(history.team_two_merit_points),
+                        demerit: toNumber(history.team_two_demerit_points)
+                    };
+                }
+
+                return { merit: 0, demerit: 0 };
+            }
+
+            function buildTeamStats(teams, historyRows = [], attendanceRows = [], adjustmentRows = []) {
+                const statsById = new Map();
+                const aliases = new Map();
+
+                const registerTeam = team => {
+                    const teamId = String(team.id);
+                    const teamName = team[TEAM_NAME_COLUMN] || team.team || team.name || "";
+                    const stats = createEmptyTeamStats();
+                    statsById.set(teamId, stats);
+
+                    [teamName, getCollegeTeamAlias(teamName)].forEach(alias => {
+                        const key = normalizeText(alias);
+                        if (key) aliases.set(key, { team, stats });
+                    });
+                };
+
+                (teams || []).forEach(registerTeam);
+
+                const findTeam = (teamId, teamName) => {
+                    if (teamId !== null && teamId !== undefined && teamId !== "") {
+                        const byId = statsById.get(String(teamId));
+                        if (byId) return { stats: byId, id: String(teamId), name: teamName };
+                    }
+
+                    for (const alias of [teamName, getCollegeTeamAlias(teamName)]) {
+                        const found = aliases.get(normalizeText(alias));
+                        if (found) return found;
+                    }
+
+                    return null;
+                };
+
+                (historyRows || []).forEach(history => {
+                    const winnerId = history.winner_team_id ?? history.winning_team_id ?? history.winner_id ?? history.team_winner_id;
+                    const winnerName = history.winner_team_name || history.winning_team_name || history.winner_name || history.winner;
+                    const loserId = history.loser_team_id ?? history.losing_team_id ?? history.loser_id ?? history.team_loser_id;
+                    const loserName = history.loser_team_name || history.losing_team_name || history.loser_name || history.loser;
+
+                    const winner = findTeam(winnerId, winnerName);
+                    if (winner) {
+                        const adjustment = getTeamHistoryAdjustment(history, winnerId, winnerName);
+                        winner.stats.points += toNumber(history.winner_points_awarded || history.winner_award || history.winner_points || history.points_winner) + adjustment.merit - adjustment.demerit;
+                        winner.stats.wins += 1;
+                        winner.stats.merit += adjustment.merit;
+                        winner.stats.demerit += adjustment.demerit;
+                    }
+
+                    const loser = findTeam(loserId, loserName);
+                    if (loser) {
+                        const adjustment = getTeamHistoryAdjustment(history, loserId, loserName);
+                        loser.stats.points += toNumber(history.loser_points_awarded || history.loser_award || history.loser_points || history.points_loser) + adjustment.merit - adjustment.demerit;
+                        loser.stats.losses += 1;
+                        loser.stats.merit += adjustment.merit;
+                        loser.stats.demerit += adjustment.demerit;
+                    }
+                });
+
+                (attendanceRows || []).forEach(row => {
+                    const team = findTeam(null, row.team || row.home_college);
+                    const points = toNumber(row.total_points || row.points);
+                    if (team && points > 0) {
+                        team.stats.points += points;
+                        team.stats.merit += points;
+                    }
+                });
+
+                (adjustmentRows || []).forEach(row => {
+                    const team = findTeam(row.team_id, row.team);
+                    const points = toNumber(row.points);
+                    if (!team || points <= 0) return;
+
+                    if (row.adjustment_type === "demerit") {
+                        team.stats.points -= points;
+                        team.stats.demerit += points;
+                    } else {
+                        team.stats.points += points;
+                        team.stats.merit += points;
+                    }
+                });
+
+                return statsById;
+            }
+
+            async function addTeamPointAdjustment(team, adjustmentType) {
+                const typeLabel = adjustmentType === "demerit" ? "Demerit" : "Merit";
+                const pointsValue = Number(prompt(`Enter ${typeLabel.toLowerCase()} points for ${team[TEAM_NAME_COLUMN]}:`));
+
+                if (!Number.isFinite(pointsValue) || pointsValue <= 0) {
+                    showDashboardToast(`Enter valid ${typeLabel.toLowerCase()} points greater than 0.`, "warning");
+                    return;
+                }
+
+                const remarks = String(prompt(`Enter remarks/reason for this ${typeLabel.toLowerCase()}:`) || "").trim();
+
+                if (!remarks) {
+                    showDashboardToast("Remarks are required before saving merit or demerit.", "warning");
+                    return;
+                }
+
+                const adminUser = getStoredAdminUser();
+                const { error } = await supabase
+                    .from(TEAM_POINT_ADJUSTMENTS_TABLE)
+                    .insert([{
+                        team_id: team.id,
+                        team: team[TEAM_NAME_COLUMN],
+                        adjustment_type: adjustmentType,
+                        points: pointsValue,
+                        remarks,
+                        created_by: adminUser?.id || adminUser?.email || null,
+                        created_by_name: adminUser?.fullName || adminUser?.full_name || adminUser?.email || "Admin"
+                    }]);
+
+                if (error) {
+                    console.error("Team point adjustment error:", error.message || error);
+                    showDashboardToast(error.message || "Failed to save team point adjustment.", "warning");
+                    return;
+                }
+
+                showDashboardToast(`${typeLabel} saved for ${team[TEAM_NAME_COLUMN]}.`);
+                await Promise.all([loadTeams(), loadAdminOverviewCounts()]);
+            }
+
             async function loadTeams() {
-                const { data, error } = await supabase
-                    .from(TEAMS_TABLE)
-                    .select(`id, ${TEAM_NAME_COLUMN}`)
-                    .order(TEAM_NAME_COLUMN, { ascending: true });
+                const [
+                    { data, error },
+                    { data: historyRows, error: historyError },
+                    { data: attendancePointRows, error: attendancePointError },
+                    { data: adjustmentRows, error: adjustmentError }
+                ] = await Promise.all([
+                    supabase
+                        .from(TEAMS_TABLE)
+                        .select(`id, ${TEAM_NAME_COLUMN}`)
+                        .order(TEAM_NAME_COLUMN, { ascending: true }),
+                    supabase
+                        .from(GAME_HISTORY_TABLE)
+                        .select("*"),
+                    supabase
+                        .from(ATTENDANCE_POINTS_VIEW)
+                        .select("*"),
+                    supabase
+                        .from(TEAM_POINT_ADJUSTMENTS_TABLE)
+                        .select("*")
+                ]);
 
                 if (error) {
                     console.error("Error loading teams:", error.message || error);
@@ -6572,13 +6746,25 @@
                     return;
                 }
 
+                if (historyError) console.warn("Team stats game history warning:", historyError.message || historyError);
+                if (attendancePointError) console.warn("Team stats attendance warning:", attendancePointError.message || attendancePointError);
+                if (adjustmentError) console.warn("Team point adjustments warning:", adjustmentError.message || adjustmentError);
+
+                const teamStats = buildTeamStats(
+                    data || [],
+                    historyError ? [] : (historyRows || []),
+                    attendancePointError ? [] : (attendancePointRows || []),
+                    adjustmentError ? [] : (adjustmentRows || [])
+                );
+
                 teamsData = await Promise.all(
                     (data || []).map(async teamRow => {
                         const membersCount = await getParticipantCount(teamRow[TEAM_NAME_COLUMN]);
 
                         return {
                             ...teamRow,
-                            membersCount
+                            membersCount,
+                            stats: teamStats.get(String(teamRow.id)) || createEmptyTeamStats()
                         };
                     })
                 );
@@ -6600,7 +6786,7 @@
                 if (teamsData.length === 0) {
                     teamsTableBody.innerHTML = `
                         <tr>
-                            <td colspan="3" class="py-4 px-4 text-gray-600">
+                            <td colspan="4" class="py-4 px-4 text-gray-600">
                                 No teams added yet.
                             </td>
                         </tr>
@@ -6611,6 +6797,7 @@
                 teamsData.forEach(team => {
                     const row = document.createElement("tr");
                     row.className = "border-b border-gray-100 hover:bg-gray-50";
+                    const stats = team.stats || createEmptyTeamStats();
 
                     row.innerHTML = `
                         <td class="py-3 px-4 font-medium text-gray-900">
@@ -6619,6 +6806,16 @@
 
                         <td class="py-3 px-4 text-gray-600">
                             ${team.membersCount}
+                        </td>
+
+                        <td class="py-3 px-4">
+                            <div class="flex flex-wrap gap-2 text-xs font-bold">
+                                <span class="rounded-full bg-blue-50 px-3 py-1 text-blue-700">Pts ${Number(stats.points || 0).toLocaleString()}</span>
+                                <span class="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">Victory ${Number(stats.wins || 0).toLocaleString()}</span>
+                                <span class="rounded-full bg-slate-100 px-3 py-1 text-slate-700">Defeat ${Number(stats.losses || 0).toLocaleString()}</span>
+                                <button type="button" data-team-id="${team.id}" data-adjustment-type="merit" class="team-adjustment-btn rounded-full bg-green-50 px-3 py-1 text-green-700 hover:bg-green-100">Merit +${Number(stats.merit || 0).toLocaleString()}</button>
+                                <button type="button" data-team-id="${team.id}" data-adjustment-type="demerit" class="team-adjustment-btn rounded-full bg-red-50 px-3 py-1 text-red-700 hover:bg-red-100">Demerit -${Number(stats.demerit || 0).toLocaleString()}</button>
+                            </div>
                         </td>
 
                         <td class="py-3 px-4 space-x-2">
@@ -6649,6 +6846,15 @@
 
                         if (selectedTeam) {
                             openEditTeamModal(selectedTeam);
+                        }
+                    });
+                });
+
+                document.querySelectorAll(".team-adjustment-btn").forEach(button => {
+                    button.addEventListener("click", function () {
+                        const selectedTeam = teamsData.find(team => Number(team.id) === Number(this.dataset.teamId));
+                        if (selectedTeam) {
+                            addTeamPointAdjustment(selectedTeam, this.dataset.adjustmentType === "demerit" ? "demerit" : "merit");
                         }
                     });
                 });
@@ -10305,6 +10511,15 @@
                         table: ATTENDANCE_SETTINGS_TABLE
                     },
                     () => scheduleAdminRealtimeReload({ attendanceSettings: true, overview: true }, 0, { force: true })
+                )
+                .on(
+                    "postgres_changes",
+                    {
+                        event: "*",
+                        schema: "public",
+                        table: TEAM_POINT_ADJUSTMENTS_TABLE
+                    },
+                    () => scheduleAdminRealtimeReload({ teams: true, overview: true }, 0, { force: true })
                 )
                 .on(
                     "postgres_changes",

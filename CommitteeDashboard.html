@@ -2606,6 +2606,7 @@
                 const ATTENDANCE_POINTS_VIEW = "attendance_point_history";
                 const MATCHES_TABLE = "scheduled_matches";
                 const GAME_HISTORY_TABLE = "game_history";
+                const TEAM_POINT_ADJUSTMENTS_TABLE = "team_point_adjustments";
                 const BASKETBALL_STATS_TABLE = "basketball_match_player_stats";
                 const BASKETBALL_STAT_FIELDS = new Set(["points", "fouls"]);
                 const SPORTS_TABLE = "sports";
@@ -5463,7 +5464,8 @@
                 const [
                     { data: teams, error: teamsError },
                     { data: historyRows, error: historyError },
-                    { data: attendancePointRows, error: attendancePointError }
+                    { data: attendancePointRows, error: attendancePointError },
+                    { data: teamAdjustmentRows, error: teamAdjustmentError }
                 ] = await Promise.all([
                     supabase
                         .from(TEAMS_TABLE)
@@ -5476,11 +5478,19 @@
 
                     supabase
                         .from(ATTENDANCE_POINTS_VIEW)
+                        .select("*"),
+
+                    supabase
+                        .from(TEAM_POINT_ADJUSTMENTS_TABLE)
                         .select("*")
                 ]);
 
                     if (attendancePointError) {
                         console.warn("Leaderboard attendance points warning:", attendancePointError.message || attendancePointError);
+                    }
+
+                    if (teamAdjustmentError) {
+                        console.warn("Leaderboard team adjustment warning:", teamAdjustmentError.message || teamAdjustmentError);
                     }
 
                     if (teamsError) {
@@ -5584,6 +5594,18 @@
                         .filter(row => row.team && row.date && Number.isFinite(row.points));
                 }
 
+                function buildTeamAdjustmentRows(adjustmentRows) {
+                    return (adjustmentRows || [])
+                        .map(row => ({
+                            ...row,
+                            team: getCollegeTeamAlias(row.team || ""),
+                            team_id: row.team_id || null,
+                            points: Number(row.points || 0),
+                            adjustment_type: row.adjustment_type === "demerit" ? "demerit" : "merit"
+                        }))
+                        .filter(row => (row.team || row.team_id) && Number.isFinite(row.points) && row.points > 0);
+                }
+
                 function getCollegeTeamAlias(value) {
                     const rawValue = String(value || "").trim();
                     const normalizedValue = rawValue.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -5683,6 +5705,13 @@
                         const team = getRegisteredTeamStat(null, attendancePoints.team);
                         if (team) {
                             team.points += attendancePoints.points;
+                        }
+                    });
+
+                    buildTeamAdjustmentRows(teamAdjustmentError ? [] : (teamAdjustmentRows || [])).forEach(adjustment => {
+                        const team = getRegisteredTeamStat(adjustment.team_id, adjustment.team);
+                        if (team) {
+                            team.points += adjustment.adjustment_type === "demerit" ? -adjustment.points : adjustment.points;
                         }
                     });
 
@@ -8447,6 +8476,17 @@
                         },
                         () => scheduleCommitteeRealtimeReload({
                             matches: true,
+                            leaderboard: true
+                        }, 0, { force: true })
+                    )
+                    .on(
+                        "postgres_changes",
+                        {
+                            event: "*",
+                            schema: "public",
+                            table: TEAM_POINT_ADJUSTMENTS_TABLE
+                        },
+                        () => scheduleCommitteeRealtimeReload({
                             leaderboard: true
                         }, 0, { force: true })
                     )

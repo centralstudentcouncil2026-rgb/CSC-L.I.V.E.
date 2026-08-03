@@ -731,6 +731,7 @@
             const ATTENDANCE_POINTS_VIEW = "attendance_point_history";
             const MATCHES_TABLE = "scheduled_matches";
             const GAME_HISTORY_TABLE = "game_history";
+            const TEAM_POINT_ADJUSTMENTS_TABLE = "team_point_adjustments";
             const BASKETBALL_STATS_TABLE = "basketball_match_player_stats";
             const SPORTS_TABLE = "sports";
             const STUDENT_FEEDBACK_TABLE = "student_feedback";
@@ -790,6 +791,7 @@
             let lastLeaderboardRows = [];
             let lastLeaderboardHistoryRows = [];
             let lastLeaderboardAttendancePointRows = [];
+            let lastLeaderboardTeamAdjustmentRows = [];
             let lastLeaderboardSignature = "";
             let lastMatchesSignature = "";
             let lastShownAnnouncementKey = null;
@@ -1712,7 +1714,7 @@
                         console.error("Leaderboard teams error:", teamsError.message || teamsError);
 
                         if (lastLeaderboardRows.length > 0) {
-                            renderLeaderboardRows(lastLeaderboardRows, lastLeaderboardHistoryRows, lastLeaderboardAttendancePointRows);
+                            renderLeaderboardRows(lastLeaderboardRows, lastLeaderboardHistoryRows, lastLeaderboardAttendancePointRows, lastLeaderboardTeamAdjustmentRows);
                         } else {
                             studentLeaderboardBody.innerHTML = `
                                 <tr>
@@ -1728,7 +1730,8 @@
 
                     const [
                         { data: historyRows, error: historyError },
-                        { data: attendancePointRows, error: attendancePointError }
+                        { data: attendancePointRows, error: attendancePointError },
+                        { data: teamAdjustmentRows, error: teamAdjustmentError }
                     ] = await Promise.all([
                         supabase
                             .from(GAME_HISTORY_TABLE)
@@ -1736,6 +1739,10 @@
 
                         supabase
                             .from(ATTENDANCE_POINTS_VIEW)
+                            .select("*"),
+
+                        supabase
+                            .from(TEAM_POINT_ADJUSTMENTS_TABLE)
                             .select("*")
                     ]);
 
@@ -1747,18 +1754,24 @@
                         console.warn("Leaderboard attendance points warning:", attendancePointError.message || attendancePointError);
                     }
 
+                    if (teamAdjustmentError) {
+                        console.warn("Leaderboard team adjustment warning:", teamAdjustmentError.message || teamAdjustmentError);
+                    }
+
                     const leaderboardRows = buildLeaderboardRows(
                         teams || [],
                         historyError ? [] : (historyRows || []),
-                        attendancePointError ? [] : (attendancePointRows || [])
+                        attendancePointError ? [] : (attendancePointRows || []),
+                        teamAdjustmentError ? [] : (teamAdjustmentRows || [])
                     );
                     const leaderboardSignature = JSON.stringify(leaderboardRows);
                     lastLeaderboardRows = leaderboardRows;
                     lastLeaderboardHistoryRows = historyError ? [] : (historyRows || []);
                     lastLeaderboardAttendancePointRows = attendancePointError ? [] : (attendancePointRows || []);
+                    lastLeaderboardTeamAdjustmentRows = teamAdjustmentError ? [] : (teamAdjustmentRows || []);
 
                     if (leaderboardSignature !== lastLeaderboardSignature) {
-                        renderLeaderboardRows(leaderboardRows, lastLeaderboardHistoryRows, lastLeaderboardAttendancePointRows);
+                        renderLeaderboardRows(leaderboardRows, lastLeaderboardHistoryRows, lastLeaderboardAttendancePointRows, lastLeaderboardTeamAdjustmentRows);
                         lastLeaderboardSignature = leaderboardSignature;
                     }
 
@@ -1766,7 +1779,7 @@
                     console.error("Leaderboard load error:", error.message || error);
 
                     if (lastLeaderboardRows.length > 0) {
-                        renderLeaderboardRows(lastLeaderboardRows, lastLeaderboardHistoryRows, lastLeaderboardAttendancePointRows);
+                        renderLeaderboardRows(lastLeaderboardRows, lastLeaderboardHistoryRows, lastLeaderboardAttendancePointRows, lastLeaderboardTeamAdjustmentRows);
                     } else {
                         studentLeaderboardBody.innerHTML = `
                             <tr>
@@ -1785,7 +1798,7 @@
                 }
             }
 
-            function buildLeaderboardRows(teams, historyRows, attendanceRows = []) {
+            function buildLeaderboardRows(teams, historyRows, attendanceRows = [], teamAdjustmentRows = []) {
                 const teamStats = new Map();
                 const registeredTeamAliases = new Map();
 
@@ -1905,6 +1918,13 @@
                     }
                 });
 
+                buildTeamAdjustmentRows(teamAdjustmentRows).forEach(adjustment => {
+                    const team = getRegisteredTeamStat(adjustment.team_id, adjustment.team);
+                    if (team) {
+                        team.points += adjustment.adjustment_type === "demerit" ? -adjustment.points : adjustment.points;
+                    }
+                });
+
                 return Array.from(teamStats.values()).sort((a, b) => {
                     if (b.points !== a.points) return b.points - a.points;
                     if (b.wins !== a.wins) return b.wins - a.wins;
@@ -2007,7 +2027,7 @@
                 return 0;
             }
 
-            function renderLeaderboardRows(leaderboardRows, historyRows, attendancePointRows = []) {
+            function renderLeaderboardRows(leaderboardRows, historyRows, attendancePointRows = [], teamAdjustmentRows = []) {
                 if (!leaderboardRows || leaderboardRows.length === 0) {
                     studentLeaderboardBody.innerHTML = `
                         <tr>
@@ -2066,7 +2086,7 @@
                         <td class="py-5 px-6 text-center font-bold text-red-500">${Number(team.losses || 0)}</td>
                     `;
 
-                    row.onclick = () => openTeamDetails(team, historyRows || [], attendancePointRows || []);
+                    row.onclick = () => openTeamDetails(team, historyRows || [], attendancePointRows || [], teamAdjustmentRows || []);
                     studentLeaderboardBody.appendChild(row);
                 });
 
@@ -2123,6 +2143,20 @@
                     .filter(row => row.team && row.date && Number.isFinite(row.points));
             }
 
+            function buildTeamAdjustmentRows(adjustmentRows) {
+                return (adjustmentRows || [])
+                    .map(row => ({
+                        ...row,
+                        team: getCollegeTeamAlias(row.team || ""),
+                        team_id: row.team_id || null,
+                        points: Number(row.points || 0),
+                        adjustment_type: row.adjustment_type === "demerit" ? "demerit" : "merit",
+                        date: row.created_at || "",
+                        remarks: row.remarks || ""
+                    }))
+                    .filter(row => (row.team || row.team_id) && Number.isFinite(row.points) && row.points > 0);
+            }
+
             function getCollegeTeamAlias(value) {
                 const rawValue = String(value || "").trim();
                 const normalizedValue = rawValue.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -2142,7 +2176,7 @@
                 return aliases[normalizedValue] || rawValue;
             }
 
-            function openTeamDetails(team, historyRows, attendancePointRows = []) {
+            function openTeamDetails(team, historyRows, attendancePointRows = [], teamAdjustmentRows = []) {
                 const teamId = team.id;
                 const teamName = team.team;
                 const normalizeTeamName = (n) => String(n || "").trim().toLowerCase();
@@ -2159,6 +2193,9 @@
                 const attendanceHistory = buildAttendancePointRows(attendancePointRows)
                     .filter(row => normalizeTeamName(row.team) === selectedName && Number(row.points || 0) > 0)
                     .sort((a, b) => new Date(b.attendance_date || b.date || 0) - new Date(a.attendance_date || a.date || 0));
+                const teamAdjustmentHistory = buildTeamAdjustmentRows(teamAdjustmentRows)
+                    .filter(row => (row.team_id && Number(row.team_id) === Number(teamId)) || normalizeTeamName(row.team) === selectedName)
+                    .sort((a, b) => new Date(b.created_at || b.date || 0) - new Date(a.created_at || a.date || 0));
                 const getHistorySportName = (game) => game.sport_name || game.sport?.sport_name || game.game_category || game.category || "Uncategorized";
                 const getTeamAdjustments = (game) => {
                     const isTeamOne = (game.team_one_id && Number(game.team_one_id) === Number(teamId))
@@ -2187,8 +2224,10 @@
                     return { merit: 0, meritRemarks: "", demerit: 0, demeritRemarks: "" };
                 };
                 const meritTotal = sortedHistory.reduce((sum, game) => sum + getTeamAdjustments(game).merit, 0)
-                    + attendanceHistory.reduce((sum, row) => sum + (Number(row.points) || 0), 0);
-                const demeritTotal = sortedHistory.reduce((sum, game) => sum + getTeamAdjustments(game).demerit, 0);
+                    + attendanceHistory.reduce((sum, row) => sum + (Number(row.points) || 0), 0)
+                    + teamAdjustmentHistory.filter(row => row.adjustment_type === "merit").reduce((sum, row) => sum + (Number(row.points) || 0), 0);
+                const demeritTotal = sortedHistory.reduce((sum, game) => sum + getTeamAdjustments(game).demerit, 0)
+                    + teamAdjustmentHistory.filter(row => row.adjustment_type === "demerit").reduce((sum, row) => sum + (Number(row.points) || 0), 0);
                 const historyCategories = [...new Set([
                     ...sortedHistory.map(getHistorySportName).filter(Boolean),
                     ...(attendanceHistory.length ? ["Attendance"] : [])
@@ -2212,8 +2251,11 @@
                     const visibleAttendanceHistory = (category === "All" || category === "Attendance") && adjustmentFilter !== "Demerit"
                         ? attendanceHistory
                         : [];
+                    const visibleTeamAdjustmentHistory = category === "All"
+                        ? teamAdjustmentHistory.filter(row => adjustmentFilter === "All" || row.adjustment_type === adjustmentFilter.toLowerCase())
+                        : [];
 
-                    if (visibleHistory.length === 0 && visibleAttendanceHistory.length === 0) {
+                    if (visibleHistory.length === 0 && visibleAttendanceHistory.length === 0 && visibleTeamAdjustmentHistory.length === 0) {
                         const emptyMessage = adjustmentFilter === "All"
                             ? "No match history found for this game category."
                             : `No ${adjustmentFilter.toLowerCase()} history or remarks found for this game category.`;
@@ -2245,6 +2287,31 @@
                             </div>
                         </div>
                     `);
+
+                    const teamAdjustmentCards = visibleTeamAdjustmentHistory.map(row => {
+                        const isMerit = row.adjustment_type !== "demerit";
+                        return `
+                            <div class="p-5 rounded-2xl border ${isMerit ? "border-emerald-200 bg-emerald-50/70" : "border-red-200 bg-red-50/70"}">
+                                <div class="flex justify-between items-start gap-3 mb-4">
+                                    <div>
+                                        <p class="text-[10px] font-bold uppercase tracking-widest ${isMerit ? "text-emerald-700" : "text-red-700"} mb-1">Team ${isMerit ? "Merit" : "Demerit"}</p>
+                                        <p class="font-black text-slate-950 text-lg">${escapeHTML(row.remarks || "No remarks recorded.")}</p>
+                                    </div>
+                                    <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter bg-white/80 ${isMerit ? "text-emerald-800" : "text-red-800"}">${isMerit ? "Merit" : "Demerit"}</span>
+                                </div>
+                                <div class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                                    <div class="bg-white/80 p-3 rounded-xl border border-white">
+                                        <p class="text-[10px] font-bold text-slate-600 uppercase mb-1">Points</p>
+                                        <p class="font-black ${isMerit ? "text-emerald-900" : "text-red-900"}">${isMerit ? "+" : "-"}${Number(row.points || 0).toLocaleString()}</p>
+                                    </div>
+                                    <div class="bg-white/80 p-3 rounded-xl border border-white">
+                                        <p class="text-[10px] font-bold text-slate-600 uppercase mb-1">Recorded</p>
+                                        <p class="font-bold text-slate-950">${formatDateTime(row.created_at || row.date)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
 
                     const gameCards = visibleHistory.map(game => {
                         const isWin = (game.winner_team_id && Number(game.winner_team_id) === Number(teamId)) || normalizeTeamName(game.winner_team_name) === selectedName;
@@ -2329,7 +2396,7 @@
                         `;
                     });
 
-                    return [...attendanceCards, ...gameCards].join("");
+                    return [...attendanceCards, ...teamAdjustmentCards, ...gameCards].join("");
                 };
 
                 matchDetailsModal.classList.remove("hidden");
@@ -2843,6 +2910,9 @@
                 .on("postgres_changes", { event: "*", schema: "public", table: GAME_HISTORY_TABLE }, () => {
                     scheduleLiveLeaderboardReload(0, { force: true });
                     scheduleLiveMatchReload(0, { force: true });
+                })
+                .on("postgres_changes", { event: "*", schema: "public", table: TEAM_POINT_ADJUSTMENTS_TABLE }, () => {
+                    scheduleLiveLeaderboardReload(0, { force: true });
                 })
                 .on("postgres_changes", { event: "*", schema: "public", table: BASKETBALL_STATS_TABLE }, () => {
                     scheduleLiveMatchReload(0, { force: true });
