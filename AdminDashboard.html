@@ -1679,19 +1679,22 @@
                 </button>
 
                 <div class="responsive-table-card p-6 bg-white border-0 shadow-md rounded-lg overflow-x-auto">
-                    <table class="w-full min-w-[860px]">
+                    <table class="w-full min-w-[980px]">
                         <thead>
                             <tr class="border-b border-gray-200">
                                 <th class="text-left py-3 px-4 font-semibold text-gray-700">Team Name</th>
                                 <th class="text-left py-3 px-4 font-semibold text-gray-700">Members</th>
-                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Team Stats</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Team Points</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Victory</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Defeat</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Merit / Demerit</th>
                                 <th class="text-left py-3 px-4 font-semibold text-gray-700">Actions</th>
                             </tr>
                         </thead>
 
                         <tbody id="teamsTableBody">
                             <tr>
-                                <td colspan="4" class="py-4 px-4 text-gray-600">
+                                <td colspan="7" class="py-4 px-4 text-gray-600">
                                     Loading teams...
                                 </td>
                             </tr>
@@ -2374,6 +2377,80 @@
         </div>
     </div>
 
+    <!-- Team Merit / Demerit Modal -->
+    <div
+        id="teamAdjustmentModal"
+        class="dashboard-modal-overlay fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+
+        <div class="dashboard-modal-panel modal-panel bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <div class="flex items-start justify-between gap-4 mb-4">
+                <div>
+                    <h2 id="teamAdjustmentModalTitle" class="text-xl font-semibold text-gray-900">
+                        Add Merit
+                    </h2>
+                    <p id="teamAdjustmentTeamName" class="mt-1 text-sm font-semibold text-gray-500"></p>
+                </div>
+
+                <button
+                    type="button"
+                    id="closeTeamAdjustmentModal"
+                    class="text-gray-500 hover:text-gray-700 text-2xl leading-none">
+                    &times;
+                </button>
+            </div>
+
+            <form id="teamAdjustmentForm" class="space-y-4">
+                <input type="hidden" id="teamAdjustmentTeamId">
+                <input type="hidden" id="teamAdjustmentType">
+
+                <div>
+                    <label id="teamAdjustmentPointsLabel" class="block text-sm font-medium text-gray-700 mb-1" for="teamAdjustmentPointsInput">
+                        Merit Points
+                    </label>
+
+                    <input
+                        type="number"
+                        id="teamAdjustmentPointsInput"
+                        min="0.01"
+                        step="0.01"
+                        required
+                        placeholder="Enter points"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1" for="teamAdjustmentRemarksInput">
+                        Remarks
+                    </label>
+
+                    <textarea
+                        id="teamAdjustmentRemarksInput"
+                        required
+                        maxlength="500"
+                        rows="4"
+                        placeholder="Enter reason or remarks"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 resize-none"></textarea>
+                </div>
+
+                <div class="flex justify-end space-x-2 pt-4">
+                    <button
+                        type="button"
+                        id="cancelTeamAdjustmentModal"
+                        class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                        Cancel
+                    </button>
+
+                    <button
+                        type="submit"
+                        id="saveTeamAdjustment"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Add / Edit Sport Modal -->
         <div 
         id="sportModal"
@@ -3028,6 +3105,18 @@
             const teamId = document.getElementById("teamId");
             const teamNameInput = document.getElementById("teamNameInput");
             const teamsTableBody = document.getElementById("teamsTableBody");
+            const teamAdjustmentModal = document.getElementById("teamAdjustmentModal");
+            const closeTeamAdjustmentModal = document.getElementById("closeTeamAdjustmentModal");
+            const cancelTeamAdjustmentModal = document.getElementById("cancelTeamAdjustmentModal");
+            const teamAdjustmentForm = document.getElementById("teamAdjustmentForm");
+            const teamAdjustmentModalTitle = document.getElementById("teamAdjustmentModalTitle");
+            const teamAdjustmentTeamName = document.getElementById("teamAdjustmentTeamName");
+            const teamAdjustmentTeamId = document.getElementById("teamAdjustmentTeamId");
+            const teamAdjustmentType = document.getElementById("teamAdjustmentType");
+            const teamAdjustmentPointsLabel = document.getElementById("teamAdjustmentPointsLabel");
+            const teamAdjustmentPointsInput = document.getElementById("teamAdjustmentPointsInput");
+            const teamAdjustmentRemarksInput = document.getElementById("teamAdjustmentRemarksInput");
+            const saveTeamAdjustment = document.getElementById("saveTeamAdjustment");
 
             const openSportModal = document.getElementById("openSportModal");
             const closeSportModal = document.getElementById("closeSportModal");
@@ -6554,6 +6643,32 @@
                 teamId.value = "";
             }
 
+            function openTeamAdjustmentModal(team, adjustmentType) {
+                const type = adjustmentType === "demerit" ? "demerit" : "merit";
+                const typeLabel = type === "demerit" ? "Demerit" : "Merit";
+
+                teamAdjustmentModalTitle.textContent = `Add ${typeLabel}`;
+                teamAdjustmentTeamName.textContent = team[TEAM_NAME_COLUMN] || "Selected team";
+                teamAdjustmentTeamId.value = team.id;
+                teamAdjustmentType.value = type;
+                teamAdjustmentPointsLabel.textContent = `${typeLabel} Points`;
+                teamAdjustmentPointsInput.value = "";
+                teamAdjustmentRemarksInput.value = "";
+                saveTeamAdjustment.textContent = `Save ${typeLabel}`;
+
+                teamAdjustmentModal.classList.remove("hidden");
+                teamAdjustmentModal.classList.add("flex");
+                setTimeout(() => teamAdjustmentPointsInput.focus(), 50);
+            }
+
+            function closeTeamAdjustmentModalFunction() {
+                teamAdjustmentModal.classList.add("hidden");
+                teamAdjustmentModal.classList.remove("flex");
+                teamAdjustmentForm.reset();
+                teamAdjustmentTeamId.value = "";
+                teamAdjustmentType.value = "";
+            }
+
             function createEmptyTeamStats() {
                 return {
                     points: 0,
@@ -6671,43 +6786,62 @@
                 return statsById;
             }
 
-            async function addTeamPointAdjustment(team, adjustmentType) {
+            async function saveTeamPointAdjustment(event) {
+                event.preventDefault();
+
+                const team = teamsData.find(item => Number(item.id) === Number(teamAdjustmentTeamId.value));
+                const adjustmentType = teamAdjustmentType.value === "demerit" ? "demerit" : "merit";
                 const typeLabel = adjustmentType === "demerit" ? "Demerit" : "Merit";
-                const pointsValue = Number(prompt(`Enter ${typeLabel.toLowerCase()} points for ${team[TEAM_NAME_COLUMN]}:`));
+                const pointsValue = Number(teamAdjustmentPointsInput.value);
+                const remarks = String(teamAdjustmentRemarksInput.value || "").trim();
+
+                if (!team) {
+                    showDashboardToast("Selected team could not be found. Please reload and try again.", "warning");
+                    return;
+                }
 
                 if (!Number.isFinite(pointsValue) || pointsValue <= 0) {
                     showDashboardToast(`Enter valid ${typeLabel.toLowerCase()} points greater than 0.`, "warning");
+                    teamAdjustmentPointsInput.focus();
                     return;
                 }
-
-                const remarks = String(prompt(`Enter remarks/reason for this ${typeLabel.toLowerCase()}:`) || "").trim();
 
                 if (!remarks) {
                     showDashboardToast("Remarks are required before saving merit or demerit.", "warning");
+                    teamAdjustmentRemarksInput.focus();
                     return;
                 }
 
-                const adminUser = getStoredAdminUser();
-                const { error } = await supabase
-                    .from(TEAM_POINT_ADJUSTMENTS_TABLE)
-                    .insert([{
-                        team_id: team.id,
-                        team: team[TEAM_NAME_COLUMN],
-                        adjustment_type: adjustmentType,
-                        points: pointsValue,
-                        remarks,
-                        created_by: adminUser?.id || adminUser?.email || null,
-                        created_by_name: adminUser?.fullName || adminUser?.full_name || adminUser?.email || "Admin"
-                    }]);
+                saveTeamAdjustment.disabled = true;
+                saveTeamAdjustment.textContent = "Saving...";
 
-                if (error) {
-                    console.error("Team point adjustment error:", error.message || error);
-                    showDashboardToast(error.message || "Failed to save team point adjustment.", "warning");
-                    return;
+                try {
+                    const adminUser = getStoredAdminUser();
+                    const { error } = await supabase
+                        .from(TEAM_POINT_ADJUSTMENTS_TABLE)
+                        .insert([{
+                            team_id: team.id,
+                            team: team[TEAM_NAME_COLUMN],
+                            adjustment_type: adjustmentType,
+                            points: pointsValue,
+                            remarks,
+                            created_by: adminUser?.id || adminUser?.email || null,
+                            created_by_name: adminUser?.fullName || adminUser?.full_name || adminUser?.email || "Admin"
+                        }]);
+
+                    if (error) {
+                        console.error("Team point adjustment error:", error.message || error);
+                        showDashboardToast(error.message || "Failed to save team point adjustment.", "warning");
+                        return;
+                    }
+
+                    closeTeamAdjustmentModalFunction();
+                    showDashboardToast(`${typeLabel} saved for ${team[TEAM_NAME_COLUMN]}.`);
+                    await Promise.all([loadTeams(), loadAdminOverviewCounts()]);
+                } finally {
+                    saveTeamAdjustment.disabled = false;
+                    saveTeamAdjustment.textContent = `Save ${typeLabel}`;
                 }
-
-                showDashboardToast(`${typeLabel} saved for ${team[TEAM_NAME_COLUMN]}.`);
-                await Promise.all([loadTeams(), loadAdminOverviewCounts()]);
             }
 
             async function loadTeams() {
@@ -6737,7 +6871,7 @@
 
                     teamsTableBody.innerHTML = `
                         <tr>
-                            <td colspan="3" class="py-4 px-4 text-red-600">
+                            <td colspan="7" class="py-4 px-4 text-red-600">
                                 Error loading teams. Check your Supabase table and RLS policies.
                             </td>
                         </tr>
@@ -6786,7 +6920,7 @@
                 if (teamsData.length === 0) {
                     teamsTableBody.innerHTML = `
                         <tr>
-                            <td colspan="4" class="py-4 px-4 text-gray-600">
+                            <td colspan="7" class="py-4 px-4 text-gray-600">
                                 No teams added yet.
                             </td>
                         </tr>
@@ -6808,13 +6942,22 @@
                             ${team.membersCount}
                         </td>
 
+                        <td class="py-3 px-4 font-black text-blue-700">
+                            ${Number(stats.points || 0).toLocaleString()}
+                        </td>
+
+                        <td class="py-3 px-4 font-semibold text-emerald-700">
+                            ${Number(stats.wins || 0).toLocaleString()}
+                        </td>
+
+                        <td class="py-3 px-4 font-semibold text-slate-700">
+                            ${Number(stats.losses || 0).toLocaleString()}
+                        </td>
+
                         <td class="py-3 px-4">
-                            <div class="flex flex-wrap gap-2 text-xs font-bold">
-                                <span class="rounded-full bg-blue-50 px-3 py-1 text-blue-700">Pts ${Number(stats.points || 0).toLocaleString()}</span>
-                                <span class="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">Victory ${Number(stats.wins || 0).toLocaleString()}</span>
-                                <span class="rounded-full bg-slate-100 px-3 py-1 text-slate-700">Defeat ${Number(stats.losses || 0).toLocaleString()}</span>
-                                <button type="button" data-team-id="${team.id}" data-adjustment-type="merit" class="team-adjustment-btn rounded-full bg-green-50 px-3 py-1 text-green-700 hover:bg-green-100">Merit +${Number(stats.merit || 0).toLocaleString()}</button>
-                                <button type="button" data-team-id="${team.id}" data-adjustment-type="demerit" class="team-adjustment-btn rounded-full bg-red-50 px-3 py-1 text-red-700 hover:bg-red-100">Demerit -${Number(stats.demerit || 0).toLocaleString()}</button>
+                            <div class="flex flex-col gap-2 sm:flex-row">
+                                <button type="button" data-team-id="${team.id}" data-adjustment-type="merit" class="team-adjustment-btn whitespace-nowrap rounded-lg bg-green-50 px-3 py-2 text-xs font-bold text-green-700 hover:bg-green-100">Merit +${Number(stats.merit || 0).toLocaleString()}</button>
+                                <button type="button" data-team-id="${team.id}" data-adjustment-type="demerit" class="team-adjustment-btn whitespace-nowrap rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100">Demerit -${Number(stats.demerit || 0).toLocaleString()}</button>
                             </div>
                         </td>
 
@@ -6854,7 +6997,7 @@
                     button.addEventListener("click", function () {
                         const selectedTeam = teamsData.find(team => Number(team.id) === Number(this.dataset.teamId));
                         if (selectedTeam) {
-                            addTeamPointAdjustment(selectedTeam, this.dataset.adjustmentType === "demerit" ? "demerit" : "merit");
+                            openTeamAdjustmentModal(selectedTeam, this.dataset.adjustmentType === "demerit" ? "demerit" : "merit");
                         }
                     });
                 });
@@ -10104,6 +10247,9 @@
             openTeamModal.addEventListener("click", openAddTeamModal);
             closeTeamModal.addEventListener("click", closeTeamModalFunction);
             cancelTeamModal.addEventListener("click", closeTeamModalFunction);
+            teamAdjustmentForm.addEventListener("submit", saveTeamPointAdjustment);
+            closeTeamAdjustmentModal.addEventListener("click", closeTeamAdjustmentModalFunction);
+            cancelTeamAdjustmentModal.addEventListener("click", closeTeamAdjustmentModalFunction);
 
             sportForm.addEventListener("submit", saveSport);
             openSportModal.addEventListener("click", openAddSportModal);
@@ -10353,6 +10499,12 @@
             teamModal.addEventListener("click", function (event) {
                 if (event.target === teamModal) {
                     closeTeamModalFunction();
+                }
+            });
+
+            teamAdjustmentModal.addEventListener("click", function (event) {
+                if (event.target === teamAdjustmentModal) {
+                    closeTeamAdjustmentModalFunction();
                 }
             });
 
