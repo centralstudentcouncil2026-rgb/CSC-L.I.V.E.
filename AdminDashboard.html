@@ -5442,6 +5442,49 @@
                 return normalizeAttendanceLookupValue(value).replace(/\s+/g, " ").toLowerCase();
             }
 
+            function normalizeAttendanceDigitKey(value) {
+                return normalizeAttendanceLookupValue(value).replace(/\D+/g, "");
+            }
+
+            function getAttendanceExternalLookupCandidates(value) {
+                const rawValue = normalizeAttendanceLookupValue(value);
+                const compactValue = rawValue.replace(/\s+/g, "");
+                const uppercaseValue = compactValue.toUpperCase();
+                const digitKey = normalizeAttendanceDigitKey(rawValue);
+                const candidates = new Set();
+
+                [rawValue, compactValue, uppercaseValue].forEach(candidate => {
+                    if (candidate) candidates.add(candidate);
+                });
+
+                const aupMatch = uppercaseValue.match(/^(20\d{2})-?AUP-?(\d{1,6})$/);
+                if (aupMatch) {
+                    const year = aupMatch[1];
+                    const number = aupMatch[2].padStart(4, "0");
+                    candidates.add(`${year}-AUP${number}`);
+                    candidates.add(`${year}${number}`);
+                }
+
+                if (/^20\d{6}$/.test(digitKey)) {
+                    const year = digitKey.slice(0, 4);
+                    const number = digitKey.slice(4).padStart(4, "0");
+                    candidates.add(`${year}-AUP${number}`);
+                    candidates.add(`${year}${number}`);
+                }
+
+                if (/^20\d{4,}$/.test(digitKey)) {
+                    const year = digitKey.slice(0, 4);
+                    const number = digitKey.slice(4).padStart(4, "0");
+                    candidates.add(`${year}-AUP${number}`);
+                }
+
+                if (/^\d{5,}$/.test(digitKey)) {
+                    candidates.add(digitKey);
+                }
+
+                return Array.from(candidates).filter(Boolean).slice(0, 8);
+            }
+
             function normalizeAttendanceNameKey(value) {
                 return normalizeAttendanceLookupValue(value).toLowerCase().replace(/[^a-z0-9]+/g, "");
             }
@@ -5567,7 +5610,7 @@
             function parseAupRfidProfile(value) {
                 const [name, course, college] = getAupRfidTableCells(value);
 
-                if (!name) {
+                if (!name || normalizeAttendanceNameKey(name) === normalizeAttendanceNameKey("Scan RFID or Enter ID Number")) {
                     return null;
                 }
 
@@ -5613,39 +5656,40 @@
             }
 
             async function getCachedRfidProfile(scannedValue) {
-                const rfidValue = normalizeAttendanceLookupValue(scannedValue);
+                const rfidCandidates = getAttendanceExternalLookupCandidates(scannedValue);
+                const rfidValue = rfidCandidates[0] || normalizeAttendanceLookupValue(scannedValue);
 
                 if (!rfidValue) {
                     return null;
                 }
 
                 const selectColumns = "rfid_value, student_id, full_name, course, college, last_checked_at";
-                const { data: rfidMatch, error: rfidError } = await supabase
+                const { data: rfidMatches, error: rfidError } = await supabase
                     .from(RFID_PROFILES_TABLE)
                     .select(selectColumns)
-                    .eq("rfid_value", rfidValue)
-                    .maybeSingle();
+                    .in("rfid_value", rfidCandidates);
 
                 if (rfidError) {
                     console.warn("RFID profile cache lookup skipped:", rfidError.message || rfidError);
                     return null;
                 }
 
+                const rfidMatch = (rfidMatches || [])[0];
                 if (rfidMatch) {
                     return normalizeCachedAupProfile(rfidMatch);
                 }
 
-                const { data: studentIdMatch, error: studentIdError } = await supabase
+                const { data: studentIdMatches, error: studentIdError } = await supabase
                     .from(RFID_PROFILES_TABLE)
                     .select(selectColumns)
-                    .eq("student_id", rfidValue)
-                    .maybeSingle();
+                    .in("student_id", rfidCandidates);
 
                 if (studentIdError) {
                     console.warn("RFID profile cache lookup skipped:", studentIdError.message || studentIdError);
                     return null;
                 }
 
+                const studentIdMatch = (studentIdMatches || [])[0];
                 return normalizeCachedAupProfile(studentIdMatch);
             }
 
@@ -5743,37 +5787,41 @@
                     return null;
                 }
 
-                const localParticipant = findParticipantByLocalAttendanceValue(lookupValue);
+                const lookupCandidates = getAttendanceExternalLookupCandidates(lookupValue);
 
-                if (localParticipant) {
-                    return localParticipant;
+                for (const candidate of lookupCandidates) {
+                    const localParticipant = findParticipantByLocalAttendanceValue(candidate);
+
+                    if (localParticipant) {
+                        return localParticipant;
+                    }
                 }
 
                 const { data: studentIdMatch, error: studentIdError } = await supabase
                     .from(PARTICIPANTS_TABLE)
                     .select("id, name, full_name, student_id, id_number, team, home_college, status")
-                    .eq("student_id", lookupValue)
-                    .maybeSingle();
+                    .in("student_id", lookupCandidates)
+                    .limit(1);
 
                 if (studentIdError) {
                     throw studentIdError;
                 }
 
-                if (studentIdMatch) {
-                    return studentIdMatch;
+                if ((studentIdMatch || []).length) {
+                    return studentIdMatch[0];
                 }
 
                 const { data: idNumberMatch, error: idNumberError } = await supabase
                     .from(PARTICIPANTS_TABLE)
                     .select("id, name, full_name, student_id, id_number, team, home_college, status")
-                    .eq("id_number", lookupValue)
-                    .maybeSingle();
+                    .in("id_number", lookupCandidates)
+                    .limit(1);
 
                 if (idNumberError) {
                     throw idNumberError;
                 }
 
-                return idNumberMatch || await findParticipantByAttendanceName(lookupValue);
+                return (idNumberMatch || [])[0] || await findParticipantByAttendanceName(lookupValue);
             }
 
             async function fetchAupRfidLookupValue(scannedValue) {
@@ -5837,14 +5885,32 @@
                     };
                 }
 
-                const lookupText = await fetchAupRfidLookupValue(scannedValue);
-                const aupProfile = parseAupRfidProfile(lookupText);
-                const resolvedStudentId = getResolvedStudentIdFromLookup(scannedValue, lookupText);
+                let lookupText = "";
+                let lookupValueUsed = normalizeAttendanceLookupValue(scannedValue);
+                let aupProfile = null;
+                const lookupCandidates = getAttendanceExternalLookupCandidates(scannedValue);
+
+                for (const candidate of lookupCandidates) {
+                    try {
+                        lookupText = await fetchAupRfidLookupValue(candidate);
+                        aupProfile = parseAupRfidProfile(lookupText);
+                        lookupValueUsed = candidate;
+                    } catch (error) {
+                        console.warn("RFID lookup candidate skipped:", candidate, error.message || error);
+                        continue;
+                    }
+
+                    if (aupProfile) {
+                        break;
+                    }
+                }
+
+                const resolvedStudentId = getResolvedStudentIdFromLookup(lookupValueUsed, lookupText);
 
                 if (aupProfile) {
                     aupProfile.studentId = resolvedStudentId;
-                    aupProfile.rfidValue = normalizeAttendanceLookupValue(scannedValue);
-                    await saveCachedRfidProfile(scannedValue, aupProfile, resolvedStudentId);
+                    aupProfile.rfidValue = lookupValueUsed;
+                    await saveCachedRfidProfile(lookupValueUsed, aupProfile, resolvedStudentId);
                 }
 
                 const { idCandidates, nameCandidates } = getAttendanceLookupCandidates(lookupText);
@@ -6182,12 +6248,100 @@
                 return overviewAttendanceDateFilter?.value || getAttendanceSessionDate() || getLocalISODate();
             }
 
-            async function loadOverviewAttendanceStats() {
-                const attendanceDate = getOverviewAttendanceDate();
+            const repairedAttendanceDateKeys = new Set();
+
+            function isPlaceholderAttendanceName(value) {
+                return normalizeAttendanceNameKey(value) === normalizeAttendanceNameKey("Scan RFID or Enter ID Number");
+            }
+
+            async function updateAttendanceRowFromLookup(row, participant, aupProfile, scannedValue) {
+                const rawCollege = participant
+                    ? (participant.home_college || participant.team || "")
+                    : (aupProfile?.college || "");
+                const attendanceCollege = getCollegeTeamAlias(rawCollege);
+
+                if (!attendanceCollege) {
+                    return false;
+                }
+
+                const updatePayload = {
+                    participant_id: participant?.id || row.participant_id || null,
+                    participant_name: participant?.full_name || participant?.name || aupProfile?.name || row.participant_name,
+                    team: attendanceCollege,
+                    home_college: attendanceCollege,
+                    attendance_rfid_value: aupProfile?.rfidValue || scannedValue || row.student_id,
+                    attendance_course: aupProfile?.course || null,
+                    attendance_source: participant ? "registered_rfid_lookup" : "aup_rfid_lookup"
+                };
+
+                let result = await supabase
+                    .from(ATTENDANCE_TABLE)
+                    .update(updatePayload)
+                    .eq("id", row.id);
+
+                if (result.error && /attendance_rfid_value|attendance_course|attendance_source|column|schema cache/i.test(result.error.message || "")) {
+                    delete updatePayload.attendance_rfid_value;
+                    delete updatePayload.attendance_course;
+                    delete updatePayload.attendance_source;
+
+                    result = await supabase
+                        .from(ATTENDANCE_TABLE)
+                        .update(updatePayload)
+                        .eq("id", row.id);
+                }
+
+                if (result.error) {
+                    console.warn("Attendance row repair skipped:", result.error.message || result.error);
+                    return false;
+                }
+
+                return true;
+            }
+
+            async function repairPlaceholderAttendanceRowsForDate(attendanceDate) {
+                if (!attendanceDate || repairedAttendanceDateKeys.has(attendanceDate)) {
+                    return;
+                }
+
+                repairedAttendanceDateKeys.add(attendanceDate);
 
                 const { data, error } = await supabase
                     .from(ATTENDANCE_TABLE)
-                    .select("id, student_id, team, home_college, attendance_date, attendance_session_title, status")
+                    .select("id, participant_id, student_id, participant_name, team, home_college, status, attendance_date, attendance_session_title")
+                    .eq("attendance_date", attendanceDate)
+                    .limit(1000);
+
+                if (error) {
+                    console.warn("Attendance repair lookup skipped:", error.message || error);
+                    return;
+                }
+
+                const placeholderRows = (data || []).filter(row => {
+                    const status = String(row.status || "Present").trim().toLowerCase();
+                    const hasCollege = Boolean(String(row.team || row.home_college || "").trim());
+                    return status === "present" && !hasCollege && isPlaceholderAttendanceName(row.participant_name);
+                });
+
+                for (const row of placeholderRows) {
+                    try {
+                        const { participant, aupProfile } = await resolveAttendanceParticipant(row.student_id);
+
+                        if (participant || aupProfile) {
+                            await updateAttendanceRowFromLookup(row, participant, aupProfile, row.student_id);
+                        }
+                    } catch (error) {
+                        console.warn("Attendance external repair skipped:", row.student_id, error.message || error);
+                    }
+                }
+            }
+
+            async function loadOverviewAttendanceStats() {
+                const attendanceDate = getOverviewAttendanceDate();
+                await repairPlaceholderAttendanceRowsForDate(attendanceDate);
+
+                const { data, error } = await supabase
+                    .from(ATTENDANCE_TABLE)
+                    .select("id, student_id, participant_name, team, home_college, attendance_date, attendance_session_title, status")
                     .eq("attendance_date", attendanceDate)
                     .order("team", { ascending: true });
 
@@ -6201,7 +6355,9 @@
                 (data || [])
                     .filter(row => String(row.status || "Present").trim().toLowerCase() === "present")
                     .forEach(row => {
-                        const college = getCollegeTeamAlias(row.team || row.home_college || "Unassigned") || "Unassigned";
+                        const isPlaceholderName = normalizeAttendanceNameKey(row.participant_name) === normalizeAttendanceNameKey("Scan RFID or Enter ID Number");
+                        const hasCollege = Boolean(String(row.team || row.home_college || "").trim());
+                        const college = getCollegeTeamAlias(row.team || row.home_college || (isPlaceholderName && !hasCollege ? "Unassigned" : "")) || "Unassigned";
                         const studentKey = String(row.student_id || "").trim() || String(row.id || `${college}-${row.attendance_session_title || ""}`);
                         const sessionTitle = String(row.attendance_session_title || "").trim();
 
