@@ -1242,35 +1242,35 @@
 
                 <button 
                     onclick="switchTab('teams')" 
-                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100" 
+                    class="tab-btn hidden w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100"
                     data-tab="teams">
                     <span class="font-medium">Manage Teams</span>
                 </button>
 
                 <button 
                     onclick="switchTab('games')" 
-                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100" 
+                    class="tab-btn hidden w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100"
                     data-tab="games">
                     <span class="font-medium">Manage Games</span>
                 </button>
 
                 <button 
                     onclick="switchTab('participants')" 
-                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100" 
+                    class="tab-btn hidden w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100"
                     data-tab="participants">
                     <span class="font-medium">Participants</span>
                 </button>
 
                 <button 
                     onclick="switchTab('attendance')" 
-                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100" 
+                    class="tab-btn hidden w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100"
                     data-tab="attendance">
                     <span class="font-medium">Attendance Checker</span>
                 </button>
 
                 <button 
                     onclick="switchTab('announcements')" 
-                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100" 
+                    class="tab-btn hidden w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100"
                     data-tab="announcements">
                     <span class="font-medium">Announcements</span>
                 </button>
@@ -1284,7 +1284,7 @@
 
                 <button 
                     onclick="switchTab('accounts')" 
-                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100" 
+                    class="tab-btn hidden w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100"
                     data-tab="accounts">
                     <span class="font-medium">Account Approvals</span>
                 </button>
@@ -2820,6 +2820,8 @@
         const ADMIN_ACTIVE_TAB_KEY = 'adminDashboardActiveTab';
         const ADMIN_SESSION_STARTED_KEY = 'adminDashboardSessionStarted';
         const ADMIN_TAB_ACCESS_OWNER_EMAIL = 'centralstudentcouncil2026@gmail.com';
+        let adminTabAccessResolved = false;
+        let adminResolvedAccessUser = null;
         const ALWAYS_ALLOWED_ADMIN_TABS = new Set(['overview', 'feedback', 'communications', 'prints', 'about']);
         const RESTRICTED_ADMIN_TABS = [
             'teams',
@@ -2871,15 +2873,20 @@
             return normalizeAdminAccessValue(userData?.email) === ADMIN_TAB_ACCESS_OWNER_EMAIL;
         }
 
-        function getEffectiveAllowedAdminTabs(userData = getStoredAdminAccessUser()) {
+        function getEffectiveAllowedAdminTabs(userData = adminResolvedAccessUser) {
             const allowedTabs = new Set(ALWAYS_ALLOWED_ADMIN_TABS);
+            const accessUser = userData || null;
 
-            if (isAdminTabAccessOwner(userData)) {
+            if (!adminTabAccessResolved || !accessUser) {
+                return allowedTabs;
+            }
+
+            if (isAdminTabAccessOwner(accessUser)) {
                 RESTRICTED_ADMIN_TABS.forEach(tab => allowedTabs.add(tab));
                 return allowedTabs;
             }
 
-            parseAdminAllowedTabs(userData?.allowedTabs || userData?.allowed_tabs).forEach(tab => {
+            parseAdminAllowedTabs(accessUser?.allowedTabs || accessUser?.allowed_tabs).forEach(tab => {
                 if (RESTRICTED_ADMIN_TABS.includes(tab)) {
                     allowedTabs.add(tab);
                 }
@@ -2888,11 +2895,11 @@
             return allowedTabs;
         }
 
-        function canAccessAdminTab(tabName, userData = getStoredAdminAccessUser()) {
+        function canAccessAdminTab(tabName, userData = adminResolvedAccessUser) {
             return getEffectiveAllowedAdminTabs(userData).has(normalizeAdminAccessValue(tabName));
         }
 
-        function applyAdminTabAccess(userData = getStoredAdminAccessUser()) {
+        function applyAdminTabAccess(userData = adminResolvedAccessUser) {
             const allowedTabs = getEffectiveAllowedAdminTabs(userData);
 
             document.querySelectorAll('.tab-btn[data-tab]').forEach(button => {
@@ -2922,14 +2929,15 @@
             });
 
             document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.className = 'tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-100';
+                const buttonTabName = normalizeAdminAccessValue(btn.dataset.tab);
+                const canAccess = canAccessAdminTab(buttonTabName);
+                const isActive = buttonTabName === selectedTabName;
+                btn.className = `tab-btn ${canAccess ? '' : 'hidden '}w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${isActive ? 'bg-blue-600 text-white shadow-md' : 'text-gray-700 hover:bg-gray-100'}`;
+                btn.disabled = !canAccess;
+                btn.setAttribute('aria-hidden', canAccess ? 'false' : 'true');
             });
 
             document.getElementById(selectedTabName).classList.remove('hidden');
-
-            const activeBtn = document.querySelector(`[data-tab="${selectedTabName}"]`);
-
-            activeBtn.className = 'tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 bg-blue-600 text-white shadow-md';
 
             const titles = {
                 overview: 'Dashboard Overview',
@@ -3961,8 +3969,11 @@
                 }
 
                 currentAdminUser = resolvedUser;
+                adminResolvedAccessUser = currentAdminUser;
+                adminTabAccessResolved = true;
                 renderAdminSidebarIdentity(currentAdminUser);
                 applyAdminTabAccess(currentAdminUser);
+                restoreAdminActiveTab();
                 return currentAdminUser;
             }
 
@@ -10925,6 +10936,24 @@
                 }, delay);
             }
 
+            function isCurrentAdminProfilePayload(payload) {
+                const changedProfile = payload?.new || payload?.old || {};
+                const changedId = String(changedProfile.id || "").trim();
+                const changedEmail = normalizeComparableValue(changedProfile.email);
+                return Boolean(
+                    (changedId && changedId === String(currentAdminUser?.id || "").trim())
+                    || (changedEmail && changedEmail === normalizeComparableValue(currentAdminUser?.email))
+                );
+            }
+
+            function handleAdminProfileRealtime(payload) {
+                scheduleAdminRealtimeReload({ accounts: true, contacts: true }, 0, { force: true });
+
+                if (isCurrentAdminProfilePayload(payload)) {
+                    loadCurrentAdminUser();
+                }
+            }
+
             setInterval(async () => {
                 if (adminMessagingSyncInProgress) return;
 
@@ -11029,7 +11058,7 @@
                         schema: "public",
                         table: ACCOUNT_PROFILES_TABLE
                     },
-                    () => scheduleAdminRealtimeReload({ accounts: true, contacts: true }, 0, { force: true })
+                    handleAdminProfileRealtime
                 )
                 .on(
                     "postgres_changes",
