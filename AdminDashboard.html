@@ -3726,6 +3726,47 @@
                 return aliases[normalizedValue] || rawValue;
             }
 
+            function isInvalidAttendanceCollegeLabel(value) {
+                const normalizedValue = String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+                const invalidLabels = new Set([
+                    "",
+                    "scan rfid or enter id number",
+                    "rfid who",
+                    "id given id barcode rfid from aolis",
+                    "id given barcode rfid from aolis",
+                    "name",
+                    "course",
+                    "get mother college",
+                    "unassigned"
+                ]);
+
+                return invalidLabels.has(normalizedValue);
+            }
+
+            function getAttendanceStatsCollege(row) {
+                const rawTeam = String(row?.team || "").trim();
+                const rawHomeCollege = String(row?.home_college || "").trim();
+                const candidate = !isInvalidAttendanceCollegeLabel(rawTeam)
+                    ? rawTeam
+                    : !isInvalidAttendanceCollegeLabel(rawHomeCollege)
+                        ? rawHomeCollege
+                        : "";
+                const aliasedCollege = getCollegeTeamAlias(candidate);
+                const normalizedCollege = normalizeText(aliasedCollege);
+                const registeredTeamNames = new Set((teamsData || []).map(team => normalizeText(team?.[TEAM_NAME_COLUMN] || team?.team || team?.name)));
+                const officialTeams = new Set(["CAH", "COB", "COD", "COH", "COM", "CON", "COT", "CSET", "CTE", "Academy", "Faculty"].map(normalizeText));
+
+                if (!aliasedCollege || isInvalidAttendanceCollegeLabel(aliasedCollege)) {
+                    return "Unassigned";
+                }
+
+                if (registeredTeamNames.has(normalizedCollege) || officialTeams.has(normalizedCollege)) {
+                    return aliasedCollege;
+                }
+
+                return "Unassigned";
+            }
+
             function resolveAttendanceCategory(participant) {
                 return String(participant?.status || "").trim().toLowerCase() === "approved"
                     ? "registered_player"
@@ -6318,8 +6359,9 @@
 
                 const placeholderRows = (data || []).filter(row => {
                     const status = String(row.status || "Present").trim().toLowerCase();
-                    const hasCollege = Boolean(String(row.team || row.home_college || "").trim());
-                    return status === "present" && !hasCollege && isPlaceholderAttendanceName(row.participant_name);
+                    return status === "present"
+                        && getAttendanceStatsCollege(row) === "Unassigned"
+                        && isPlaceholderAttendanceName(row.participant_name);
                 });
 
                 for (const row of placeholderRows) {
@@ -6355,9 +6397,7 @@
                 (data || [])
                     .filter(row => String(row.status || "Present").trim().toLowerCase() === "present")
                     .forEach(row => {
-                        const isPlaceholderName = normalizeAttendanceNameKey(row.participant_name) === normalizeAttendanceNameKey("Scan RFID or Enter ID Number");
-                        const hasCollege = Boolean(String(row.team || row.home_college || "").trim());
-                        const college = getCollegeTeamAlias(row.team || row.home_college || (isPlaceholderName && !hasCollege ? "Unassigned" : "")) || "Unassigned";
+                        const college = getAttendanceStatsCollege(row);
                         const studentKey = String(row.student_id || "").trim() || String(row.id || `${college}-${row.attendance_session_title || ""}`);
                         const sessionTitle = String(row.attendance_session_title || "").trim();
 
