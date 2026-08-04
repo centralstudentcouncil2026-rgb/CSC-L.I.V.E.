@@ -2037,6 +2037,23 @@
 
             <!-- Student Feedback Tab -->
             <div id="feedback" class="tab-content hidden mt-5 ml-5 mr-5">
+                <div class="mb-6 rounded-xl border border-blue-100 bg-blue-50 p-4 shadow-sm">
+                    <form id="evaluationLinkForm" class="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+                        <div>
+                            <label for="evaluationFormUrl" class="mb-1 block text-xs font-black uppercase tracking-wide text-blue-900">Evaluation Form Link</label>
+                            <input
+                                id="evaluationFormUrl"
+                                type="url"
+                                placeholder="https://example.com/evaluation-form"
+                                class="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                            <p id="evaluationLinkStatus" class="mt-2 text-xs font-bold text-blue-800">Loading evaluation form link...</p>
+                        </div>
+                        <button type="submit" id="saveEvaluationLinkButton" class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-bold text-white hover:bg-blue-800">
+                            Save Link
+                        </button>
+                    </form>
+                </div>
+
                 <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-6">
             
                 <div class="responsive-table-card p-4 sm:p-6 bg-white border-0 shadow-md rounded-lg overflow-x-auto">
@@ -3081,6 +3098,8 @@
             const TEAM_POINT_ADJUSTMENTS_TABLE = "team_point_adjustments";
             const BASKETBALL_STATS_TABLE = "basketball_match_player_stats";
             const STUDENT_FEEDBACK_TABLE = "student_feedback";
+            const APP_SETTINGS_TABLE = "app_settings";
+            const EVALUATION_FORM_SETTING_KEY = "evaluation_form_url";
             const ANNOUNCEMENTS_TABLE = "announcements";
             const ACCOUNT_PROFILES_TABLE = "user_profiles";
             const CONVERSATIONS_TABLE = "conversations";
@@ -3197,6 +3216,10 @@
             const attendanceResult = document.getElementById("attendanceResult");
             const attendanceEmptyState = document.getElementById("attendanceEmptyState");
             const studentFeedbackTableBody = document.getElementById("studentFeedbackTableBody");
+            const evaluationLinkForm = document.getElementById("evaluationLinkForm");
+            const evaluationFormUrl = document.getElementById("evaluationFormUrl");
+            const evaluationLinkStatus = document.getElementById("evaluationLinkStatus");
+            const saveEvaluationLinkButton = document.getElementById("saveEvaluationLinkButton");
             const studentFeedbackMessageModal = document.getElementById("studentFeedbackMessageModal");
             const studentFeedbackMessageModalText = document.getElementById("studentFeedbackMessageModalText");
             const closeStudentFeedbackMessageModal = document.getElementById("closeStudentFeedbackMessageModal");
@@ -9651,6 +9674,84 @@
                 }
             }
 
+            function normalizeEvaluationFormUrl(value) {
+                const url = String(value || "").trim();
+                if (!url) return "";
+                if (!/^https?:\/\//i.test(url)) {
+                    return `https://${url}`;
+                }
+                return url;
+            }
+
+            function setEvaluationLinkStatus(message, tone = "info") {
+                if (!evaluationLinkStatus) return;
+                evaluationLinkStatus.textContent = message;
+                evaluationLinkStatus.className = `mt-2 text-xs font-bold ${tone === "error" ? "text-red-700" : tone === "success" ? "text-emerald-700" : "text-blue-800"}`;
+            }
+
+            async function loadEvaluationFormLink() {
+                if (!evaluationFormUrl) return;
+
+                setEvaluationLinkStatus("Loading evaluation form link...");
+
+                const { data, error } = await supabase
+                    .from(APP_SETTINGS_TABLE)
+                    .select("setting_value")
+                    .eq("setting_key", EVALUATION_FORM_SETTING_KEY)
+                    .maybeSingle();
+
+                if (error) {
+                    console.warn("Evaluation form link load warning:", error.message || error);
+                    setEvaluationLinkStatus("Evaluation link settings are not ready. Run the evaluation form setting SQL first.", "error");
+                    return;
+                }
+
+                evaluationFormUrl.value = data?.setting_value || "";
+                setEvaluationLinkStatus(data?.setting_value ? "Evaluation form link is active." : "No evaluation form link saved yet.");
+            }
+
+            async function saveEvaluationFormLink(event) {
+                event.preventDefault();
+                if (!evaluationFormUrl || !saveEvaluationLinkButton) return;
+
+                const normalizedUrl = normalizeEvaluationFormUrl(evaluationFormUrl.value);
+                if (normalizedUrl) {
+                    try {
+                        new URL(normalizedUrl);
+                    } catch (error) {
+                        setEvaluationLinkStatus("Please enter a valid evaluation form URL.", "error");
+                        evaluationFormUrl.focus();
+                        return;
+                    }
+                }
+
+                saveEvaluationLinkButton.disabled = true;
+                saveEvaluationLinkButton.textContent = "Saving...";
+                setEvaluationLinkStatus("Saving evaluation form link...");
+
+                const { error } = await supabase
+                    .from(APP_SETTINGS_TABLE)
+                    .upsert({
+                        setting_key: EVALUATION_FORM_SETTING_KEY,
+                        setting_value: normalizedUrl,
+                        updated_by: currentAdminUser?.id || null,
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: "setting_key" });
+
+                saveEvaluationLinkButton.disabled = false;
+                saveEvaluationLinkButton.textContent = "Save Link";
+
+                if (error) {
+                    console.error("Evaluation form link save error:", error.message || error);
+                    setEvaluationLinkStatus("Failed to save. Run the evaluation form setting SQL and try again.", "error");
+                    return;
+                }
+
+                evaluationFormUrl.value = normalizedUrl;
+                setEvaluationLinkStatus(normalizedUrl ? "Evaluation form link saved." : "Evaluation form link cleared.", "success");
+                showDashboardToast("Evaluation form link saved.");
+            }
+
             function renderStudentFeedback() {
                 if (!studentFeedbackTableBody) return;
 
@@ -10685,6 +10786,7 @@
             printCollegePointsButton.addEventListener("click", printCollegePoints);
             printAttendanceByDateButton.addEventListener("click", printAttendanceByDate);
             printCommitteeMatchesButton.addEventListener("click", printCommitteeMatches);
+            evaluationLinkForm?.addEventListener("submit", saveEvaluationFormLink);
             adminContactGroupSelect.addEventListener("change", function () {
                 setAdminContactsVisible(true);
                 const nextGroup = this.value || "";
@@ -10923,6 +11025,7 @@
                 loadSports(),
                 loadParticipants(),
                 loadStudentFeedback(),
+                loadEvaluationFormLink(),
                 loadAnnouncements(),
                 loadAccountApprovals(),
                 loadAdminContactProfiles(),
@@ -11084,6 +11187,16 @@
                         table: STUDENT_FEEDBACK_TABLE
                     },
                     () => scheduleAdminRealtimeReload({ feedback: true }, 0, { force: true })
+                )
+                .on(
+                    "postgres_changes",
+                    {
+                        event: "*",
+                        schema: "public",
+                        table: APP_SETTINGS_TABLE,
+                        filter: `setting_key=eq.${EVALUATION_FORM_SETTING_KEY}`
+                    },
+                    loadEvaluationFormLink
                 )
                 .on(
                     "postgres_changes",

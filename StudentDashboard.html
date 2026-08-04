@@ -432,6 +432,17 @@
                 </div>
             </div>
 
+            <div class="rounded-2xl border border-blue-100 bg-blue-50 p-5 text-center shadow-sm">
+                <button
+                    type="button"
+                    id="studentEvaluationButton"
+                    disabled
+                    class="rounded-xl bg-blue-700 px-5 py-3 text-sm font-black text-white shadow-md shadow-blue-900/20 transition-colors hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 disabled:shadow-none">
+                    Click this to evaluate this event
+                </button>
+                <p id="studentEvaluationStatus" class="mt-2 text-xs font-bold text-blue-800">Loading evaluation form link...</p>
+            </div>
+
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6">
                 <div class="mb-4">
                     <h3 class="text-xl font-black text-slate-950">Send a Recommendation or Concern</h3>
@@ -735,6 +746,8 @@
             const BASKETBALL_STATS_TABLE = "basketball_match_player_stats";
             const SPORTS_TABLE = "sports";
             const STUDENT_FEEDBACK_TABLE = "student_feedback";
+            const APP_SETTINGS_TABLE = "app_settings";
+            const EVALUATION_FORM_SETTING_KEY = "evaluation_form_url";
             const ANNOUNCEMENTS_TABLE = "announcements";
 
             const studentLeaderboardBody = document.getElementById("studentLeaderboardBody");
@@ -752,6 +765,8 @@
             const feedbackMessage = document.getElementById("feedbackMessage");
             const submitStudentFeedback = document.getElementById("submitStudentFeedback");
             const studentFeedbackStatus = document.getElementById("studentFeedbackStatus");
+            const studentEvaluationButton = document.getElementById("studentEvaluationButton");
+            const studentEvaluationStatus = document.getElementById("studentEvaluationStatus");
             const studentAnnouncementModal = document.getElementById("studentAnnouncementModal");
             const closeStudentAnnouncementModal = document.getElementById("closeStudentAnnouncementModal");
             const studentAnnouncementDate = document.getElementById("studentAnnouncementDate");
@@ -781,6 +796,7 @@
             let activeSportCategoryFilter = localStorage.getItem(STUDENT_SPORT_CATEGORY_FILTER_KEY) || "All";
             let studentMatchesData = [];
             let basketballStatsByMatch = new Map();
+            let evaluationFormUrl = "";
             let registeredSports = [];
             let matchReloadTimer = null;
             let leaderboardReloadTimer = null;
@@ -905,6 +921,54 @@
                 feedbackType.value = "Recommendation";
                 studentFeedbackStatus.textContent = "Thank you. Your feedback was sent to the admin.";
                 studentFeedbackStatus.className = "text-sm font-bold text-emerald-700";
+            }
+
+            function setStudentEvaluationStatus(message, tone = "info") {
+                if (!studentEvaluationStatus) return;
+                studentEvaluationStatus.textContent = message;
+                studentEvaluationStatus.className = `mt-2 text-xs font-bold ${tone === "error" ? "text-red-700" : tone === "success" ? "text-emerald-700" : "text-blue-800"}`;
+            }
+
+            function applyStudentEvaluationLink(urlValue) {
+                evaluationFormUrl = String(urlValue || "").trim();
+
+                if (!studentEvaluationButton) return;
+
+                studentEvaluationButton.disabled = !evaluationFormUrl;
+                setStudentEvaluationStatus(
+                    evaluationFormUrl ? "Evaluation form is ready." : "Evaluation form is not available yet.",
+                    evaluationFormUrl ? "success" : "info"
+                );
+            }
+
+            async function loadStudentEvaluationFormLink() {
+                if (!studentEvaluationButton) return;
+
+                setStudentEvaluationStatus("Loading evaluation form link...");
+
+                const { data, error } = await supabase
+                    .from(APP_SETTINGS_TABLE)
+                    .select("setting_value")
+                    .eq("setting_key", EVALUATION_FORM_SETTING_KEY)
+                    .maybeSingle();
+
+                if (error) {
+                    console.warn("Student evaluation link load warning:", error.message || error);
+                    applyStudentEvaluationLink("");
+                    setStudentEvaluationStatus("Evaluation form link is not ready yet.", "error");
+                    return;
+                }
+
+                applyStudentEvaluationLink(data?.setting_value || "");
+            }
+
+            function openStudentEvaluationForm() {
+                if (!evaluationFormUrl) {
+                    setStudentEvaluationStatus("Evaluation form is not available yet.", "error");
+                    return;
+                }
+
+                window.location.href = evaluationFormUrl;
             }
 
             function getAnnouncementSeenKey(announcement) {
@@ -3003,12 +3067,14 @@
             closeStudentNotificationsModal.addEventListener("click", closeNotificationsModal);
             studentNotificationsModal.addEventListener("click", (e) => { if (e.target === studentNotificationsModal) closeNotificationsModal(); });
             studentFeedbackForm.addEventListener("submit", submitFeedback);
+            studentEvaluationButton?.addEventListener("click", openStudentEvaluationForm);
             closeStudentAnnouncementModal.addEventListener("click", closeAnnouncementModal);
             studentAnnouncementModal.addEventListener("click", (e) => { if (e.target === studentAnnouncementModal) closeAnnouncementModal(); });
 
             await Promise.all([
                 loadStats(),
                 loadLeaderboard({ showLoading: true }),
+                loadStudentEvaluationFormLink(),
                 loadSportCategoryFilterOptions(),
                 loadMatches({ showLoading: true }),
                 refreshStudentAnnouncements({ showPopup: true })
@@ -3063,6 +3129,12 @@
                     scheduleLiveLeaderboardReload(0, { force: true });
                     scheduleLiveMatchReload(0, { force: true });
                 })
+                .on("postgres_changes", {
+                    event: "*",
+                    schema: "public",
+                    table: APP_SETTINGS_TABLE,
+                    filter: `setting_key=eq.${EVALUATION_FORM_SETTING_KEY}`
+                }, loadStudentEvaluationFormLink)
                 .on("postgres_changes", { event: "*", schema: "public", table: ANNOUNCEMENTS_TABLE }, notifyStudentAnnouncementChange)
                 .subscribe((status) => {
                     if (status === "SUBSCRIBED") {
