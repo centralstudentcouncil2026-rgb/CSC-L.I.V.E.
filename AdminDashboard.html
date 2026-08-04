@@ -5757,10 +5757,40 @@
                 return cells;
             }
 
+            function isInvalidAupRfidLookupResponse(value) {
+                const text = normalizeAttendanceLookupValue(value)
+                    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+                    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+                    .replace(/<[^>]+>/g, " ")
+                    .replace(/&nbsp;/gi, " ")
+                    .replace(/\s+/g, " ")
+                    .trim()
+                    .toLowerCase();
+
+                return !text
+                    || /\b0\s+rows?\b/i.test(text)
+                    || text === "name course get_mother_college"
+                    || text.includes("trying rao 0 rows");
+            }
+
+            function isInvalidAupProfileField(value) {
+                const key = normalizeAttendanceNameKey(value);
+                return !key
+                    || key === "name"
+                    || key === "course"
+                    || key === "getmothercollege"
+                    || key === "mothercollege"
+                    || key === normalizeAttendanceNameKey("Scan RFID or Enter ID Number");
+            }
+
             function parseAupRfidProfile(value) {
+                if (isInvalidAupRfidLookupResponse(value)) {
+                    return null;
+                }
+
                 const [name, course, college] = getAupRfidTableCells(value);
 
-                if (!name || normalizeAttendanceNameKey(name) === normalizeAttendanceNameKey("Scan RFID or Enter ID Number")) {
+                if (isInvalidAupProfileField(name) || isInvalidAupProfileField(course)) {
                     return null;
                 }
 
@@ -5792,7 +5822,7 @@
             }
 
             function normalizeCachedAupProfile(row) {
-                if (!row?.full_name) {
+                if (!row?.full_name || isInvalidAupProfileField(row.full_name) || isInvalidAupProfileField(row.course)) {
                     return null;
                 }
 
@@ -10604,8 +10634,15 @@
                     const attendanceCollege = getAttendanceCollegeFromProfile(participant, aupProfile);
                     const attendanceCourse = participant ? "" : (aupProfile?.course || "");
                     const attendanceCategoryValue = resolveAttendanceCategory(participant);
+                    const hasValidExternalProfile = Boolean(
+                        aupProfile
+                        && !isInvalidAupProfileField(aupProfile.name)
+                        && !isInvalidAupProfileField(aupProfile.course)
+                        && attendanceCollege
+                        && !isInvalidAttendanceCollegeLabel(attendanceCollege)
+                    );
 
-                    if (!participant && !aupProfile) {
+                    if (!participant && !hasValidExternalProfile) {
                         showAttendanceResult("error", `
                             <p class="font-semibold">ID number is invalid.</p>
                             <p>No registered participant or valid AUP RFID profile matched <strong>${escapeHTML(scannedValue)}</strong>. Attendance was not saved.</p>
