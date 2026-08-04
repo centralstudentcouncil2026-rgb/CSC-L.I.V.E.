@@ -3391,6 +3391,10 @@
                 return Boolean(settings?.opened_at && getLocalDateFromValue(settings.opened_at) === getLocalISODate());
             }
 
+            function isBackdatedAttendanceSession(settings = activeAttendanceSettings) {
+                return Boolean(settings?.attendance_date && settings.attendance_date < getLocalISODate());
+            }
+
             function getTimeInputValueFromDate(dateValue) {
                 const parsed = dateValue instanceof Date ? dateValue : new Date(dateValue);
 
@@ -3457,6 +3461,10 @@
                     return false;
                 }
 
+                if (isBackdatedAttendanceSession(settings)) {
+                    return true;
+                }
+
                 const closesAt = getAttendanceSessionClosesAt(settings);
                 const startsAt = getAttendanceSessionStartsAt(settings);
                 const now = Date.now();
@@ -3469,6 +3477,10 @@
 
                 if (!closesAt || Number.isNaN(closesAt.getTime())) {
                     return "No closing time set";
+                }
+
+                if (isBackdatedAttendanceSession(settings) && isAttendanceSessionFromCurrentDay(settings)) {
+                    return `Reopened for backdated recording. Saves to ${settings.attendance_date}.`;
                 }
 
                 if (startsAt && Date.now() < startsAt.getTime()) {
@@ -5267,13 +5279,14 @@
 
                 const open = isAttendanceSessionOpen(settings);
                 const startsAt = getAttendanceSessionStartsAt(settings);
-                const isScheduled = startsAt && Date.now() < startsAt.getTime();
+                const isBackdated = isBackdatedAttendanceSession(settings);
+                const isScheduled = !isBackdated && startsAt && Date.now() < startsAt.getTime();
                 attendanceSettingsStatus.className = open
                     ? "rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-bold text-green-900"
                     : isScheduled
                         ? "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-900"
                     : "rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-900";
-                attendanceSettingsStatus.textContent = `${open ? "Open" : isScheduled ? "Scheduled" : "Closed"} for ${settings.attendance_date}. ${settings.session_title || "Morning Session"}. ${getAttendanceSessionRemainingText(settings)}`;
+                attendanceSettingsStatus.textContent = `${isBackdated && open ? "Reopened" : open ? "Open" : isScheduled ? "Scheduled" : "Closed"} for ${settings.attendance_date}. ${settings.session_title || "Morning Session"}. ${getAttendanceSessionRemainingText(settings)}`;
             }
 
             async function loadAttendanceSettings() {
