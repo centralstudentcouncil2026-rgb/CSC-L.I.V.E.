@@ -10294,8 +10294,8 @@
 
                     if (!participant && !aupProfile) {
                         showAttendanceResult("error", `
-                            <p class="font-semibold">Student not found.</p>
-                            <p>No registered participant or AUP RFID profile matched <strong>${escapeHTML(scannedValue)}</strong>.</p>
+                            <p class="font-semibold">ID number is invalid.</p>
+                            <p>No registered participant or valid AUP RFID profile matched <strong>${escapeHTML(scannedValue)}</strong>. Attendance was not saved.</p>
                         `);
                         attendanceForm.reset();
                         setTimeout(() => attendanceStudentId.focus(), 50);
