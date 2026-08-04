@@ -432,15 +432,13 @@
                 </div>
             </div>
 
-            <div class="rounded-2xl border border-blue-100 bg-blue-50 p-5 text-center shadow-sm">
+            <div id="studentEvaluationBlock" class="hidden rounded-2xl border border-blue-100 bg-blue-50 p-6 text-center shadow-sm">
                 <button
                     type="button"
                     id="studentEvaluationButton"
-                    disabled
-                    class="rounded-xl bg-blue-700 px-5 py-3 text-sm font-black text-white shadow-md shadow-blue-900/20 transition-colors hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 disabled:shadow-none">
+                    class="rounded-2xl bg-blue-700 px-8 py-4 text-base font-black text-white shadow-lg shadow-blue-900/25 transition-colors hover:bg-blue-800 sm:px-12 sm:py-5 sm:text-lg">
                     Click this to evaluate this event
                 </button>
-                <p id="studentEvaluationStatus" class="mt-2 text-xs font-bold text-blue-800">Loading evaluation form link...</p>
             </div>
 
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6">
@@ -765,8 +763,8 @@
             const feedbackMessage = document.getElementById("feedbackMessage");
             const submitStudentFeedback = document.getElementById("submitStudentFeedback");
             const studentFeedbackStatus = document.getElementById("studentFeedbackStatus");
+            const studentEvaluationBlock = document.getElementById("studentEvaluationBlock");
             const studentEvaluationButton = document.getElementById("studentEvaluationButton");
-            const studentEvaluationStatus = document.getElementById("studentEvaluationStatus");
             const studentAnnouncementModal = document.getElementById("studentAnnouncementModal");
             const closeStudentAnnouncementModal = document.getElementById("closeStudentAnnouncementModal");
             const studentAnnouncementDate = document.getElementById("studentAnnouncementDate");
@@ -923,28 +921,16 @@
                 studentFeedbackStatus.className = "text-sm font-bold text-emerald-700";
             }
 
-            function setStudentEvaluationStatus(message, tone = "info") {
-                if (!studentEvaluationStatus) return;
-                studentEvaluationStatus.textContent = message;
-                studentEvaluationStatus.className = `mt-2 text-xs font-bold ${tone === "error" ? "text-red-700" : tone === "success" ? "text-emerald-700" : "text-blue-800"}`;
-            }
-
             function applyStudentEvaluationLink(urlValue) {
                 evaluationFormUrl = String(urlValue || "").trim();
 
-                if (!studentEvaluationButton) return;
+                if (!studentEvaluationButton || !studentEvaluationBlock) return;
 
-                studentEvaluationButton.disabled = !evaluationFormUrl;
-                setStudentEvaluationStatus(
-                    evaluationFormUrl ? "Evaluation form is ready." : "Evaluation form is not available yet.",
-                    evaluationFormUrl ? "success" : "info"
-                );
+                studentEvaluationBlock.classList.toggle("hidden", !evaluationFormUrl);
             }
 
             async function loadStudentEvaluationFormLink() {
                 if (!studentEvaluationButton) return;
-
-                setStudentEvaluationStatus("Loading evaluation form link...");
 
                 const { data, error } = await supabase
                     .from(APP_SETTINGS_TABLE)
@@ -955,7 +941,6 @@
                 if (error) {
                     console.warn("Student evaluation link load warning:", error.message || error);
                     applyStudentEvaluationLink("");
-                    setStudentEvaluationStatus("Evaluation form link is not ready yet.", "error");
                     return;
                 }
 
@@ -964,7 +949,6 @@
 
             function openStudentEvaluationForm() {
                 if (!evaluationFormUrl) {
-                    setStudentEvaluationStatus("Evaluation form is not available yet.", "error");
                     return;
                 }
 
