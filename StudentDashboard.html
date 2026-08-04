@@ -1291,6 +1291,77 @@
                 return basketballStatsByMatch.get(Number(matchId)) || [];
             }
 
+            function stripPlayerIdSuffix(value) {
+                return String(value || "")
+                    .replace(/\s*\([^)]*\d[^)]*\)\s*$/g, "")
+                    .trim();
+            }
+
+            function looksLikeStudentId(value) {
+                const normalized = String(value || "").trim();
+                return /^(?:\d{4}[-\s]?)?AUP[-\s]?\d{3,}$/i.test(normalized)
+                    || /^\d{5,}$/.test(normalized);
+            }
+
+            function getDisplayPlayerName(row) {
+                const playerName = stripPlayerIdSuffix(row?.player_name);
+                return playerName && !looksLikeStudentId(playerName) ? playerName : "Player";
+            }
+
+            function getBestPlayerDisplay(value) {
+                const playerName = stripPlayerIdSuffix(value);
+                return playerName && !looksLikeStudentId(playerName) ? playerName : "Not recorded";
+            }
+
+            function getHistoryDeclaredTeamPoints(match, teamSide) {
+                const history = match?.game_history;
+                if (!history) return null;
+
+                const teamId = getTeamId(match, teamSide);
+                const teamName = normalizeTeamValue(getTeamName(match, teamSide));
+                const winnerId = Number(history.winner_team_id);
+                const loserId = Number(history.loser_team_id);
+                const winnerName = normalizeTeamValue(history.winner_team_name);
+                const loserName = normalizeTeamValue(history.loser_team_name);
+
+                if (Number.isFinite(teamId) && Number.isFinite(winnerId) && teamId === winnerId) {
+                    return Number(history.winner_points_awarded ?? history.winner_points ?? 0);
+                }
+
+                if (Number.isFinite(teamId) && Number.isFinite(loserId) && teamId === loserId) {
+                    return Number(history.loser_points_awarded ?? history.loser_points ?? 0);
+                }
+
+                if (teamName && teamName === winnerName) {
+                    return Number(history.winner_points_awarded ?? history.winner_points ?? 0);
+                }
+
+                if (teamName && teamName === loserName) {
+                    return Number(history.loser_points_awarded ?? history.loser_points ?? 0);
+                }
+
+                return null;
+            }
+
+            function getDeclaredTeamPoints(match, teamSide) {
+                const historyPoints = getHistoryDeclaredTeamPoints(match, teamSide);
+                if (Number.isFinite(historyPoints)) {
+                    return historyPoints;
+                }
+
+                if (hasPlayerScoreSheet(match)) {
+                    return getStudentBasketballTotals(match, teamSide).points;
+                }
+
+                return null;
+            }
+
+            function renderDeclaredTeamPoints(match, teamSide, classes = "mt-1 text-xs font-black uppercase tracking-wide text-slate-500") {
+                const points = getDeclaredTeamPoints(match, teamSide);
+                if (!Number.isFinite(points)) return "";
+                return `<p class="${classes}">Declared Points: ${Number(points).toLocaleString()}</p>`;
+            }
+
             function getSafeBasketballStatRows(rows) {
                 const mergedRows = new Map();
 
@@ -1324,11 +1395,44 @@
                 return Array.from(mergedRows.values());
             }
 
-            function getStudentBasketballTeamRows(match, teamSide, activeOnly = false) {
+            function getStudentBasketballTeamRows(match, teamSide, activeOnly = false, finalMode = false) {
                 const teamId = getTeamId(match, teamSide);
                 const activePeriod = getBasketballActivePeriod(match);
                 const allTeamRows = getSafeBasketballStatRows(getBasketballStatsForMatch(match.id))
                     .filter(row => Number(row.team_id) === Number(teamId));
+
+                if (finalMode) {
+                    const playerRows = new Map();
+
+                    allTeamRows.forEach(row => {
+                        const key = normalizeTeamValue(row.id_number || row.participant_id || row.player_name || row.id);
+                        if (!key) return;
+
+                        const existing = playerRows.get(key) || {
+                            ...row,
+                            points: 0,
+                            fouls: 0,
+                            is_active: false
+                        };
+
+                        playerRows.set(key, {
+                            ...existing,
+                            ...row,
+                            points: (Number(existing.points) || 0) + (Number(row.points) || 0),
+                            fouls: (Number(existing.fouls) || 0) + (Number(row.fouls) || 0),
+                            is_active: Boolean(existing.is_active || row.is_active),
+                            player_name: row.player_name || existing.player_name
+                        });
+                    });
+
+                    return Array.from(playerRows.values())
+                        .filter(row => (Number(row.points) || 0) > 0 || (Number(row.fouls) || 0) > 0 || row.is_active)
+                        .sort((first, second) => {
+                            const pointDiff = (Number(second.points) || 0) - (Number(first.points) || 0);
+                            if (pointDiff !== 0) return pointDiff;
+                            return getDisplayPlayerName(first).localeCompare(getDisplayPlayerName(second));
+                        });
+                }
 
                 return allTeamRows
                     .filter(row => Number(row.game_period || 1) === activePeriod)
@@ -1367,29 +1471,36 @@
             }
 
             function renderStudentBasketballScoreSheet(match, options = {}) {
-                if (!hasPlayerScoreSheet(match) || match.status !== "Ongoing") {
+                if (!hasPlayerScoreSheet(match) || !["Ongoing", "Done"].includes(match.status)) {
                     return "";
                 }
 
                 const { compact = false } = options;
+                const finalMode = match.status === "Done";
                 const isVolleyballMatch = isVolleyballSport(match);
                 const faultLabel = getScoreSheetFaultLabel(match);
                 const periodName = isVolleyballMatch ? "set" : "quarter";
-                const scoreSheetTitle = isVolleyballMatch ? "Volleyball Score Sheet Preview" : "Basketball Score Sheet Preview";
+                const scoreSheetTitle = finalMode
+                    ? (isVolleyballMatch ? "Volleyball Game Stats" : "Basketball Game Stats")
+                    : (isVolleyballMatch ? "Volleyball Score Sheet Preview" : "Basketball Score Sheet Preview");
                 const teamOneGameTotals = getStudentBasketballTotals(match, "one");
                 const teamTwoGameTotals = getStudentBasketballTotals(match, "two");
 
                 const renderTeamPreview = (teamSide, theme) => {
                     const teamName = getTeamName(match, teamSide);
-                    const rows = getStudentBasketballTeamRows(match, teamSide, true);
+                    const rows = getStudentBasketballTeamRows(match, teamSide, !finalMode, finalMode);
                     const gameTotals = teamSide === "one" ? teamOneGameTotals : teamTwoGameTotals;
                     const visibleRows = rows.length ? rows : [];
+                    const emptyMessage = finalMode
+                        ? "No player stats were recorded for this team."
+                        : `No active players selected for this ${periodName} yet.`;
 
                     return `
                         <div class="student-basketball-score-team rounded-2xl border ${theme.border} ${theme.bg} overflow-hidden">
                             <div class="flex items-center justify-between gap-1 px-2 py-2 sm:gap-2 sm:px-3">
                                 <div class="min-w-0">
                                     <h4 class="truncate text-[11px] font-black uppercase ${theme.text} sm:text-sm">${escapeHTML(teamName)}</h4>
+                                    ${renderDeclaredTeamPoints(match, teamSide, `mt-1 text-[9px] font-black uppercase tracking-wide ${theme.text}`)}
                                 </div>
                                 <div class="shrink-0 text-right">
                                     <p class="text-lg font-black leading-none ${theme.text} sm:text-2xl">${gameTotals.points}</p>
@@ -1409,14 +1520,14 @@
                                         ${visibleRows.length ? visibleRows.map((row, index) => `
                                             <tr class="border-t border-white/70 bg-white/75">
                                                 <td class="py-1.5 font-black sm:py-2">${index + 1}</td>
-                                                <td class="student-basketball-score-player truncate py-1.5 font-bold text-slate-800 sm:py-2">${escapeHTML(row.player_name || row.id_number || "Player")}</td>
+                                                <td class="student-basketball-score-player truncate py-1.5 font-bold text-slate-800 sm:py-2">${escapeHTML(getDisplayPlayerName(row))}</td>
                                                 <td class="py-1.5 text-center font-black ${theme.text} sm:py-2">${Number(row.points) || 0}</td>
                                                 <td class="py-1.5 text-center font-black text-red-600 sm:py-2">${Number(row.fouls) || 0}</td>
                                             </tr>
                                         `).join("") : `
                                             <tr>
                                                 <td colspan="4" class="px-3 py-4 text-center text-[11px] font-semibold text-slate-500">
-                                                    No active players selected for this ${periodName} yet.
+                                                    ${escapeHTML(emptyMessage)}
                                                 </td>
                                             </tr>
                                         `}
@@ -2632,9 +2743,23 @@
                     const showTimer = isUpcoming && (match.timer_enabled || duration > 0);
                     const matchStageLabel = getMatchStageLabel(match.match_stage);
                     const livePeriodLabel = getLivePeriodLabel(match);
+                    const canOpenGameStats = hasPlayerScoreSheet(match) && ["Ongoing", "Done"].includes(match.status);
+                    const statsCardAction = canOpenGameStats ? `
+                        <button
+                            type="button"
+                            data-match-id="${match.id}"
+                            class="view-match-btn mt-4 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-black uppercase tracking-wide text-white hover:bg-slate-800">
+                            ${isDone ? "View Game Stats" : "View Live Stats"}
+                        </button>
+                    ` : "";
 
                     const card = document.createElement("div");
-                    card.className = "card-hover bg-white rounded-2xl border border-slate-300 overflow-hidden flex flex-col";
+                    card.className = `card-hover bg-white rounded-2xl border border-slate-300 overflow-hidden flex flex-col ${canOpenGameStats ? "cursor-pointer" : ""}`;
+                    if (canOpenGameStats) {
+                        card.setAttribute("role", "button");
+                        card.setAttribute("tabindex", "0");
+                        card.dataset.matchId = match.id;
+                    }
                     card.innerHTML = `
                         <div class="p-6 flex-1">
                             <div class="flex justify-between items-start gap-4 mb-6">
@@ -2668,15 +2793,15 @@
                                 <div class="flex-1 min-w-0 text-center">
                                     <p class="text-[10px] font-black text-slate-700 uppercase mb-1">Team 1</p>
                                     <p class="text-lg sm:text-xl font-black text-blue-700 truncate">${escapeHTML(t1)}</p>
+                                    ${renderDeclaredTeamPoints(match, "one", "mt-1 text-[10px] font-black uppercase tracking-wide text-blue-600")}
                                 </div>
                                 <div class="shrink-0 text-red-600 text-lg font-black italic">VS</div>
                                 <div class="flex-1 min-w-0 text-center">
                                     <p class="text-[10px] font-black text-slate-700 uppercase mb-1">Team 2</p>
                                     <p class="text-lg sm:text-xl font-black text-emerald-700 truncate">${escapeHTML(t2)}</p>
+                                    ${renderDeclaredTeamPoints(match, "two", "mt-1 text-[10px] font-black uppercase tracking-wide text-emerald-600")}
                                 </div>
                             </div>
-
-                            ${renderStudentBasketballScoreSheet(match, { compact: true })}
 
                             <div class="space-y-2 pt-4 border-t border-slate-300">
                                 <div class="flex items-center text-sm text-slate-800 font-bold">
@@ -2691,16 +2816,30 @@
                                 <div class="mt-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-100">
                                     <p class="text-[10px] font-bold text-emerald-600 uppercase mb-2">Final Result</p>
                                     <p class="text-sm font-bold text-emerald-900">Winner: ${escapeHTML(history.winner_team_name)}</p>
-                                    <p class="text-sm font-bold text-emerald-900 mt-1">Player of the Game: ${escapeHTML(history.best_player || "Not recorded")}</p>
+                                    <p class="text-sm font-bold text-emerald-900 mt-1">Player of the Game: ${escapeHTML(getBestPlayerDisplay(history.best_player))}</p>
+                                    ${statsCardAction}
                                 </div>
-                            ` : ''}
+                            ` : statsCardAction}
                         </div>
                     `;
                     studentMatchesGrid.appendChild(card);
                 });
 
                 document.querySelectorAll(".view-match-btn").forEach(btn => {
-                    btn.onclick = function() {
+                    btn.onclick = function(event) {
+                        event.stopPropagation();
+                        const m = studentMatchesData.find(x => Number(x.id) === Number(this.dataset.matchId));
+                        if (m) openMatchDetails(m);
+                    };
+                });
+                document.querySelectorAll("[data-match-id].cursor-pointer").forEach(card => {
+                    card.onclick = function() {
+                        const m = studentMatchesData.find(x => Number(x.id) === Number(this.dataset.matchId));
+                        if (m) openMatchDetails(m);
+                    };
+                    card.onkeydown = function(event) {
+                        if (event.key !== "Enter" && event.key !== " ") return;
+                        event.preventDefault();
                         const m = studentMatchesData.find(x => Number(x.id) === Number(this.dataset.matchId));
                         if (m) openMatchDetails(m);
                     };
@@ -2744,11 +2883,13 @@
                             <div class="p-6 bg-slate-50 rounded-2xl border border-slate-100 text-center">
                                 <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Team 1</p>
                                 <p class="text-xl font-black text-slate-900">${escapeHTML(getTeamName(match, "one"))}</p>
+                                ${renderDeclaredTeamPoints(match, "one", "mt-2 text-[10px] font-black uppercase tracking-wide text-blue-600")}
                             </div>
                             <div class="text-center font-black text-slate-200 text-2xl italic">VS</div>
                             <div class="p-6 bg-slate-50 rounded-2xl border border-slate-100 text-center">
                                 <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Team 2</p>
                                 <p class="text-xl font-black text-slate-900">${escapeHTML(getTeamName(match, "two"))}</p>
+                                ${renderDeclaredTeamPoints(match, "two", "mt-2 text-[10px] font-black uppercase tracking-wide text-emerald-600")}
                             </div>
                         </div>
 
@@ -2799,7 +2940,7 @@
                                     </div>
                                     <div class="flex justify-between items-center bg-white/50 p-3 rounded-xl">
                                         <span class="text-sm font-bold text-slate-600">Player of the Game</span>
-                                        <span class="font-black text-emerald-700 text-right">${escapeHTML(history.best_player || "Not recorded")}</span>
+                                        <span class="font-black text-emerald-700 text-right">${escapeHTML(getBestPlayerDisplay(history.best_player))}</span>
                                     </div>
                                     <p class="text-[10px] text-emerald-600 font-bold text-right pt-2">DECLARED AT: ${formatDateTime(history.declared_at)}</p>
                                 </div>

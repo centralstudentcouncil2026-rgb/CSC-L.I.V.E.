@@ -1570,6 +1570,8 @@
                                 <input
                                     id="overviewAttendanceDateFilter"
                                     type="date"
+                                    min="2026-01-04"
+                                    step="7"
                                     class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-bold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 sm:w-44">
                             </div>
                         </div>
@@ -3365,6 +3367,19 @@
 
             function getAttendanceSessionDate() {
                 return attendanceSessionDate?.value || activeAttendanceSettings?.attendance_date || getLocalISODate();
+            }
+
+            function getSundayDateValue(dateValue = getLocalISODate()) {
+                const parsed = new Date(`${dateValue || getLocalISODate()}T00:00:00`);
+                const safeDate = Number.isNaN(parsed.getTime()) ? new Date(`${getLocalISODate()}T00:00:00`) : parsed;
+                safeDate.setDate(safeDate.getDate() - safeDate.getDay());
+                return safeDate.toLocaleDateString("en-CA");
+            }
+
+            function isSundayDateValue(dateValue) {
+                if (!dateValue) return false;
+                const parsed = new Date(`${dateValue}T00:00:00`);
+                return !Number.isNaN(parsed.getTime()) && parsed.getDay() === 0;
             }
 
             const ATTENDANCE_SESSION_CATEGORIES = ["Morning Session", "Afternoon Session", "Opening Ceremony", "Parade"];
@@ -6340,10 +6355,12 @@
             }
 
             function getOverviewAttendanceDate() {
-                return overviewAttendanceDateFilter?.value || getAttendanceSessionDate() || getLocalISODate();
+                return getSundayDateValue(overviewAttendanceDateFilter?.value || getAttendanceSessionDate() || getLocalISODate());
             }
 
             const repairedAttendanceDateKeys = new Set();
+            const repairingAttendanceDateKeys = new Set();
+            let overviewAttendanceLoadSequence = 0;
 
             function isPlaceholderAttendanceName(value) {
                 return normalizeAttendanceNameKey(value) === normalizeAttendanceNameKey("Scan RFID or Enter ID Number");
@@ -6391,46 +6408,65 @@
             }
 
             async function repairPlaceholderAttendanceRowsForDate(attendanceDate) {
-                if (!attendanceDate || repairedAttendanceDateKeys.has(attendanceDate)) {
-                    return;
+                if (!attendanceDate || repairedAttendanceDateKeys.has(attendanceDate) || repairingAttendanceDateKeys.has(attendanceDate)) {
+                    return 0;
                 }
 
-                repairedAttendanceDateKeys.add(attendanceDate);
+                repairingAttendanceDateKeys.add(attendanceDate);
+                let repairedCount = 0;
 
-                const { data, error } = await supabase
-                    .from(ATTENDANCE_TABLE)
-                    .select("id, participant_id, student_id, participant_name, team, home_college, status, attendance_date, attendance_session_title")
-                    .eq("attendance_date", attendanceDate)
-                    .limit(1000);
+                try {
+                    const { data, error } = await supabase
+                        .from(ATTENDANCE_TABLE)
+                        .select("id, participant_id, student_id, participant_name, team, home_college, status, attendance_date, attendance_session_title")
+                        .eq("attendance_date", attendanceDate)
+                        .limit(1000);
 
-                if (error) {
-                    console.warn("Attendance repair lookup skipped:", error.message || error);
-                    return;
-                }
-
-                const placeholderRows = (data || []).filter(row => {
-                    const status = String(row.status || "Present").trim().toLowerCase();
-                    return status === "present"
-                        && getAttendanceStatsCollege(row) === "Unassigned"
-                        && isPlaceholderAttendanceName(row.participant_name);
-                });
-
-                for (const row of placeholderRows) {
-                    try {
-                        const { participant, aupProfile } = await resolveAttendanceParticipant(row.student_id);
-
-                        if (participant || aupProfile) {
-                            await updateAttendanceRowFromLookup(row, participant, aupProfile, row.student_id);
-                        }
-                    } catch (error) {
-                        console.warn("Attendance external repair skipped:", row.student_id, error.message || error);
+                    if (error) {
+                        console.warn("Attendance repair lookup skipped:", error.message || error);
+                        return 0;
                     }
+
+                    const placeholderRows = (data || []).filter(row => {
+                        const status = String(row.status || "Present").trim().toLowerCase();
+                        return status === "present"
+                            && getAttendanceStatsCollege(row) === "Unassigned"
+                            && isPlaceholderAttendanceName(row.participant_name);
+                    });
+
+                    for (const row of placeholderRows) {
+                        try {
+                            const { participant, aupProfile } = await resolveAttendanceParticipant(row.student_id);
+
+                            if (participant || aupProfile) {
+                                const wasRepaired = await updateAttendanceRowFromLookup(row, participant, aupProfile, row.student_id);
+                                if (wasRepaired) {
+                                    repairedCount += 1;
+                                }
+                            }
+                        } catch (error) {
+                            console.warn("Attendance external repair skipped:", row.student_id, error.message || error);
+                        }
+                    }
+
+                    repairedAttendanceDateKeys.add(attendanceDate);
+                    return repairedCount;
+                } finally {
+                    repairingAttendanceDateKeys.delete(attendanceDate);
                 }
             }
 
-            async function loadOverviewAttendanceStats() {
-                const attendanceDate = getOverviewAttendanceDate();
-                await repairPlaceholderAttendanceRowsForDate(attendanceDate);
+            async function loadOverviewAttendanceStats(options = {}) {
+                const attendanceDate = options.attendanceDate || getOverviewAttendanceDate();
+                if (options.repairInBackground !== false) {
+                    repairPlaceholderAttendanceRowsForDate(attendanceDate)
+                        .then(repairedCount => {
+                            if (repairedCount > 0 && getOverviewAttendanceDate() === attendanceDate) {
+                                loadAndRenderOverviewAttendanceStats({ showLoading: false, skipRepair: true });
+                            }
+                        })
+                        .catch(error => console.warn("Attendance background repair skipped:", error.message || error));
+                }
 
                 const { data, error } = await supabase
                     .from(ATTENDANCE_TABLE)
@@ -6481,6 +6517,34 @@
                         afternoon: stat.afternoonIds.size
                     }))
                     .sort((a, b) => a.college.localeCompare(b.college));
+            }
+
+            async function loadAndRenderOverviewAttendanceStats(options = {}) {
+                if (!overviewAttendanceBody) {
+                    return [];
+                }
+
+                const loadId = ++overviewAttendanceLoadSequence;
+                const attendanceDate = getOverviewAttendanceDate();
+
+                if (options.showLoading !== false) {
+                    renderEmptyRow(overviewAttendanceBody, 4, "Loading attendance records...");
+                }
+
+                const attendanceStats = await loadOverviewAttendanceStats({
+                    attendanceDate,
+                    repairInBackground: !options.skipRepair
+                });
+
+                if (loadId !== overviewAttendanceLoadSequence || getOverviewAttendanceDate() !== attendanceDate) {
+                    return attendanceStats;
+                }
+
+                const selectedDateAttendanceTotal = attendanceStats.reduce((total, row) => total + Number(row.total || 0), 0);
+                setOverviewText(adminTodayAttendance, selectedDateAttendanceTotal);
+                renderOverviewAttendance(attendanceStats);
+
+                return attendanceStats;
             }
 
             function renderOverviewMatchStatus(totalMatches, upcomingMatches, activeGames, completedMatches, todayMatches) {
@@ -10647,13 +10711,15 @@
             printAttendanceDate.value = getLocalISODate();
             printCommitteeMatchesDate.value = "";
             if (overviewAttendanceDateFilter) {
-                overviewAttendanceDateFilter.value = getLocalISODate();
+                overviewAttendanceDateFilter.min = "2026-01-04";
+                overviewAttendanceDateFilter.step = "7";
+                overviewAttendanceDateFilter.value = getSundayDateValue();
                 overviewAttendanceDateFilter.addEventListener("change", function () {
-                    if (!overviewAttendanceDateFilter.value) {
-                        overviewAttendanceDateFilter.value = getLocalISODate();
+                    if (!overviewAttendanceDateFilter.value || !isSundayDateValue(overviewAttendanceDateFilter.value)) {
+                        overviewAttendanceDateFilter.value = getSundayDateValue(overviewAttendanceDateFilter.value || getLocalISODate());
                     }
 
-                    loadAdminOverviewCounts();
+                    loadAndRenderOverviewAttendanceStats({ showLoading: true });
                 });
             }
             attendanceSessionDate.value = getLocalISODate();
