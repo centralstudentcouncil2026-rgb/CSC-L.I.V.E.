@@ -3767,6 +3767,60 @@
                 return "Unassigned";
             }
 
+            function getAttendanceCollegeFromCourse(courseValue) {
+                const normalizedCourse = String(courseValue || "").trim().toLowerCase();
+
+                if (/^grade\s+\d+/.test(normalizedCourse) || normalizedCourse.includes("elementary")) {
+                    return "Academy";
+                }
+
+                if (normalizedCourse.includes("business administration")
+                    || normalizedCourse.includes("accountancy")
+                    || normalizedCourse.includes("information technology")) {
+                    return "COB";
+                }
+
+                if (normalizedCourse.includes("nursing")) {
+                    return "CON";
+                }
+
+                if (normalizedCourse.includes("medical laboratory")
+                    || normalizedCourse.includes("nutrition")
+                    || normalizedCourse.includes("health")) {
+                    return "COH";
+                }
+
+                if (normalizedCourse.includes("dent")) {
+                    return "COD";
+                }
+
+                if (normalizedCourse.includes("theology")) {
+                    return "COT";
+                }
+
+                if (normalizedCourse.includes("psychology") || normalizedCourse.includes("arts")) {
+                    return "CAH";
+                }
+
+                return "";
+            }
+
+            function getAttendanceCollegeFromProfile(participant, aupProfile) {
+                const participantCollege = getCollegeTeamAlias(participant?.home_college || participant?.team || "");
+
+                if (participantCollege && !isInvalidAttendanceCollegeLabel(participantCollege)) {
+                    return participantCollege;
+                }
+
+                const profileCollege = getCollegeTeamAlias(aupProfile?.college || "");
+
+                if (profileCollege && !isInvalidAttendanceCollegeLabel(profileCollege)) {
+                    return profileCollege;
+                }
+
+                return getAttendanceCollegeFromCourse(aupProfile?.course);
+            }
+
             function resolveAttendanceCategory(participant) {
                 return String(participant?.status || "").trim().toLowerCase() === "approved"
                     ? "registered_player"
@@ -6296,10 +6350,7 @@
             }
 
             async function updateAttendanceRowFromLookup(row, participant, aupProfile, scannedValue) {
-                const rawCollege = participant
-                    ? (participant.home_college || participant.team || "")
-                    : (aupProfile?.college || "");
-                const attendanceCollege = getCollegeTeamAlias(rawCollege);
+                const attendanceCollege = getAttendanceCollegeFromProfile(participant, aupProfile);
 
                 if (!attendanceCollege) {
                     return false;
@@ -10325,10 +10376,7 @@
                     const { participant, aupProfile } = await resolveAttendanceParticipant(scannedValue);
                     const participantName = participant?.full_name || participant?.name || aupProfile?.name || "";
                     const attendanceStudentIdValue = participant?.student_id || aupProfile?.studentId || scannedValue;
-                    const rawAttendanceCollege = participant
-                        ? (participant.home_college || participant.team || "")
-                        : (aupProfile?.college || "");
-                    const attendanceCollege = getCollegeTeamAlias(rawAttendanceCollege);
+                    const attendanceCollege = getAttendanceCollegeFromProfile(participant, aupProfile);
                     const attendanceCourse = participant ? "" : (aupProfile?.course || "");
                     const attendanceCategoryValue = resolveAttendanceCategory(participant);
 
