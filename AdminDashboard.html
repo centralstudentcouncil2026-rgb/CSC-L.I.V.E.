@@ -1859,6 +1859,8 @@
                                         <input
                                             id="attendanceSessionDate"
                                             type="date"
+                                            min="2026-01-04"
+                                            step="7"
                                             required
                                             class="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-bold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
                                     </div>
@@ -3397,7 +3399,7 @@
             }
 
             function getAttendanceSessionDate() {
-                return attendanceSessionDate?.value || activeAttendanceSettings?.attendance_date || getLocalISODate();
+                return getSundayDateValue(attendanceSessionDate?.value || activeAttendanceSettings?.attendance_date || getLocalISODate());
             }
 
             function getSundayDateValue(dateValue = getLocalISODate()) {
@@ -5488,7 +5490,8 @@
             async function saveAttendanceSettings(event) {
                 event.preventDefault();
 
-                const attendanceDate = attendanceSessionDate.value || getLocalISODate();
+                const attendanceDate = getSundayDateValue(attendanceSessionDate.value || getLocalISODate());
+                attendanceSessionDate.value = attendanceDate;
                 const scanningWindowDate = getAttendanceScanningWindowDate(attendanceDate);
                 const openedAt = getAttendanceStartDateTime(scanningWindowDate, attendanceStartTime.value);
                 const closesAt = getAttendanceCloseDateTime(scanningWindowDate, attendanceOpenUntil.value);
@@ -5555,7 +5558,10 @@
             }
 
             async function handleAttendanceSessionSelectionChange() {
-                const attendanceDate = attendanceSessionDate?.value || getLocalISODate();
+                const attendanceDate = getSundayDateValue(attendanceSessionDate?.value || getLocalISODate());
+                if (attendanceSessionDate) {
+                    attendanceSessionDate.value = attendanceDate;
+                }
                 const sessionTitle = normalizeAttendanceSessionTitle(attendanceSessionTitle?.value);
                 const scanningWindowDate = getAttendanceScanningWindowDate(attendanceDate);
                 const openedAt = getAttendanceStartDateTime(scanningWindowDate, attendanceStartTime?.value || "");
@@ -10878,7 +10884,9 @@
                     loadAndRenderOverviewAttendanceStats({ showLoading: true });
                 });
             }
-            attendanceSessionDate.value = getLocalISODate();
+            attendanceSessionDate.min = "2026-01-04";
+            attendanceSessionDate.step = "7";
+            attendanceSessionDate.value = getSundayDateValue();
             attendanceStartTime.value = "";
             attendanceOpenUntil.value = "";
             attendanceSettingsToggle.addEventListener("click", function () {
