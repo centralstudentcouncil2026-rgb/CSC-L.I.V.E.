@@ -6467,6 +6467,48 @@
                 }
             }
 
+            async function loadOverviewAttendanceRows(attendanceDate) {
+                const pageSize = 1000;
+                const rows = [];
+
+                for (let start = 0; ; start += pageSize) {
+                    const { data, error } = await supabase
+                        .from(ATTENDANCE_TABLE)
+                        .select("id, student_id, participant_name, team, home_college, attendance_date, attendance_session_title, status")
+                        .eq("attendance_date", attendanceDate)
+                        .order("team", { ascending: true })
+                        .range(start, start + pageSize - 1);
+
+                    if (error) {
+                        return { data: rows, error };
+                    }
+
+                    const pageRows = data || [];
+                    rows.push(...pageRows);
+
+                    if (pageRows.length < pageSize) {
+                        break;
+                    }
+                }
+
+                return { data: rows, error: null };
+            }
+
+            async function loadOverviewAttendanceCount(attendanceDate) {
+                const { count, error } = await supabase
+                    .from(ATTENDANCE_TABLE)
+                    .select("id", { count: "exact", head: true })
+                    .eq("attendance_date", attendanceDate)
+                    .ilike("status", "present");
+
+                if (error) {
+                    console.warn("Attendance exact count warning:", error.message || error);
+                    return null;
+                }
+
+                return Number(count || 0);
+            }
+
             async function loadOverviewAttendanceStats(options = {}) {
                 const attendanceDate = options.attendanceDate || getOverviewAttendanceDate();
                 if (options.repairInBackground !== false) {
@@ -6479,11 +6521,7 @@
                         .catch(error => console.warn("Attendance background repair skipped:", error.message || error));
                 }
 
-                const { data, error } = await supabase
-                    .from(ATTENDANCE_TABLE)
-                    .select("id, student_id, participant_name, team, home_college, attendance_date, attendance_session_title, status")
-                    .eq("attendance_date", attendanceDate)
-                    .order("team", { ascending: true });
+                const { data, error } = await loadOverviewAttendanceRows(attendanceDate);
 
                 if (error) {
                     console.error("Error loading attendance stats:", error.message || error);
@@ -6542,16 +6580,19 @@
                     renderEmptyRow(overviewAttendanceBody, 4, "Loading attendance records...");
                 }
 
-                const attendanceStats = await loadOverviewAttendanceStats({
-                    attendanceDate,
-                    repairInBackground: !options.skipRepair
-                });
+                const [attendanceStats, attendanceCount] = await Promise.all([
+                    loadOverviewAttendanceStats({
+                        attendanceDate,
+                        repairInBackground: !options.skipRepair
+                    }),
+                    loadOverviewAttendanceCount(attendanceDate)
+                ]);
 
                 if (loadId !== overviewAttendanceLoadSequence || getOverviewAttendanceDate() !== attendanceDate) {
                     return attendanceStats;
                 }
 
-                const selectedDateAttendanceTotal = attendanceStats.reduce((total, row) => total + Number(row.total || 0), 0);
+                const selectedDateAttendanceTotal = attendanceCount ?? attendanceStats.reduce((total, row) => total + Number(row.total || 0), 0);
                 setOverviewText(adminTodayAttendance, selectedDateAttendanceTotal);
                 renderOverviewAttendance(attendanceStats);
 
@@ -6868,7 +6909,8 @@
                     sportsResult,
                     participantsResult,
                     matches,
-                    attendanceStats
+                    attendanceStats,
+                    attendanceCount
                 ] = await Promise.all([
                     supabase
                         .from(TEAMS_TABLE)
@@ -6886,7 +6928,8 @@
                         .order("created_at", { ascending: false }),
 
                     loadOverviewMatches(),
-                    loadOverviewAttendanceStats()
+                    loadOverviewAttendanceStats(),
+                    loadOverviewAttendanceCount(getOverviewAttendanceDate())
                 ]);
 
                 if (teamsResult.error) {
@@ -6946,7 +6989,7 @@
                 setOverviewText(adminApprovedParticipants, approvedParticipants);
                 setOverviewText(adminPendingParticipants, pendingParticipants);
                 setOverviewText(adminRejectedParticipants, rejectedParticipants);
-                const selectedDateAttendanceTotal = attendanceStats.reduce((total, row) => total + Number(row.total || 0), 0);
+                const selectedDateAttendanceTotal = attendanceCount ?? attendanceStats.reduce((total, row) => total + Number(row.total || 0), 0);
                 setOverviewText(adminTodayAttendance, selectedDateAttendanceTotal);
 
                 if (adminOverviewLastUpdated) {
