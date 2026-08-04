@@ -2564,7 +2564,7 @@
                                 </div>
                                 <div class="mt-4 bg-white/75 p-3 rounded-xl border border-slate-200 text-sm">
                                     <p class="text-[10px] font-bold text-slate-600 uppercase mb-1">Player of the Game</p>
-                                    <p class="font-bold text-slate-950">${escapeHTML(game.best_player || "Not recorded")}</p>
+                                    <p class="font-bold text-slate-950">${escapeHTML(getBestPlayerDisplay(game.best_player))}</p>
                                 </div>
                             </div>
                         `;
