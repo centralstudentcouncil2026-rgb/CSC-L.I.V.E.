@@ -1922,11 +1922,11 @@
                                         </label>
                                     </div>
                                     <p class="mt-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-900">
-                                        Set Faculty / Sponsor Points to 0 to use the faculty and department chair percentage formulas with a fixed base of 100. Any value above 0 is used as fixed points per faculty or department chair attendee.
+                                        Set the total number of students for each team so attendance percentage computations use the correct team population.
                                     </p>
 
                                     <div class="mt-4 rounded-xl border border-blue-100 bg-blue-50/60 p-3">
-                                        <h5 class="mb-3 text-xs font-black uppercase tracking-wide text-blue-900">College Totals For Percentage Computation</h5>
+                                        <h5 class="mb-3 text-xs font-black uppercase tracking-wide text-blue-900">Total Number of Students per Team</h5>
                                         <div id="attendanceCollegeTotalsList" class="space-y-3">
                                             <p class="text-xs font-semibold text-slate-500">Loading colleges...</p>
                                         </div>
@@ -3672,14 +3672,10 @@
                     return `
                         <div class="rounded-lg border border-blue-100 bg-blue-50/60 p-3" data-attendance-college-total-row data-college-id="${escapeHTML(college.id)}" data-college-name="${escapeHTML(college.name)}">
                             <p class="mb-2 text-sm font-black text-blue-950">${escapeHTML(college.name)}</p>
-                            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            <div class="grid grid-cols-1 gap-2">
                                 <label class="block">
-                                    <span class="mb-1 block text-xs font-bold text-blue-900">Total Faculty</span>
-                                    <input type="number" min="0" step="1" value="${escapeHTML(savedTotals.total_faculty ?? 0)}" data-total-faculty class="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-bold">
-                                </label>
-                                <label class="block">
-                                    <span class="mb-1 block text-xs font-bold text-blue-900">Total Department Chairs</span>
-                                    <input type="number" min="0" step="1" value="${escapeHTML(savedTotals.total_department_chairs ?? 0)}" data-total-department-chairs class="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-bold">
+                                    <span class="mb-1 block text-xs font-bold text-blue-900">Total Students</span>
+                                    <input type="number" min="0" step="1" value="${escapeHTML(savedTotals.total_students ?? savedTotals.total_student_players ?? 0)}" data-total-students class="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-bold">
                                 </label>
                             </div>
                         </div>
@@ -3694,8 +3690,9 @@
                     if (collegeId) {
                         totals[collegeId] = {
                             college_name: row.dataset.collegeName || collegeId,
-                            total_faculty: getNumericInputValue(row.querySelector("[data-total-faculty]"), 0),
-                            total_department_chairs: getNumericInputValue(row.querySelector("[data-total-department-chairs]"), 0)
+                            total_students: getNumericInputValue(row.querySelector("[data-total-students]"), 0),
+                            total_faculty: 0,
+                            total_department_chairs: 0
                         };
                     }
 
