@@ -452,9 +452,13 @@ select
     ac.sponsor_game_attendance_count,
     coalesce(college_totals.total_faculty, 0) as total_faculty,
     coalesce(college_totals.total_department_chairs, 0) as total_department_chairs,
+    coalesce(college_totals.total_students, 0) as total_students,
     round((
         ac.registered_player_count * sp.registered_player_points
-        + ac.student_player_count * sp.student_player_points
+        + case
+            when coalesce(college_totals.total_students, 0) > 0 then (ac.student_player_count::numeric / nullif(college_totals.total_students, 0)) * 100
+            else 0
+          end
         + case
             when sp.faculty_points > 0 then ac.faculty_count * sp.faculty_points
             when coalesce(college_totals.total_faculty, 0) > 0 then (ac.faculty_count::numeric / nullif(college_totals.total_faculty, 0)) * 100
@@ -478,7 +482,10 @@ left join lateral (
              else 0 end as total_faculty,
         case when coalesce(value ->> 'total_department_chairs', '') ~ '^\d+(\.\d+)?$'
              then least((value ->> 'total_department_chairs')::numeric, 10000)
-             else 0 end as total_department_chairs
+             else 0 end as total_department_chairs,
+        case when coalesce(value ->> 'total_students', value ->> 'total_student_players', '') ~ '^\d+(\.\d+)?$'
+             then least(coalesce(value ->> 'total_students', value ->> 'total_student_players')::numeric, 10000)
+             else 0 end as total_students
     from jsonb_each(coalesce(sp.college_totals, '{}'::jsonb))
     where key = ac.team or value ->> 'college_name' = ac.team
     limit 1
