@@ -1901,7 +1901,6 @@
                                             type="date"
                                             min="2026-01-04"
                                             step="7"
-                                            required
                                             class="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-bold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
                                     </div>
 
@@ -1910,7 +1909,6 @@
                                         <input
                                             id="attendanceStartTime"
                                             type="time"
-                                            required
                                             class="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-bold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
                                     </div>
 
@@ -1919,7 +1917,6 @@
                                         <input
                                             id="attendanceOpenUntil"
                                             type="time"
-                                            required
                                             class="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-bold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
                                     </div>
 
@@ -5544,29 +5541,68 @@
                 const attendanceDate = getSundayDateValue(attendanceSessionDate.value || getLocalISODate());
                 attendanceSessionDate.value = attendanceDate;
                 const scanningWindowDate = getAttendanceScanningWindowDate(attendanceDate);
-                const openedAt = getAttendanceStartDateTime(scanningWindowDate, attendanceStartTime.value);
-                const closesAt = getAttendanceCloseDateTime(scanningWindowDate, attendanceOpenUntil.value);
+                const startTimeValue = String(attendanceStartTime.value || "").trim();
+                const endTimeValue = String(attendanceOpenUntil.value || "").trim();
+                const shouldSaveSessionWindow = Boolean(startTimeValue || endTimeValue);
+                const openedAt = shouldSaveSessionWindow ? getAttendanceStartDateTime(scanningWindowDate, startTimeValue) : null;
+                const closesAt = shouldSaveSessionWindow ? getAttendanceCloseDateTime(scanningWindowDate, endTimeValue) : null;
                 const adminUser = getStoredAdminUser();
                 const sessionType = "regular";
                 const sessionTitle = normalizeAttendanceSessionTitle(attendanceSessionTitle?.value);
                 const pointSettings = getAttendancePointSettingsFromForm();
 
-                if (!openedAt) {
+                if (shouldSaveSessionWindow && !openedAt) {
                     renderAttendanceSettingsStatus("Please select when attendance should start.");
                     attendanceStartTime.focus();
                     return;
                 }
 
-                if (!closesAt || closesAt.getTime() <= openedAt.getTime()) {
+                if (shouldSaveSessionWindow && (!closesAt || closesAt.getTime() <= openedAt.getTime())) {
                     renderAttendanceSettingsStatus("Please select an end time later than the start time.");
                     attendanceOpenUntil.focus();
                     return;
                 }
 
-                const durationMinutes = Math.max(1, Math.ceil((closesAt.getTime() - openedAt.getTime()) / 60000));
-
                 attendanceSettingsSaveButton.disabled = true;
                 attendanceSettingsSaveButton.textContent = "Saving...";
+
+                if (!shouldSaveSessionWindow) {
+                    const updatePayload = {
+                        id: 1,
+                        point_settings: pointSettings,
+                        updated_by: adminUser?.id || adminUser?.email || null,
+                        updated_by_name: adminUser?.fullName || adminUser?.full_name || adminUser?.email || "Admin",
+                        updated_at: new Date().toISOString()
+                    };
+
+                    const { data, error } = await supabase
+                        .from(ATTENDANCE_SETTINGS_TABLE)
+                        .upsert([updatePayload], { onConflict: "id" })
+                        .select("*")
+                        .single();
+
+                    attendanceSettingsSaveButton.disabled = false;
+                    attendanceSettingsSaveButton.textContent = "Save Attendance Session";
+
+                    if (error) {
+                        console.error("Attendance point settings save error:", error.message || error);
+                        renderAttendanceSettingsStatus(error.message || "Failed to save attendance computation settings.");
+                        return;
+                    }
+
+                    activeAttendanceSettings = data && isAttendanceSessionFromCurrentDay(data) ? data : activeAttendanceSettings;
+                    if (activeAttendanceSettings) {
+                        activeAttendanceSettings.point_settings = pointSettings;
+                    }
+                    attendanceSettingsForm?.removeAttribute("data-auto-refresh-dirty");
+                    renderAttendanceSettingsStatus("Attendance computation settings saved. Date and time were not changed.");
+                    await loadAdminOverviewCounts();
+                    showDashboardToast("Attendance computation settings saved.");
+                    closeAttendanceSettingsModalFunction();
+                    return;
+                }
+
+                const durationMinutes = Math.max(1, Math.ceil((closesAt.getTime() - openedAt.getTime()) / 60000));
 
                 const payload = {
                     id: 1,
