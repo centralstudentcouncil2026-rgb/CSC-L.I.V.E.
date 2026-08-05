@@ -1594,7 +1594,6 @@
                                     id="overviewAttendanceDateFilter"
                                     type="date"
                                     min="2026-01-04"
-                                    step="7"
                                     class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-bold text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 sm:w-44">
                             </div>
                         </div>
@@ -6514,7 +6513,7 @@
             }
 
             function getOverviewAttendanceDate() {
-                return getSundayDateValue(overviewAttendanceDateFilter?.value || getAttendanceSessionDate() || getLocalISODate());
+                return overviewAttendanceDateFilter?.value || getAttendanceSessionDate() || getLocalISODate();
             }
 
             const repairedAttendanceDateKeys = new Set();
@@ -11000,13 +10999,8 @@
             printCommitteeMatchesDate.value = "";
             if (overviewAttendanceDateFilter) {
                 overviewAttendanceDateFilter.min = "2026-01-04";
-                overviewAttendanceDateFilter.step = "7";
                 overviewAttendanceDateFilter.value = getSundayDateValue();
                 overviewAttendanceDateFilter.addEventListener("change", function () {
-                    if (!overviewAttendanceDateFilter.value || !isSundayDateValue(overviewAttendanceDateFilter.value)) {
-                        overviewAttendanceDateFilter.value = getSundayDateValue(overviewAttendanceDateFilter.value || getLocalISODate());
-                    }
-
                     loadAndRenderOverviewAttendanceStats({ showLoading: true });
                 });
             }
