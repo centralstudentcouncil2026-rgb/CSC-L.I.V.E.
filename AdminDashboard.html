@@ -3441,7 +3441,10 @@
             }
 
             function getAttendanceSessionDate() {
-                return getSundayDateValue(attendanceSessionDate?.value || activeAttendanceSettings?.attendance_date || getLocalISODate());
+                const settingsDate = activeAttendanceSettings && isAttendanceSessionFromCurrentDay(activeAttendanceSettings)
+                    ? activeAttendanceSettings.attendance_date
+                    : "";
+                return getSundayDateValue(attendanceSessionDate?.value || settingsDate || getLocalISODate());
             }
 
             function getSundayDateValue(dateValue = getLocalISODate()) {
@@ -5501,7 +5504,7 @@
                     return null;
                 }
 
-                activeAttendanceSettings = data && isAttendanceSessionFromCurrentDay(data) ? data : null;
+                activeAttendanceSettings = data || null;
                 renderAttendanceSettingsStatus();
                 return activeAttendanceSettings;
             }
@@ -5590,10 +5593,8 @@
                         return;
                     }
 
-                    activeAttendanceSettings = data && isAttendanceSessionFromCurrentDay(data) ? data : activeAttendanceSettings;
-                    if (activeAttendanceSettings) {
-                        activeAttendanceSettings.point_settings = pointSettings;
-                    }
+                    activeAttendanceSettings = data || { ...(activeAttendanceSettings || {}), ...updatePayload };
+                    activeAttendanceSettings.point_settings = pointSettings;
                     attendanceSettingsForm?.removeAttribute("data-auto-refresh-dirty");
                     renderAttendanceSettingsStatus("Attendance computation settings saved. Date and time were not changed.");
                     await loadAdminOverviewCounts();
