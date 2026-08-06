@@ -870,6 +870,15 @@
                 return getLocalDateInputValue(match?.match_time);
             }
 
+            function getMatchScheduleMinutes(match) {
+                const parsed = new Date(match?.match_time || "");
+                if (Number.isNaN(parsed.getTime())) {
+                    return Number.MAX_SAFE_INTEGER;
+                }
+
+                return parsed.getHours() * 60 + parsed.getMinutes();
+            }
+
             function formatDateFilterLabel(dateValue) {
                 const parsed = new Date(`${dateValue}T00:00:00`);
 
@@ -2775,21 +2784,17 @@
                 }
 
                 const sorted = [...filtered].sort((a, b) => {
-                    const hasActiveCountdown = match =>
-                        match.status === "Next"
-                        && Boolean(match.timer_enabled)
-                        && Boolean(match.timer_started_at);
-                    const countdownDiff = Number(hasActiveCountdown(b)) - Number(hasActiveCountdown(a));
-                    if (countdownDiff !== 0) return countdownDiff;
+                    const timeDiff = getMatchScheduleMinutes(a) - getMatchScheduleMinutes(b);
+                    if (timeDiff !== 0) return timeDiff;
 
-                    if (hasActiveCountdown(a) && hasActiveCountdown(b)) {
-                        const remainingDiff = calculateRemainingSeconds(a) - calculateRemainingSeconds(b);
-                        if (remainingDiff !== 0) return remainingDiff;
-                    }
+                    const categoryDiff = getGeneralSportName(getSportName(a)).localeCompare(getGeneralSportName(getSportName(b)));
+                    if (categoryDiff !== 0) return categoryDiff;
+
+                    const sportDiff = getSportName(a).localeCompare(getSportName(b));
+                    if (sportDiff !== 0) return sportDiff;
 
                     const order = { Ongoing: 0, Next: 1, Done: 2 };
-                    const diff = (order[a.status] ?? 99) - (order[b.status] ?? 99);
-                    return diff !== 0 ? diff : new Date(b.match_time || 0) - new Date(a.match_time || 0);
+                    return (order[a.status] ?? 99) - (order[b.status] ?? 99);
                 });
 
                 studentMatchesGrid.innerHTML = "";
