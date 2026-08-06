@@ -156,6 +156,23 @@
             word-break: break-word;
         }
 
+        body.dashboard-auth-locked .admin-shell {
+            display: none !important;
+        }
+
+        body.dashboard-auth-locked::before {
+            content: "Checking admin access...";
+            position: fixed;
+            inset: 0;
+            z-index: 2147483000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8fafc;
+            color: #1e3a8a;
+            font: 800 1rem/1.5 Inter, system-ui, sans-serif;
+        }
+
         #sidebarBackdrop {
             display: none;
         }
@@ -1233,7 +1250,7 @@
 </head>
 
 
-<body class="bg-gray-50 overflow-hidden">
+<body class="dashboard-auth-locked bg-gray-50 overflow-hidden">
     <div class="admin-shell">
         <!-- Sidebar -->
         <div id="pageSidebar" class="admin-sidebar bg-white border-r border-gray-200 shadow-sm relative flex flex-col">
@@ -4046,6 +4063,8 @@
                 currentAdminUser = resolvedUser;
                 adminResolvedAccessUser = currentAdminUser;
                 adminTabAccessResolved = true;
+                document.body.classList.remove("dashboard-auth-locked");
+                document.body.classList.add("dashboard-authenticated");
                 renderAdminSidebarIdentity(currentAdminUser);
                 applyAdminTabAccess(currentAdminUser);
                 restoreAdminActiveTab();

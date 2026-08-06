@@ -75,6 +75,23 @@
                 overflow: hidden;
             }
 
+            body.dashboard-auth-locked .committee-shell {
+                display: none !important;
+            }
+
+            body.dashboard-auth-locked::before {
+                content: "Checking committee access...";
+                position: fixed;
+                inset: 0;
+                z-index: 2147483000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: #f8fafc;
+                color: #1e3a8a;
+                font: 800 1rem/1.5 Inter, system-ui, sans-serif;
+            }
+
             .committee-sidebar {
                 width: 20rem;
                 flex: 0 0 20rem;
@@ -1292,7 +1309,7 @@
     </style>
     </head>
 
-    <body class="bg-gray-50 overflow-hidden match-controls-pending">
+    <body class="dashboard-auth-locked bg-gray-50 overflow-hidden match-controls-pending">
         <div class="committee-shell min-h-screen flex">
 
             <!-- Sidebar -->
@@ -3048,6 +3065,8 @@
                     }
 
                     currentUser = resolvedUser;
+                    document.body.classList.remove("dashboard-auth-locked");
+                    document.body.classList.add("dashboard-authenticated");
 
                     if (typeof window.renderAccountIdentity === "function") {
                         window.renderAccountIdentity(currentUser);
