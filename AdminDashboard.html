@@ -6687,7 +6687,10 @@
                         .catch(error => console.warn("Attendance background repair skipped:", error.message || error));
                 }
 
-                const { data, error } = await loadOverviewAttendanceRows(attendanceDate);
+                const { data, error } = await supabase
+                    .from(ATTENDANCE_POINTS_VIEW)
+                    .select("team, session_title, total_present")
+                    .eq("attendance_date", attendanceDate);
 
                 if (error) {
                     console.error("Error loading attendance stats:", error.message || error);
@@ -6696,40 +6699,38 @@
 
                 const collegeStats = new Map();
 
-                (data || [])
-                    .filter(row => String(row.status || "Present").trim().toLowerCase() === "present")
-                    .forEach(row => {
-                        const college = getAttendanceStatsCollege(row);
-                        const studentKey = String(row.student_id || "").trim() || String(row.id || `${college}-${row.attendance_session_title || ""}`);
-                        const sessionTitle = String(row.attendance_session_title || "").trim();
+                (data || []).forEach(row => {
+                    const college = getCollegeTeamAlias(row.team) || row.team || "Unassigned";
+                    const totalPresent = Number(row.total_present || 0);
+                    const sessionTitle = String(row.session_title || "").trim();
 
-                        if (!collegeStats.has(college)) {
-                            collegeStats.set(college, {
-                                college,
-                                total: 0,
-                                morningIds: new Set(),
-                                afternoonIds: new Set()
-                            });
-                        }
+                    if (!collegeStats.has(college)) {
+                        collegeStats.set(college, {
+                            college,
+                            total: 0,
+                            morning: 0,
+                            afternoon: 0
+                        });
+                    }
 
-                        const stat = collegeStats.get(college);
-                        stat.total += 1;
+                    const stat = collegeStats.get(college);
+                    stat.total += totalPresent;
 
-                        if (sessionTitle === "Morning Session") {
-                            stat.morningIds.add(studentKey);
-                        }
+                    if (sessionTitle === "Morning Session") {
+                        stat.morning += totalPresent;
+                    }
 
-                        if (sessionTitle === "Afternoon Session") {
-                            stat.afternoonIds.add(studentKey);
-                        }
-                    });
+                    if (sessionTitle === "Afternoon Session") {
+                        stat.afternoon += totalPresent;
+                    }
+                });
 
                 return [...collegeStats.values()]
                     .map(stat => ({
                         college: stat.college,
                         total: stat.total,
-                        morning: stat.morningIds.size,
-                        afternoon: stat.afternoonIds.size
+                        morning: stat.morning,
+                        afternoon: stat.afternoon
                     }))
                     .sort((a, b) => a.college.localeCompare(b.college));
             }
@@ -6746,19 +6747,16 @@
                     renderEmptyRow(overviewAttendanceBody, 4, "Loading attendance records...");
                 }
 
-                const [attendanceStats, attendanceCount] = await Promise.all([
-                    loadOverviewAttendanceStats({
-                        attendanceDate,
-                        repairInBackground: !options.skipRepair
-                    }),
-                    loadOverviewAttendanceCount(attendanceDate)
-                ]);
+                const attendanceStats = await loadOverviewAttendanceStats({
+                    attendanceDate,
+                    repairInBackground: !options.skipRepair
+                });
 
                 if (loadId !== overviewAttendanceLoadSequence || getOverviewAttendanceDate() !== attendanceDate) {
                     return attendanceStats;
                 }
 
-                const selectedDateAttendanceTotal = attendanceCount ?? attendanceStats.reduce((total, row) => total + Number(row.total || 0), 0);
+                const selectedDateAttendanceTotal = attendanceStats.reduce((total, row) => total + Number(row.total || 0), 0);
                 setOverviewText(adminTodayAttendance, selectedDateAttendanceTotal);
                 renderOverviewAttendance(attendanceStats);
 
@@ -7075,8 +7073,7 @@
                     sportsResult,
                     participantsResult,
                     matches,
-                    attendanceStats,
-                    attendanceCount
+                    attendanceStats
                 ] = await Promise.all([
                     supabase
                         .from(TEAMS_TABLE)
@@ -7094,8 +7091,7 @@
                         .order("created_at", { ascending: false }),
 
                     loadOverviewMatches(),
-                    loadOverviewAttendanceStats(),
-                    loadOverviewAttendanceCount(getOverviewAttendanceDate())
+                    loadOverviewAttendanceStats()
                 ]);
 
                 if (teamsResult.error) {
@@ -7155,7 +7151,7 @@
                 setOverviewText(adminApprovedParticipants, approvedParticipants);
                 setOverviewText(adminPendingParticipants, pendingParticipants);
                 setOverviewText(adminRejectedParticipants, rejectedParticipants);
-                const selectedDateAttendanceTotal = attendanceCount ?? attendanceStats.reduce((total, row) => total + Number(row.total || 0), 0);
+                const selectedDateAttendanceTotal = attendanceStats.reduce((total, row) => total + Number(row.total || 0), 0);
                 setOverviewText(adminTodayAttendance, selectedDateAttendanceTotal);
 
                 if (adminOverviewLastUpdated) {
