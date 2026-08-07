@@ -65,10 +65,16 @@ normalized_attendance as (
         a.id,
         a.attendance_date,
         coalesce(nullif(trim(a.attendance_session_title), ''), 'Attendance') as session_title,
-        coalesce(a.attendance_category, 'student_player') as attendance_category,
+        case
+            when a.participant_id is not null
+             and lower(coalesce(p.status, '')) = 'approved'
+                then 'registered_player'
+            when coalesce(a.attendance_category, '') in ('faculty', 'department_chair', 'dean', 'sponsor', 'sponsor_game_attendance')
+                then a.attendance_category
+            else 'student_player'
+        end as resolved_attendance_category,
         coalesce(a.status, 'Present') as attendance_status,
         a.participant_id,
-        p.status as participant_status,
         case btrim(lower(regexp_replace(coalesce(
             case
                 when a.participant_id is not null and nullif(p.team, '') is not null then p.team
@@ -109,21 +115,17 @@ attendance_counts as (
         na.team,
         count(*) as total_present,
         count(*) filter (
-            where na.participant_id is not null
-              and lower(coalesce(na.participant_status, '')) = 'approved'
-              and na.attendance_category = 'registered_player'
+            where na.resolved_attendance_category = 'registered_player'
         ) as registered_player_count,
         count(*) filter (
-            where na.attendance_category in ('student_player', 'student_from_college')
-               or na.participant_id is null
-               or lower(coalesce(na.participant_status, '')) <> 'approved'
+            where na.resolved_attendance_category = 'student_player'
         ) as student_player_count,
-        count(*) filter (where na.attendance_category = 'faculty') as faculty_count,
-        count(*) filter (where na.attendance_category = 'department_chair') as department_chair_count,
-        count(*) filter (where na.attendance_category = 'dean') as dean_count,
-        count(*) filter (where na.attendance_category = 'student_from_college') as student_from_college_count,
-        count(*) filter (where na.attendance_category = 'sponsor') as sponsor_count,
-        count(*) filter (where na.attendance_category = 'sponsor_game_attendance') as sponsor_game_attendance_count
+        count(*) filter (where na.resolved_attendance_category = 'faculty') as faculty_count,
+        count(*) filter (where na.resolved_attendance_category = 'department_chair') as department_chair_count,
+        count(*) filter (where na.resolved_attendance_category = 'dean') as dean_count,
+        count(*) filter (where na.resolved_attendance_category = 'student_player') as student_from_college_count,
+        count(*) filter (where na.resolved_attendance_category = 'sponsor') as sponsor_count,
+        count(*) filter (where na.resolved_attendance_category = 'sponsor_game_attendance') as sponsor_game_attendance_count
     from normalized_attendance na
     where lower(coalesce(na.attendance_status, 'present')) = 'present'
       and na.team in ('CAH', 'COB', 'COD', 'COH', 'COM', 'CON', 'COT', 'CSET', 'CTE', 'Academy', 'Faculty')
