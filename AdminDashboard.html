@@ -3586,6 +3586,30 @@
                 return new Date(openedAt.getTime() + durationMinutes * 60000);
             }
 
+            function getDateTimeFromSessionTime(attendanceDate, timeValue) {
+                const scanningWindowDate = getAttendanceScanningWindowDate(attendanceDate);
+                return timeValue ? getAttendanceStartDateTime(scanningWindowDate, timeValue) : null;
+            }
+
+            function mergeAttendanceSettingsWithSessionRow(baseSettings = {}, sessionRow = null) {
+                if (!sessionRow) {
+                    return baseSettings;
+                }
+
+                const openedAt = getDateTimeFromSessionTime(sessionRow.attendance_date, sessionRow.start_time);
+                const closesAt = getDateTimeFromSessionTime(sessionRow.attendance_date, sessionRow.end_time);
+
+                return {
+                    ...(baseSettings || {}),
+                    attendance_date: sessionRow.attendance_date,
+                    session_title: normalizeAttendanceSessionTitle(sessionRow.category),
+                    attendance_session_id: sessionRow.id || baseSettings?.attendance_session_id || null,
+                    opened_at: openedAt ? openedAt.toISOString() : baseSettings?.opened_at || null,
+                    closes_at: closesAt ? closesAt.toISOString() : baseSettings?.closes_at || null,
+                    point_settings: normalizeAttendancePointSettings(sessionRow.point_settings || baseSettings?.point_settings)
+                };
+            }
+
             function isAttendanceSessionOpen(settings = activeAttendanceSettings) {
                 if (!settings?.attendance_date) {
                     return false;
@@ -5472,8 +5496,8 @@
                 return Boolean(isFocusedInsideSettings || isDirty);
             }
 
-            function syncAttendanceSettingsFormFromSettings(settings, dateValue, sessionTitle) {
-                if (isAttendanceSettingsFormEditing()) {
+            function syncAttendanceSettingsFormFromSettings(settings, dateValue, sessionTitle, forceSync = false) {
+                if (!forceSync && isAttendanceSettingsFormEditing()) {
                     return;
                 }
 
@@ -5488,7 +5512,7 @@
                 setAttendancePointSettingsForm(settings?.point_settings);
             }
 
-            function renderAttendanceSettingsStatus(message = "") {
+            function renderAttendanceSettingsStatus(message = "", options = {}) {
                 if (!attendanceSessionDate || !attendanceStartTime || !attendanceOpenUntil || !attendanceSettingsStatus) {
                     return;
                 }
@@ -5497,7 +5521,7 @@
                 const dateValue = getAttendanceSessionDate();
                 const sessionTitle = normalizeAttendanceSessionTitle(settings?.session_title || attendanceSessionTitle?.value);
 
-                syncAttendanceSettingsFormFromSettings(settings, dateValue, sessionTitle);
+                syncAttendanceSettingsFormFromSettings(settings, dateValue, sessionTitle, Boolean(options.forceSync));
 
                 if (message) {
                     attendanceSettingsStatus.className = "rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-900";
@@ -5548,11 +5572,19 @@
                 }
 
                 activeAttendanceSettings = data || null;
+                const sessionDate = activeAttendanceSettings?.attendance_date;
+                const sessionTitle = normalizeAttendanceSessionTitle(activeAttendanceSettings?.session_title || attendanceSessionTitle?.value);
+                if (sessionDate && sessionTitle) {
+                    const sessionRow = await loadOrCreateAttendanceSessionRow(sessionTitle, sessionDate);
+                    if (sessionRow?.id) {
+                        activeAttendanceSettings = mergeAttendanceSettingsWithSessionRow(activeAttendanceSettings, sessionRow);
+                    }
+                }
                 renderAttendanceSettingsStatus();
                 return activeAttendanceSettings;
             }
 
-            async function ensureAttendanceSessionRow(category, attendanceDate, openedAt = null, closesAt = null) {
+            async function ensureAttendanceSessionRow(category, attendanceDate, openedAt = null, closesAt = null, pointSettings = null) {
                 if (!category || !attendanceDate) {
                     return null;
                 }
@@ -5565,12 +5597,16 @@
                     updated_at: new Date().toISOString()
                 };
 
+                if (pointSettings) {
+                    payload.point_settings = normalizeAttendancePointSettings(pointSettings);
+                }
+
                 const { data, error } = await supabase
                     .from(ATTENDANCE_SESSIONS_TABLE)
                     .upsert([payload], {
                         onConflict: "category,attendance_date"
                     })
-                    .select("id, category, attendance_date, start_time, end_time")
+                    .select("id, category, attendance_date, start_time, end_time, point_settings")
                     .single();
 
                 if (error) {
@@ -5579,6 +5615,48 @@
                 }
 
                 return data;
+            }
+
+            async function loadOrCreateAttendanceSessionRow(category, attendanceDate) {
+                if (!category || !attendanceDate) {
+                    return null;
+                }
+
+                const selectColumns = "id, category, attendance_date, start_time, end_time, point_settings";
+                const existingResult = await supabase
+                    .from(ATTENDANCE_SESSIONS_TABLE)
+                    .select(selectColumns)
+                    .eq("category", category)
+                    .eq("attendance_date", attendanceDate)
+                    .maybeSingle();
+
+                if (!existingResult.error && existingResult.data) {
+                    return existingResult.data;
+                }
+
+                if (existingResult.error) {
+                    console.warn("Attendance session row load warning:", existingResult.error.message || existingResult.error);
+                }
+
+                return ensureAttendanceSessionRow(category, attendanceDate, null, null, activeAttendanceSettings?.point_settings);
+            }
+
+            async function updateAttendanceRecordsPointSettings(attendanceDate, sessionTitle, pointSettings) {
+                if (!attendanceDate || !sessionTitle || !pointSettings) {
+                    return;
+                }
+
+                const { error } = await supabase
+                    .from(ATTENDANCE_TABLE)
+                    .update({
+                        attendance_point_settings: normalizeAttendancePointSettings(pointSettings)
+                    })
+                    .eq("attendance_date", attendanceDate)
+                    .eq("attendance_session_title", normalizeAttendanceSessionTitle(sessionTitle));
+
+                if (error) {
+                    console.warn("Attendance record point settings refresh warning:", error.message || error);
+                }
             }
 
             async function saveAttendanceSettings(event) {
@@ -5615,6 +5693,9 @@
                 if (!shouldSaveSessionWindow) {
                     const updatePayload = {
                         id: 1,
+                        attendance_date: attendanceDate,
+                        session_type: sessionType,
+                        session_title: sessionTitle,
                         point_settings: pointSettings,
                         updated_by: adminUser?.id || adminUser?.email || null,
                         updated_by_name: adminUser?.fullName || adminUser?.full_name || adminUser?.email || "Admin",
@@ -5638,6 +5719,11 @@
 
                     activeAttendanceSettings = data || { ...(activeAttendanceSettings || {}), ...updatePayload };
                     activeAttendanceSettings.point_settings = pointSettings;
+                    const sessionRow = await ensureAttendanceSessionRow(sessionTitle, attendanceDate, openedAt, closesAt, pointSettings);
+                    if (sessionRow?.id) {
+                        activeAttendanceSettings = mergeAttendanceSettingsWithSessionRow(activeAttendanceSettings, sessionRow);
+                    }
+                    await updateAttendanceRecordsPointSettings(attendanceDate, sessionTitle, pointSettings);
                     attendanceSettingsForm?.removeAttribute("data-auto-refresh-dirty");
                     renderAttendanceSettingsStatus("Attendance computation settings saved. Date and time were not changed.");
                     await loadAdminOverviewCounts();
@@ -5678,10 +5764,11 @@
                 }
 
                 activeAttendanceSettings = data || payload;
-                const sessionRow = await ensureAttendanceSessionRow(sessionTitle, attendanceDate, openedAt, closesAt);
+                const sessionRow = await ensureAttendanceSessionRow(sessionTitle, attendanceDate, openedAt, closesAt, pointSettings);
                 if (sessionRow?.id) {
-                    activeAttendanceSettings.attendance_session_id = sessionRow.id;
+                    activeAttendanceSettings = mergeAttendanceSettingsWithSessionRow(activeAttendanceSettings, sessionRow);
                 }
+                await updateAttendanceRecordsPointSettings(attendanceDate, sessionTitle, pointSettings);
                 attendanceSettingsForm?.removeAttribute("data-auto-refresh-dirty");
                 renderAttendanceSettingsStatus();
                 await loadAdminOverviewCounts();
@@ -5695,22 +5782,18 @@
                     attendanceSessionDate.value = attendanceDate;
                 }
                 const sessionTitle = normalizeAttendanceSessionTitle(attendanceSessionTitle?.value);
-                const scanningWindowDate = getAttendanceScanningWindowDate(attendanceDate);
-                const openedAt = getAttendanceStartDateTime(scanningWindowDate, attendanceStartTime?.value || "");
-                const closesAt = getAttendanceCloseDateTime(scanningWindowDate, attendanceOpenUntil?.value || "");
-
                 activeAttendanceSettings = {
                     ...(activeAttendanceSettings || {}),
                     attendance_date: attendanceDate,
                     session_title: sessionTitle
                 };
 
-                const sessionRow = await ensureAttendanceSessionRow(sessionTitle, attendanceDate, openedAt, closesAt);
+                const sessionRow = await loadOrCreateAttendanceSessionRow(sessionTitle, attendanceDate);
                 if (sessionRow?.id) {
-                    activeAttendanceSettings.attendance_session_id = sessionRow.id;
+                    activeAttendanceSettings = mergeAttendanceSettingsWithSessionRow(activeAttendanceSettings, sessionRow);
                 }
 
-                renderAttendanceSettingsStatus();
+                renderAttendanceSettingsStatus("", { forceSync: true });
                 await loadAdminOverviewCounts();
             }
 
