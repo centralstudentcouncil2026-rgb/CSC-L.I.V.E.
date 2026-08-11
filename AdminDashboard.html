@@ -1841,6 +1841,27 @@
                     </div>
                 </div>
 
+                <div class="mb-6 rounded-xl border border-blue-100 bg-white p-4 shadow-sm">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h4 class="text-sm font-black uppercase tracking-wide text-blue-900">
+                                Standalone Registration Form
+                            </h4>
+                            <p id="registrationOpenStatus" class="mt-1 text-sm font-semibold text-gray-600">
+                                Loading registration status...
+                            </p>
+                        </div>
+
+                        <label class="inline-flex cursor-pointer items-center gap-3 self-start sm:self-center">
+                            <span id="registrationOpenToggleLabel" class="text-sm font-black text-gray-800">
+                                Open
+                            </span>
+                            <input id="registrationOpenToggle" type="checkbox" class="peer sr-only" checked>
+                            <span class="relative h-7 w-14 rounded-full bg-red-500 transition peer-checked:bg-emerald-500 after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-7"></span>
+                        </label>
+                    </div>
+                </div>
+
                 <div class="responsive-table-card p-6 bg-white border-0 shadow-md rounded-lg overflow-x-auto">
                     <table class="w-full min-w-[1280px]">
                         <thead>
@@ -3154,6 +3175,7 @@
             const STUDENT_FEEDBACK_TABLE = "student_feedback";
             const APP_SETTINGS_TABLE = "app_settings";
             const EVALUATION_FORM_SETTING_KEY = "evaluation_form_url";
+            const REGISTRATION_OPEN_SETTING_KEY = "registration_open";
             const ANNOUNCEMENTS_TABLE = "announcements";
             const ACCOUNT_PROFILES_TABLE = "user_profiles";
             const CONVERSATIONS_TABLE = "conversations";
@@ -3280,6 +3302,9 @@
             const evaluationFormUrl = document.getElementById("evaluationFormUrl");
             const evaluationLinkStatus = document.getElementById("evaluationLinkStatus");
             const saveEvaluationLinkButton = document.getElementById("saveEvaluationLinkButton");
+            const registrationOpenToggle = document.getElementById("registrationOpenToggle");
+            const registrationOpenToggleLabel = document.getElementById("registrationOpenToggleLabel");
+            const registrationOpenStatus = document.getElementById("registrationOpenStatus");
             const studentFeedbackMessageModal = document.getElementById("studentFeedbackMessageModal");
             const studentFeedbackMessageModalText = document.getElementById("studentFeedbackMessageModalText");
             const closeStudentFeedbackMessageModal = document.getElementById("closeStudentFeedbackMessageModal");
@@ -10039,6 +10064,81 @@
                 showDashboardToast("Evaluation form link saved.");
             }
 
+            function parseRegistrationOpenSetting(value) {
+                return String(value ?? "true").trim().toLowerCase() !== "false";
+            }
+
+            function setRegistrationOpenStatus(isOpen, message = "") {
+                if (registrationOpenToggle) {
+                    registrationOpenToggle.checked = Boolean(isOpen);
+                    registrationOpenToggle.disabled = false;
+                }
+
+                if (registrationOpenToggleLabel) {
+                    registrationOpenToggleLabel.textContent = isOpen ? "Open" : "Closed";
+                    registrationOpenToggleLabel.className = `text-sm font-black ${isOpen ? "text-emerald-700" : "text-red-700"}`;
+                }
+
+                if (registrationOpenStatus) {
+                    registrationOpenStatus.textContent = message || (isOpen
+                        ? "Registration form is accepting submissions."
+                        : "Registration form is closed and will show the CSC office notice.");
+                    registrationOpenStatus.className = `mt-1 text-sm font-semibold ${isOpen ? "text-emerald-700" : "text-red-700"}`;
+                }
+            }
+
+            async function loadRegistrationOpenSetting() {
+                if (!registrationOpenToggle) return;
+
+                registrationOpenToggle.disabled = true;
+                if (registrationOpenStatus) {
+                    registrationOpenStatus.textContent = "Loading registration status...";
+                    registrationOpenStatus.className = "mt-1 text-sm font-semibold text-gray-600";
+                }
+
+                const { data, error } = await supabase
+                    .from(APP_SETTINGS_TABLE)
+                    .select("setting_value")
+                    .eq("setting_key", REGISTRATION_OPEN_SETTING_KEY)
+                    .maybeSingle();
+
+                if (error) {
+                    console.warn("Registration open setting load warning:", error.message || error);
+                    registrationOpenToggle.disabled = false;
+                    setRegistrationOpenStatus(true, "Registration setting is not ready. Run the registration setting SQL first.");
+                    return;
+                }
+
+                setRegistrationOpenStatus(parseRegistrationOpenSetting(data?.setting_value));
+            }
+
+            async function saveRegistrationOpenSetting() {
+                if (!registrationOpenToggle) return;
+
+                const isOpen = registrationOpenToggle.checked;
+                registrationOpenToggle.disabled = true;
+                setRegistrationOpenStatus(isOpen, "Saving registration status...");
+
+                const { error } = await supabase
+                    .from(APP_SETTINGS_TABLE)
+                    .upsert({
+                        setting_key: REGISTRATION_OPEN_SETTING_KEY,
+                        setting_value: isOpen ? "true" : "false",
+                        updated_by: currentAdminUser?.id || null,
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: "setting_key" });
+
+                if (error) {
+                    console.error("Registration open setting save error:", error.message || error);
+                    await loadRegistrationOpenSetting();
+                    showDashboardToast("Could not save registration status. Run the registration setting SQL first.", "error");
+                    return;
+                }
+
+                setRegistrationOpenStatus(isOpen);
+                showDashboardToast(isOpen ? "Registration form is now open." : "Registration form is now closed.");
+            }
+
             function renderStudentFeedback() {
                 if (!studentFeedbackTableBody) return;
 
@@ -11081,6 +11181,7 @@
             printAttendanceByDateButton.addEventListener("click", printAttendanceByDate);
             printCommitteeMatchesButton.addEventListener("click", printCommitteeMatches);
             evaluationLinkForm?.addEventListener("submit", saveEvaluationFormLink);
+            registrationOpenToggle?.addEventListener("change", saveRegistrationOpenSetting);
             adminContactGroupSelect.addEventListener("change", function () {
                 setAdminContactsVisible(true);
                 const nextGroup = this.value || "";
@@ -11321,6 +11422,7 @@
                 loadParticipants(),
                 loadStudentFeedback(),
                 loadEvaluationFormLink(),
+                loadRegistrationOpenSetting(),
                 loadAnnouncements(),
                 loadAccountApprovals(),
                 loadAdminContactProfiles(),
@@ -11492,6 +11594,16 @@
                         filter: `setting_key=eq.${EVALUATION_FORM_SETTING_KEY}`
                     },
                     loadEvaluationFormLink
+                )
+                .on(
+                    "postgres_changes",
+                    {
+                        event: "*",
+                        schema: "public",
+                        table: APP_SETTINGS_TABLE,
+                        filter: `setting_key=eq.${REGISTRATION_OPEN_SETTING_KEY}`
+                    },
+                    loadRegistrationOpenSetting
                 )
                 .on(
                     "postgres_changes",
