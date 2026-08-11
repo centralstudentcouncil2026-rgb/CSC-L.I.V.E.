@@ -3803,7 +3803,33 @@
                 }).join("");
             }
 
+            function getSavedAttendanceCollegeTotals() {
+                return normalizeAttendancePointSettings(activeAttendanceSettings?.point_settings)
+                    .parameters
+                    .college_totals || {};
+            }
+
+            function hasUserChangedAttendanceCollegeTotals() {
+                return attendanceSettingsForm?.dataset.collegeTotalsDirty === "true";
+            }
+
+            function markAttendanceSettingsDirty(event) {
+                if (!attendanceSettingsForm) {
+                    return;
+                }
+
+                attendanceSettingsForm.dataset.autoRefreshDirty = "true";
+
+                if (event?.target?.closest?.("[data-attendance-college-total-row]")) {
+                    attendanceSettingsForm.dataset.collegeTotalsDirty = "true";
+                }
+            }
+
             function getAttendanceCollegeTotalsFromForm() {
+                if (!hasUserChangedAttendanceCollegeTotals()) {
+                    return getSavedAttendanceCollegeTotals();
+                }
+
                 return Array.from(document.querySelectorAll("[data-attendance-college-total-row]")).reduce((totals, row) => {
                     const collegeId = row.dataset.collegeId || row.dataset.collegeName || "";
 
@@ -4001,6 +4027,7 @@
                 if (sundayFacultyPoints) sundayFacultyPoints.value = parameters.faculty_points;
                 if (gameSponsorPoints) gameSponsorPoints.value = parameters.sponsor_game_attendance_points;
                 renderAttendanceCollegeTotals(parameters.college_totals);
+                attendanceSettingsForm?.removeAttribute("data-college-totals-dirty");
             }
 
             function getStoredAdminUser() {
@@ -5725,6 +5752,7 @@
                     }
                     await updateAttendanceRecordsPointSettings(attendanceDate, sessionTitle, pointSettings);
                     attendanceSettingsForm?.removeAttribute("data-auto-refresh-dirty");
+                    attendanceSettingsForm?.removeAttribute("data-college-totals-dirty");
                     renderAttendanceSettingsStatus("Attendance computation settings saved. Date and time were not changed.");
                     await loadAdminOverviewCounts();
                     showDashboardToast("Attendance computation settings saved.");
@@ -5770,6 +5798,7 @@
                 }
                 await updateAttendanceRecordsPointSettings(attendanceDate, sessionTitle, pointSettings);
                 attendanceSettingsForm?.removeAttribute("data-auto-refresh-dirty");
+                attendanceSettingsForm?.removeAttribute("data-college-totals-dirty");
                 renderAttendanceSettingsStatus();
                 await loadAdminOverviewCounts();
                 showDashboardToast("Attendance session saved.");
@@ -7563,7 +7592,9 @@
                 renderParticipantTeamFilter();
                 renderParticipantTeamOptions();
                 renderPrintTeamOptions();
-                renderAttendanceCollegeTotals(activeAttendanceSettings?.point_settings?.opening_program?.college_totals || {});
+                if (!hasUserChangedAttendanceCollegeTotals()) {
+                    renderAttendanceCollegeTotals(getSavedAttendanceCollegeTotals());
+                }
 
                 if (sportsData.length > 0) {
                     renderSports();
@@ -11265,6 +11296,8 @@
             printCommitteeMatchesButton.addEventListener("click", printCommitteeMatches);
             evaluationLinkForm?.addEventListener("submit", saveEvaluationFormLink);
             registrationOpenToggle?.addEventListener("change", saveRegistrationOpenSetting);
+            attendanceSettingsForm?.addEventListener("input", markAttendanceSettingsDirty);
+            attendanceSettingsForm?.addEventListener("change", markAttendanceSettingsDirty);
             adminContactGroupSelect.addEventListener("change", function () {
                 setAdminContactsVisible(true);
                 const nextGroup = this.value || "";
