@@ -7954,40 +7954,42 @@
                 return getParticipantMajorSportName(participant);
             }
 
+            function compareParticipantsForAdmin(a, b) {
+                const statusDiff = getParticipantStatusSortRank(a.status) - getParticipantStatusSortRank(b.status);
+
+                if (statusDiff !== 0) {
+                    return statusDiff;
+                }
+
+                const teamDiff = compareParticipantText(getParticipantTeamName(a), getParticipantTeamName(b));
+
+                if (teamDiff !== 0) {
+                    return teamDiff;
+                }
+
+                const scopeDiff = getParticipantGameScopeSortRank(a) - getParticipantGameScopeSortRank(b);
+
+                if (scopeDiff !== 0) {
+                    return scopeDiff;
+                }
+
+                const sportDiff = compareParticipantText(getParticipantSportSortName(a), getParticipantSportSortName(b));
+
+                if (sportDiff !== 0) {
+                    return sportDiff;
+                }
+
+                const nameDiff = compareParticipantText(getParticipantDisplayName(a), getParticipantDisplayName(b));
+
+                if (nameDiff !== 0) {
+                    return nameDiff;
+                }
+
+                return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+            }
+
             function sortParticipantsForAdmin(participants) {
-                return [...participants].sort((a, b) => {
-                    const statusDiff = getParticipantStatusSortRank(a.status) - getParticipantStatusSortRank(b.status);
-
-                    if (statusDiff !== 0) {
-                        return statusDiff;
-                    }
-
-                    const teamDiff = compareParticipantText(getParticipantTeamName(a), getParticipantTeamName(b));
-
-                    if (teamDiff !== 0) {
-                        return teamDiff;
-                    }
-
-                    const scopeDiff = getParticipantGameScopeSortRank(a) - getParticipantGameScopeSortRank(b);
-
-                    if (scopeDiff !== 0) {
-                        return scopeDiff;
-                    }
-
-                    const sportDiff = compareParticipantText(getParticipantSportSortName(a), getParticipantSportSortName(b));
-
-                    if (sportDiff !== 0) {
-                        return sportDiff;
-                    }
-
-                    const nameDiff = compareParticipantText(getParticipantDisplayName(a), getParticipantDisplayName(b));
-
-                    if (nameDiff !== 0) {
-                        return nameDiff;
-                    }
-
-                    return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-                });
+                return [...participants].sort(compareParticipantsForAdmin);
             }
 
             function getParticipantStatusLabel(status) {
@@ -8259,6 +8261,63 @@
                 });
             }
 
+            function isPrintingAllParticipants() {
+                return !getParticipantTeamFilterValue()
+                    && !getParticipantSportFilterValue()
+                    && !getParticipantSearchValue();
+            }
+
+            function getParticipantSportEntries(participant) {
+                const entries = [];
+
+                splitParticipantSportNames(getParticipantMajorSportName(participant)).forEach(sportName => {
+                    entries.push({
+                        sportName,
+                        gameType: "Major"
+                    });
+                });
+
+                splitParticipantSportNames(getParticipantMinorSportName(participant)).forEach(sportName => {
+                    entries.push({
+                        sportName,
+                        gameType: "Minor"
+                    });
+                });
+
+                return entries.length ? entries : [{ sportName: "No Sport Listed", gameType: "-" }];
+            }
+
+            function buildParticipantPrintSportGroups(participants) {
+                const groups = new Map();
+
+                participants.forEach(participant => {
+                    getParticipantSportEntries(participant).forEach(entry => {
+                        const key = normalizeParticipantSport(entry.sportName).toLowerCase() || "no sport listed";
+
+                        if (!groups.has(key)) {
+                            groups.set(key, {
+                                sportName: entry.sportName || "No Sport Listed",
+                                gameTypes: new Set(),
+                                rows: []
+                            });
+                        }
+
+                        const group = groups.get(key);
+                        if (entry.gameType && entry.gameType !== "-") {
+                            group.gameTypes.add(entry.gameType);
+                        }
+                        group.rows.push({ participant, gameType: entry.gameType });
+                    });
+                });
+
+                return Array.from(groups.values())
+                    .map(group => ({
+                        ...group,
+                        rows: [...group.rows].sort((a, b) => compareParticipantsForAdmin(a.participant, b.participant))
+                    }))
+                    .sort((a, b) => compareParticipantText(a.sportName, b.sportName));
+            }
+
             function renderParticipantTeamFilter() {
                 if (!participantTeamFilter) {
                     return;
@@ -8369,6 +8428,12 @@
                     "table { width: 100%; border-collapse: collapse; font-size: 12px; }",
                     "th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; }",
                     "th { background: #f3f4f6; font-weight: 700; }",
+                    ".sport-section { break-inside: avoid; margin-top: 22px; }",
+                    ".sport-heading { align-items: baseline; display: flex; justify-content: space-between; gap: 12px; margin: 0 0 8px; }",
+                    ".sport-heading h2 { font-size: 17px; margin: 0; }",
+                    ".sport-heading span { color: #4b5563; font-size: 12px; font-weight: 700; }",
+                    ".rejected-row td { background: #fee2e2; color: #991b1b; }",
+                    ".rejected-label { color: #b91c1c; font-weight: 700; }",
                     ".empty { padding: 18px; text-align: center; color: #6b7280; }"
                 ].join("\n");
                 printDocument.head.appendChild(style);
@@ -8382,6 +8447,90 @@
                 const summary = printDocument.createElement("p");
                 summary.textContent = `Generated ${generatedAt}. Total participants: ${filteredParticipants.length}`;
                 printDocument.body.appendChild(summary);
+
+                if (isPrintingAllParticipants()) {
+                    const sportGroups = buildParticipantPrintSportGroups(filteredParticipants);
+
+                    if (sportGroups.length === 0) {
+                        const empty = printDocument.createElement("div");
+                        empty.className = "empty";
+                        empty.textContent = "No participants found.";
+                        printDocument.body.appendChild(empty);
+                    }
+
+                    sportGroups.forEach(group => {
+                        const section = printDocument.createElement("section");
+                        section.className = "sport-section";
+
+                        const headingWrap = printDocument.createElement("div");
+                        headingWrap.className = "sport-heading";
+
+                        const sportHeading = printDocument.createElement("h2");
+                        sportHeading.textContent = group.sportName;
+                        headingWrap.appendChild(sportHeading);
+
+                        const sportMeta = printDocument.createElement("span");
+                        const gameTypes = Array.from(group.gameTypes).sort().join(" / ");
+                        sportMeta.textContent = `${gameTypes || "Sport"} - ${group.rows.length} participant record${group.rows.length === 1 ? "" : "s"}`;
+                        headingWrap.appendChild(sportMeta);
+                        section.appendChild(headingWrap);
+
+                        const groupTable = printDocument.createElement("table");
+                        const groupThead = printDocument.createElement("thead");
+                        const groupHeaderRow = printDocument.createElement("tr");
+
+                        ["#", "Name", "Student ID", "Home College", "Team to Join", "Game Type", "Status", "Created"].forEach(label => {
+                            const th = printDocument.createElement("th");
+                            th.textContent = label;
+                            groupHeaderRow.appendChild(th);
+                        });
+
+                        groupThead.appendChild(groupHeaderRow);
+                        groupTable.appendChild(groupThead);
+
+                        const groupTbody = printDocument.createElement("tbody");
+
+                        group.rows.forEach((entry, index) => {
+                            const participant = entry.participant;
+                            const row = printDocument.createElement("tr");
+                            const status = getParticipantStatusLabel(participant.status);
+                            const isRejected = normalizeParticipantStatus(participant.status) === "rejected";
+
+                            if (isRejected) {
+                                row.className = "rejected-row";
+                            }
+
+                            [
+                                index + 1,
+                                getParticipantDisplayName(participant),
+                                getParticipantIdNumber(participant),
+                                getParticipantHomeCollege(participant),
+                                getParticipantTeamName(participant),
+                                entry.gameType,
+                                status,
+                                formatDateTime(participant.created_at)
+                            ].forEach((value, cellIndex) => {
+                                const cell = printDocument.createElement("td");
+                                cell.textContent = value;
+                                if (cellIndex === 6 && isRejected) {
+                                    cell.className = "rejected-label";
+                                }
+                                row.appendChild(cell);
+                            });
+
+                            groupTbody.appendChild(row);
+                        });
+
+                        groupTable.appendChild(groupTbody);
+                        section.appendChild(groupTable);
+                        printDocument.body.appendChild(section);
+                    });
+
+                    printWindow.document.close();
+                    printWindow.focus();
+                    printWindow.print();
+                    return;
+                }
 
                 const table = printDocument.createElement("table");
                 const thead = printDocument.createElement("thead");
