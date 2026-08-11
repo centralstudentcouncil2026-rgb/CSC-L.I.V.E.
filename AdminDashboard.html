@@ -8261,9 +8261,8 @@
                 });
             }
 
-            function isPrintingAllParticipants() {
-                return !getParticipantTeamFilterValue()
-                    && !getParticipantSportFilterValue()
+            function shouldPrintParticipantsGroupedBySport() {
+                return !getParticipantSportFilterValue()
                     && !getParticipantSearchValue();
             }
 
@@ -8448,7 +8447,7 @@
                 summary.textContent = `Generated ${generatedAt}. Total participants: ${filteredParticipants.length}`;
                 printDocument.body.appendChild(summary);
 
-                if (isPrintingAllParticipants()) {
+                if (shouldPrintParticipantsGroupedBySport()) {
                     const sportGroups = buildParticipantPrintSportGroups(filteredParticipants);
 
                     if (sportGroups.length === 0) {
