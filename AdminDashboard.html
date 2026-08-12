@@ -3482,7 +3482,8 @@
             }
 
             function getAttendanceSessionDate() {
-                const settingsDate = activeAttendanceSettings && isAttendanceSessionFromCurrentDay(activeAttendanceSettings)
+                const settingsDate = activeAttendanceSettings
+                    && (isAttendanceSessionFromCurrentDay(activeAttendanceSettings) || isAttendanceSessionScheduledForFuture(activeAttendanceSettings))
                     ? activeAttendanceSettings.attendance_date
                     : "";
                 return getSundayDateValue(attendanceSessionDate?.value || settingsDate || getLocalISODate());
@@ -3523,6 +3524,11 @@
 
             function isAttendanceSessionFromCurrentDay(settings = activeAttendanceSettings) {
                 return Boolean(settings?.opened_at && getLocalDateFromValue(settings.opened_at) === getLocalISODate());
+            }
+
+            function isAttendanceSessionScheduledForFuture(settings = activeAttendanceSettings) {
+                const startsAt = getAttendanceSessionStartsAt(settings);
+                return Boolean(startsAt && !Number.isNaN(startsAt.getTime()) && startsAt.getTime() > Date.now());
             }
 
             function isBackdatedAttendanceSession(settings = activeAttendanceSettings) {
@@ -5529,10 +5535,10 @@
                 }
 
                 attendanceSessionDate.value = dateValue;
-                attendanceStartTime.value = settings?.opened_at && isAttendanceSessionFromCurrentDay(settings)
+                attendanceStartTime.value = settings?.opened_at
                     ? getTimeInputValueFromDate(settings.opened_at)
                     : "";
-                attendanceOpenUntil.value = settings?.closes_at && isAttendanceSessionFromCurrentDay(settings)
+                attendanceOpenUntil.value = settings?.closes_at
                     ? getTimeInputValueFromDate(settings.closes_at)
                     : "";
                 if (attendanceSessionTitle) attendanceSessionTitle.value = normalizeAttendanceSessionTitle(sessionTitle);
@@ -5562,16 +5568,17 @@
                     return;
                 }
 
-                if (!isAttendanceSessionFromCurrentDay(settings)) {
+                const startsAt = getAttendanceSessionStartsAt(settings);
+                const isScheduled = !isBackdatedAttendanceSession(settings) && isAttendanceSessionScheduledForFuture(settings);
+
+                if (!isAttendanceSessionFromCurrentDay(settings) && !isScheduled) {
                     attendanceSettingsStatus.className = "rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-900";
                     attendanceSettingsStatus.textContent = "Attendance session reset for a new day. Open Settings and save today's date, start time, and end time.";
                     return;
                 }
 
                 const open = isAttendanceSessionOpen(settings);
-                const startsAt = getAttendanceSessionStartsAt(settings);
                 const isBackdated = isBackdatedAttendanceSession(settings);
-                const isScheduled = !isBackdated && startsAt && Date.now() < startsAt.getTime();
                 attendanceSettingsStatus.className = open
                     ? "rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-bold text-green-900"
                     : isScheduled
