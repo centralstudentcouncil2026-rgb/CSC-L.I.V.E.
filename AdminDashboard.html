@@ -5686,6 +5686,24 @@
                 }
             }
 
+            async function refreshAttendancePointLog(attendanceDate, sessionTitle) {
+                if (!attendanceDate || !sessionTitle) {
+                    return false;
+                }
+
+                const { error } = await supabase.rpc("refresh_attendance_point_log", {
+                    p_attendance_date: attendanceDate,
+                    p_session_title: normalizeAttendanceSessionTitle(sessionTitle)
+                });
+
+                if (error) {
+                    console.warn("Attendance point log refresh warning:", error.message || error);
+                    return false;
+                }
+
+                return true;
+            }
+
             async function saveAttendanceSettings(event) {
                 event.preventDefault();
 
@@ -5751,6 +5769,7 @@
                         activeAttendanceSettings = mergeAttendanceSettingsWithSessionRow(activeAttendanceSettings, sessionRow);
                     }
                     await updateAttendanceRecordsPointSettings(attendanceDate, sessionTitle, pointSettings);
+                    await refreshAttendancePointLog(attendanceDate, sessionTitle);
                     attendanceSettingsForm?.removeAttribute("data-auto-refresh-dirty");
                     attendanceSettingsForm?.removeAttribute("data-college-totals-dirty");
                     renderAttendanceSettingsStatus("Attendance computation settings saved. Date and time were not changed.");
@@ -5797,6 +5816,7 @@
                     activeAttendanceSettings = mergeAttendanceSettingsWithSessionRow(activeAttendanceSettings, sessionRow);
                 }
                 await updateAttendanceRecordsPointSettings(attendanceDate, sessionTitle, pointSettings);
+                await refreshAttendancePointLog(attendanceDate, sessionTitle);
                 attendanceSettingsForm?.removeAttribute("data-auto-refresh-dirty");
                 attendanceSettingsForm?.removeAttribute("data-college-totals-dirty");
                 renderAttendanceSettingsStatus();
@@ -11149,6 +11169,7 @@
 
                     const attendanceDate = savedAttendance?.attendance_date || configuredAttendanceDate;
                     let attendancePointsNotice = "";
+                    await refreshAttendancePointLog(attendanceDate, configuredAttendanceTitle);
 
                     if (attendanceCollege) {
                         const { data: teamAttendancePoints, error: teamAttendanceError } = await supabase
