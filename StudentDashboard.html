@@ -161,7 +161,7 @@
         }
 
         .student-basketball-score-grid {
-            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
         }
 
         .student-basketball-score-team {
@@ -175,7 +175,40 @@
         }
 
         .student-basketball-score-player {
-            max-width: 1px;
+            min-width: 5.5rem;
+            max-width: 12rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .student-basketball-score-table {
+            table-layout: auto;
+        }
+
+        .student-history-summary-grid,
+        .student-history-adjustment-grid,
+        .student-history-card-grid {
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+        }
+
+        .student-history-stat-card {
+            min-width: 0;
+        }
+
+        .student-history-stat-value {
+            display: block;
+            max-width: 100%;
+            overflow-wrap: anywhere;
+            word-break: normal;
+            line-height: 1.05;
+            font-variant-numeric: tabular-nums;
+        }
+
+        @media (min-width: 1024px) {
+            .student-basketball-score-player {
+                min-width: 6.75rem;
+            }
         }
 
         @media (max-width: 420px) {
@@ -2468,18 +2501,18 @@
                                 </div>
                                 <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter bg-white/80 text-emerald-800">Merit</span>
                             </div>
-                            <div class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-                                <div class="bg-white/80 p-3 rounded-xl border border-white">
+                            <div class="student-history-card-grid grid gap-3 text-sm">
+                                <div class="student-history-stat-card bg-white/80 p-3 rounded-xl border border-white">
                                     <p class="text-[10px] font-bold text-slate-600 uppercase mb-1">Points Given</p>
-                                    <p class="font-black text-xl text-emerald-900">+${Number(row.points || 0).toLocaleString()}</p>
+                                    <p class="student-history-stat-value font-black text-xl text-emerald-900">+${Number(row.points || 0).toLocaleString()}</p>
                                 </div>
-                                <div class="bg-white/80 p-3 rounded-xl border border-white">
+                                <div class="student-history-stat-card bg-white/80 p-3 rounded-xl border border-white">
                                     <p class="text-[10px] font-bold text-slate-600 uppercase mb-1">Attendance Date</p>
-                                    <p class="font-bold text-slate-950">${escapeHTML(row.attendance_date || row.date || "-")}</p>
+                                    <p class="student-history-stat-value font-bold text-slate-950">${escapeHTML(row.attendance_date || row.date || "-")}</p>
                                 </div>
-                                <div class="bg-white/80 p-3 rounded-xl border border-white sm:col-span-2">
+                                <div class="student-history-stat-card bg-white/80 p-3 rounded-xl border border-white">
                                     <p class="text-[10px] font-bold text-slate-600 uppercase mb-1">Attendance Count</p>
-                                    <p class="font-bold text-slate-950">${Number(row.total_present || 0).toLocaleString()} present record(s)</p>
+                                    <p class="student-history-stat-value font-bold text-slate-950">${Number(row.total_present || 0).toLocaleString()} present record(s)</p>
                                 </div>
                             </div>
                         </div>
@@ -2496,14 +2529,14 @@
                                     </div>
                                     <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter bg-white/80 ${isMerit ? "text-emerald-800" : "text-red-800"}">${isMerit ? "Merit" : "Demerit"}</span>
                                 </div>
-                                <div class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-                                    <div class="bg-white/80 p-3 rounded-xl border border-white">
+                                <div class="student-history-card-grid grid gap-3 text-sm">
+                                    <div class="student-history-stat-card bg-white/80 p-3 rounded-xl border border-white">
                                         <p class="text-[10px] font-bold text-slate-600 uppercase mb-1">Points</p>
-                                        <p class="font-black ${isMerit ? "text-emerald-900" : "text-red-900"}">${isMerit ? "+" : "-"}${Number(row.points || 0).toLocaleString()}</p>
+                                        <p class="student-history-stat-value font-black ${isMerit ? "text-emerald-900" : "text-red-900"}">${isMerit ? "+" : "-"}${Number(row.points || 0).toLocaleString()}</p>
                                     </div>
-                                    <div class="bg-white/80 p-3 rounded-xl border border-white">
+                                    <div class="student-history-stat-card bg-white/80 p-3 rounded-xl border border-white">
                                         <p class="text-[10px] font-bold text-slate-600 uppercase mb-1">Recorded</p>
-                                        <p class="font-bold text-slate-950">${formatDateTime(row.created_at || row.date)}</p>
+                                        <p class="student-history-stat-value font-bold text-slate-950">${formatDateTime(row.created_at || row.date)}</p>
                                     </div>
                                 </div>
                             </div>
@@ -2536,18 +2569,18 @@
                                             ${adjustmentFilter}
                                         </span>
                                     </div>
-                                    <div class="grid grid-cols-1 gap-3 text-sm">
-                                        <div class="bg-white/80 p-3 rounded-xl border border-white">
+                                    <div class="student-history-card-grid grid gap-3 text-sm">
+                                        <div class="student-history-stat-card bg-white/80 p-3 rounded-xl border border-white">
                                             <p class="text-[10px] font-bold text-slate-600 uppercase mb-1">${adjustmentFilter} Points</p>
-                                            <p class="font-black text-xl">${adjustmentSign}${Number(adjustmentPoints || 0).toLocaleString()}</p>
+                                            <p class="student-history-stat-value font-black text-xl">${adjustmentSign}${Number(adjustmentPoints || 0).toLocaleString()}</p>
                                         </div>
-                                        <div class="bg-white/80 p-3 rounded-xl border border-white">
+                                        <div class="student-history-stat-card bg-white/80 p-3 rounded-xl border border-white">
                                             <p class="text-[10px] font-bold text-slate-600 uppercase mb-1">Remarks</p>
-                                            <p class="font-bold text-slate-950">${escapeHTML(adjustmentRemarks || "No remarks recorded.")}</p>
+                                            <p class="student-history-stat-value font-bold text-slate-950">${escapeHTML(adjustmentRemarks || "No remarks recorded.")}</p>
                                         </div>
-                                        <div class="bg-white/70 p-3 rounded-xl border border-white">
+                                        <div class="student-history-stat-card bg-white/70 p-3 rounded-xl border border-white">
                                             <p class="text-[10px] font-bold text-slate-600 uppercase mb-1">Date</p>
-                                            <p class="font-bold text-slate-950">${formatDateTime(game.declared_at || game.match_time)}</p>
+                                            <p class="student-history-stat-value font-bold text-slate-950">${formatDateTime(game.declared_at || game.match_time)}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -2565,23 +2598,23 @@
                                         ${isWin ? 'Victory' : 'Defeated'}
                                     </span>
                                 </div>
-                                <div class="grid grid-cols-2 gap-4 text-sm">
-                                    <div class="bg-white/70 p-3 rounded-xl border border-slate-200">
+                                <div class="student-history-card-grid grid gap-3 text-sm sm:gap-4">
+                                    <div class="student-history-stat-card bg-white/70 p-3 rounded-xl border border-slate-200">
                                         <p class="text-[10px] font-bold text-slate-600 uppercase mb-1">Points Earned</p>
-                                        <p class="font-bold text-slate-950">+${pts}</p>
+                                        <p class="student-history-stat-value font-bold text-slate-950">+${pts}</p>
                                     </div>
-                                    <div class="bg-white/70 p-3 rounded-xl border border-slate-200">
+                                    <div class="student-history-stat-card bg-white/70 p-3 rounded-xl border border-slate-200">
                                         <p class="text-[10px] font-bold text-slate-600 uppercase mb-1">Date</p>
-                                        <p class="font-bold text-slate-950">${formatDateTime(game.match_time)}</p>
+                                        <p class="student-history-stat-value font-bold text-slate-950">${formatDateTime(game.match_time)}</p>
                                     </div>
-                                    <div class="bg-white/70 p-3 rounded-xl border border-emerald-200">
+                                    <div class="student-history-stat-card bg-white/70 p-3 rounded-xl border border-emerald-200">
                                         <p class="text-[10px] font-bold text-emerald-600 uppercase mb-1">Merit</p>
-                                        <p class="font-bold text-emerald-800">+${Number(adjustments.merit || 0).toLocaleString()}</p>
+                                        <p class="student-history-stat-value font-bold text-emerald-800">+${Number(adjustments.merit || 0).toLocaleString()}</p>
                                         ${adjustments.meritRemarks ? `<p class="mt-1 text-xs text-slate-500">${escapeHTML(adjustments.meritRemarks)}</p>` : ""}
                                     </div>
-                                    <div class="bg-white/70 p-3 rounded-xl border border-red-200">
+                                    <div class="student-history-stat-card bg-white/70 p-3 rounded-xl border border-red-200">
                                         <p class="text-[10px] font-bold text-red-600 uppercase mb-1">Demerit</p>
-                                        <p class="font-bold text-red-800">-${Number(adjustments.demerit || 0).toLocaleString()}</p>
+                                        <p class="student-history-stat-value font-bold text-red-800">-${Number(adjustments.demerit || 0).toLocaleString()}</p>
                                         ${adjustments.demeritRemarks ? `<p class="mt-1 text-xs text-slate-500">${escapeHTML(adjustments.demeritRemarks)}</p>` : ""}
                                     </div>
                                 </div>
@@ -2603,27 +2636,27 @@
 
                 matchDetailsContent.innerHTML = `
                     <div class="space-y-8">
-                        <div class="grid grid-cols-3 gap-4">
-                            <div class="bg-blue-50 p-4 rounded-2xl border border-blue-100 text-center">
+                        <div class="student-history-summary-grid grid gap-3 sm:gap-4">
+                            <div class="student-history-stat-card bg-blue-50 p-4 rounded-2xl border border-blue-100 text-center">
                                 <p class="text-[10px] uppercase font-bold text-blue-600 mb-1">Total Points</p>
                                 <p class="team-detail-score-value text-2xl font-black text-blue-900">${formattedTeamPoints}</p>
                             </div>
-                            <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 text-center">
+                            <div class="student-history-stat-card bg-emerald-50 p-4 rounded-2xl border border-emerald-100 text-center">
                                 <p class="text-[10px] uppercase font-bold text-emerald-600 mb-1">Victory</p>
                                 <p class="team-detail-score-value text-2xl font-black text-emerald-900">${Number(team.wins || 0).toLocaleString()}</p>
                             </div>
-                            <div class="bg-red-50 p-4 rounded-2xl border border-red-100 text-center">
+                            <div class="student-history-stat-card bg-red-50 p-4 rounded-2xl border border-red-100 text-center">
                                 <p class="text-[10px] uppercase font-bold text-red-600 mb-1">Defeated</p>
                                 <p class="team-detail-score-value text-2xl font-black text-red-900">${Number(team.losses || 0).toLocaleString()}</p>
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-4">
-                            <button type="button" data-adjustment-filter="Merit" class="student-adjustment-filter bg-emerald-50 p-4 rounded-2xl border border-emerald-100 text-center">
+                        <div class="student-history-adjustment-grid grid gap-3 sm:gap-4">
+                            <button type="button" data-adjustment-filter="Merit" class="student-history-stat-card student-adjustment-filter bg-emerald-50 p-4 rounded-2xl border border-emerald-100 text-center">
                                 <p class="text-[10px] uppercase font-bold text-emerald-600 mb-1">Merit</p>
                                 <p class="team-detail-score-value text-2xl font-black text-emerald-900">+${Number(meritTotal || 0).toLocaleString()}</p>
                             </button>
-                            <button type="button" data-adjustment-filter="Demerit" class="student-adjustment-filter bg-red-50 p-4 rounded-2xl border border-red-100 text-center">
+                            <button type="button" data-adjustment-filter="Demerit" class="student-history-stat-card student-adjustment-filter bg-red-50 p-4 rounded-2xl border border-red-100 text-center">
                                 <p class="text-[10px] uppercase font-bold text-red-600 mb-1">Demerit</p>
                                 <p class="team-detail-score-value text-2xl font-black text-red-900">-${Number(demeritTotal || 0).toLocaleString()}</p>
                             </button>
