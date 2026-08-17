@@ -160,6 +160,14 @@
             line-height: 1.05;
         }
 
+        .student-schedule-filter-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .student-schedule-field {
+            min-height: 2.55rem;
+        }
+
         .student-basketball-score-grid {
             grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
         }
@@ -225,6 +233,33 @@
         }
 
         @media (max-width: 640px) {
+            .student-schedule-filter-grid {
+                gap: 0.5rem;
+            }
+
+            .student-schedule-control {
+                gap: 0.35rem;
+            }
+
+            .student-schedule-control label {
+                font-size: clamp(0.42rem, 1.8vw, 0.58rem);
+                letter-spacing: 0.04em;
+                line-height: 1.05;
+                white-space: normal;
+            }
+
+            .student-schedule-field {
+                border-radius: 0.85rem !important;
+                min-height: 2.45rem;
+                padding-left: 0.45rem !important;
+                padding-right: 0.45rem !important;
+                font-size: clamp(0.54rem, 2.35vw, 0.68rem) !important;
+            }
+
+            .student-schedule-date-icon {
+                display: none;
+            }
+
             .leaderboard-table {
                 table-layout: fixed;
                 min-width: 0;
@@ -525,14 +560,14 @@
 
             <!-- Schedule Filters -->
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 space-y-4">
-                <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-3 lg:flex lg:items-center lg:justify-between lg:gap-4">
-                    <div class="min-w-0 space-y-2 lg:flex lg:items-center lg:gap-3 lg:space-y-0">
+                <div class="student-schedule-filter-grid grid items-end gap-2 sm:gap-3 lg:flex lg:items-center lg:justify-between lg:gap-4">
+                    <div class="student-schedule-control min-w-0 space-y-2 lg:flex lg:items-center lg:gap-3 lg:space-y-0">
                         <label for="scheduleDateFilter" class="block text-[10px] font-black uppercase tracking-widest text-slate-800 sm:text-xs whitespace-nowrap">
                             Match Date
                         </label>
 
                         <div class="relative w-full lg:w-56">
-                            <span class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 sm:left-3">
+                            <span class="student-schedule-date-icon pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 sm:left-3">
                                 <svg aria-hidden="true" class="h-3.5 w-3.5 sm:h-4 sm:w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M8 2v4"></path>
                                     <path d="M16 2v4"></path>
@@ -544,30 +579,30 @@
                                 id="scheduleDateFilter"
                                 type="date"
                                 min="2026-01-04"
-                                class="w-full min-w-0 rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-8 pr-2 text-xs font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 sm:pl-10 sm:pr-3 sm:text-sm">
+                                class="student-schedule-field w-full min-w-0 rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-8 pr-2 text-xs font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 sm:pl-10 sm:pr-3 sm:text-sm">
                         </div>
                     </div>
 
-                    <div class="min-w-0 space-y-2 lg:flex lg:items-center lg:gap-3 lg:space-y-0">
+                    <div class="student-schedule-control min-w-0 space-y-2 lg:flex lg:items-center lg:gap-3 lg:space-y-0">
                         <label for="gameCategoryFilter" class="block text-[10px] font-black uppercase tracking-widest text-slate-800 sm:text-xs whitespace-nowrap">
                             Game Category
                         </label>
 
                         <select
                             id="gameCategoryFilter"
-                            class="w-full min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 sm:px-4 sm:text-sm lg:w-64">
+                            class="student-schedule-field w-full min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 sm:px-4 sm:text-sm lg:w-64">
                             <option value="All">All Registered Sports</option>
                         </select>
                     </div>
 
-                    <div class="min-w-0 space-y-2 lg:flex lg:items-center lg:gap-3 lg:space-y-0">
+                    <div class="student-schedule-control min-w-0 space-y-2 lg:flex lg:items-center lg:gap-3 lg:space-y-0">
                         <label for="scheduleTeamFilter" class="block text-[10px] font-black uppercase tracking-widest text-slate-800 sm:text-xs whitespace-nowrap">
                             Team
                         </label>
 
                         <select
                             id="scheduleTeamFilter"
-                            class="w-full min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 sm:px-4 sm:text-sm lg:w-56">
+                            class="student-schedule-field w-full min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 sm:px-4 sm:text-sm lg:w-56">
                             <option value="All">All Teams</option>
                         </select>
                     </div>
