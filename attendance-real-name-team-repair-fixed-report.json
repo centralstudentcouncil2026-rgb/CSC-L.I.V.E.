@@ -1,0 +1,28 @@
+{
+  "repair_count": 28,
+  "still_unresolved": [
+    {
+      "id": 361,
+      "student_id": "2026-AUP",
+      "name": "MARGARET ALAINE COMIA ESMILLO",
+      "lookup": "2026-AUP",
+      "aup_name": "MARGARET ALAINE COMIA ESMILLO",
+      "course": "Scan RFID or Enter ID Number",
+      "college": "RFID Who",
+      "team": "RFID Who",
+      "session": "Parade"
+    },
+    {
+      "id": 735,
+      "student_id": "2026-Aa",
+      "name": "MARGARET ALAINE COMIA ESMILLO",
+      "session": "Parade"
+    },
+    {
+      "id": 395,
+      "student_id": "2026-a",
+      "name": "MARGARET ALAINE COMIA ESMILLO",
+      "session": "Parade"
+    }
+  ]
+}

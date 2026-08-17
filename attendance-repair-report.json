@@ -1,0 +1,665 @@
+{
+  "valid_count": 37,
+  "invalid_count": 41,
+  "valid": [
+    {
+      "id": 1384,
+      "original_id": "2026-aup0095",
+      "lookup": "2026-AUP0095",
+      "name": "DANIELA GIRAO LEYNES",
+      "course": "Bachelor of Science in Information Technology",
+      "college": "College of Business",
+      "team": "COB",
+      "session": "opening program"
+    },
+    {
+      "id": 1316,
+      "original_id": "2026-aup0104",
+      "lookup": "2026-AUP0104",
+      "name": "XANDER ACENA MEDRANO",
+      "course": "Bachelor of Science in Nursing",
+      "college": "College of Nursing",
+      "team": "CON",
+      "session": "opening program"
+    },
+    {
+      "id": 1313,
+      "original_id": "2026-Aup0122",
+      "lookup": "2026-AUP0122",
+      "name": "DINO ANDREI MANGILIT CRISOLOGO",
+      "course": "Bachelor of Arts in Psychology",
+      "college": "College of Arts and Humanities",
+      "team": "CAH",
+      "session": "opening program"
+    },
+    {
+      "id": 1194,
+      "original_id": "2026-aup0235",
+      "lookup": "2026-AUP0235",
+      "name": "LOUVE ARIANNE DELOS SANTOS VILLAS",
+      "course": "Bachelor of Science in Accountancy",
+      "college": "College of Business",
+      "team": "COB",
+      "session": "opening program"
+    },
+    {
+      "id": 1186,
+      "original_id": "0260",
+      "lookup": "2026-AUP0260",
+      "name": "ADRIAN ALCONTIN DELAS ALAS",
+      "course": "Bachelor of Science in Accountancy",
+      "college": "College of Business",
+      "team": "COB",
+      "session": "opening program"
+    },
+    {
+      "id": 1060,
+      "original_id": "20260320",
+      "lookup": "2026-AUP0320",
+      "name": "RYSHA VAHLERIE FERNANDEZ ETEJO",
+      "course": "Bachelor of Science in Nursing",
+      "college": "College of Nursing",
+      "team": "CON",
+      "session": "opening program"
+    },
+    {
+      "id": 951,
+      "original_id": "2026-aup0181",
+      "lookup": "2026-AUP0181",
+      "name": "KYLA EVANGELISTA GONZALES",
+      "course": "Bachelor of Science in Nursing",
+      "college": "College of Nursing",
+      "team": "CON",
+      "session": "opening program"
+    },
+    {
+      "id": 934,
+      "original_id": "9990",
+      "lookup": "2026-AUP9990",
+      "name": "CARL ELIAS DE GUZMAN SARMIENTO",
+      "course": "Bachelor of Science in Nursing",
+      "college": "College of Nursing",
+      "team": "CON",
+      "session": "opening program"
+    },
+    {
+      "id": 927,
+      "original_id": "20360179",
+      "lookup": "2026-AUP0179",
+      "name": "ROBBE AMIEL QUILALA ORGASAN",
+      "course": "Bachelor of Science in Nursing",
+      "college": "College of Nursing",
+      "team": "CON",
+      "session": "opening program"
+    },
+    {
+      "id": 922,
+      "original_id": "20260636",
+      "lookup": "2026-AUP0636",
+      "name": "AHLEA LU AGRAVIADOR ROSAS",
+      "course": "Bachelor of Science in Nursing",
+      "college": "College of Nursing",
+      "team": "CON",
+      "session": "opening program"
+    },
+    {
+      "id": 783,
+      "original_id": "20260088",
+      "lookup": "2026-AUP0088",
+      "name": "MA. SOFIA MENDROZ ANCHETA",
+      "course": "Bachelor of Science in Nursing",
+      "college": "College of Nursing",
+      "team": "CON",
+      "session": "opening program"
+    },
+    {
+      "id": 917,
+      "original_id": "20260467",
+      "lookup": "2026-AUP0467",
+      "name": "HUGO JUCABAN VALENCIA",
+      "course": "Bachelor of Science in Nursing",
+      "college": "College of Nursing",
+      "team": "CON",
+      "session": "opening program"
+    },
+    {
+      "id": 905,
+      "original_id": "AUP0188",
+      "lookup": "2026-AUP0188",
+      "name": "PRINCESS MEAGAN CAÑETE SAN JOSE",
+      "course": "Bachelor of Science in Nursing",
+      "college": "College of Nursing",
+      "team": "CON",
+      "session": "opening program"
+    },
+    {
+      "id": 563,
+      "original_id": "20260160",
+      "lookup": "2026-AUP0160",
+      "name": "ALEXANDRIA J A LEAL",
+      "course": "Bachelor of Science in Nursing",
+      "college": "College of Nursing",
+      "team": "CON",
+      "session": "opening program"
+    },
+    {
+      "id": 786,
+      "original_id": "20260845",
+      "lookup": "2026-AUP0845",
+      "name": "TRACEY KAPIA",
+      "course": "Bachelor of Science in Nursing",
+      "college": "College of Nursing",
+      "team": "CON",
+      "session": "Parade"
+    },
+    {
+      "id": 758,
+      "original_id": "26200310",
+      "lookup": "2026-AUP0310",
+      "name": "ANDREA UBATAY DURIAS",
+      "course": "Bachelor of Library and Information Science",
+      "college": "College of Science, Engineering and Technology",
+      "team": "CSET",
+      "session": "Parade"
+    },
+    {
+      "id": 718,
+      "original_id": "2026-aup0640",
+      "lookup": "2026-AUP0640",
+      "name": "SHEKIENAH ELLA MONTOYA CAPRECHO",
+      "course": "Doctor of Dental Medicine",
+      "college": "College of Dentistry",
+      "team": "COD",
+      "session": "Parade"
+    },
+    {
+      "id": 711,
+      "original_id": "2026-aup0453",
+      "lookup": "2026-AUP0453",
+      "name": "DAEHYEON KO",
+      "course": "Doctor of Dental Medicine",
+      "college": "College of Dentistry",
+      "team": "COD",
+      "session": "Parade"
+    },
+    {
+      "id": 684,
+      "original_id": "2026- AUP0018",
+      "lookup": "2026-AUP0018",
+      "name": "CURT LEINE DELFIN DULLAS",
+      "course": "Doctor of Dental Medicine",
+      "college": "College of Dentistry",
+      "team": "COD",
+      "session": "Parade"
+    },
+    {
+      "id": 672,
+      "original_id": "2026-aup0038",
+      "lookup": "2026-AUP0038",
+      "name": "EINJEAL NYMPH RIVAS FETALINO",
+      "course": "Doctor of Dental Medicine",
+      "college": "College of Dentistry",
+      "team": "COD",
+      "session": "Parade"
+    },
+    {
+      "id": 649,
+      "original_id": "2036-AUP0046",
+      "lookup": "2026-AUP0046",
+      "name": "JOHANNA YLLAISA LAGRIMAS",
+      "course": "Doctor of Dental Medicine",
+      "college": "College of Dentistry",
+      "team": "COD",
+      "session": "Parade"
+    },
+    {
+      "id": 627,
+      "original_id": "2620AUPA0218",
+      "lookup": "2026-AUP0218",
+      "name": "ANIKA KIM NEGRILLO MELEGRITO",
+      "course": "Bachelor of Science in Nursing",
+      "college": "College of Nursing",
+      "team": "CON",
+      "session": "Parade"
+    },
+    {
+      "id": 624,
+      "original_id": "AUP2026-0583",
+      "lookup": "2026-AUP0583",
+      "name": "ELISHA JEI FAMERONAG SEVILLA",
+      "course": "Bachelor of Science in Medical Laboratory Science",
+      "college": "College of Health",
+      "team": "COH",
+      "session": "Parade"
+    },
+    {
+      "id": 615,
+      "original_id": "AUPA26200218",
+      "lookup": "2026-AUP0218",
+      "name": "ANIKA KIM NEGRILLO MELEGRITO",
+      "course": "Bachelor of Science in Nursing",
+      "college": "College of Nursing",
+      "team": "CON",
+      "session": "Parade"
+    },
+    {
+      "id": 604,
+      "original_id": "2026 AUP O211",
+      "lookup": "2026-AUP0211",
+      "name": "NEL JHIYAN MIRAN CAYABYAB",
+      "course": "Bachelor of Science in Medical Laboratory Science",
+      "college": "College of Health",
+      "team": "COH",
+      "session": "Parade"
+    },
+    {
+      "id": 601,
+      "original_id": "0465",
+      "lookup": "2026-AUP0465",
+      "name": "FRANCES ZSAMYRRH OLEGENIO ROTOR",
+      "course": "Doctor of Dental Medicine",
+      "college": "College of Dentistry",
+      "team": "COD",
+      "session": "Parade"
+    },
+    {
+      "id": 600,
+      "original_id": "26200218",
+      "lookup": "2026-AUP0218",
+      "name": "ANIKA KIM NEGRILLO MELEGRITO",
+      "course": "Bachelor of Science in Nursing",
+      "college": "College of Nursing",
+      "team": "CON",
+      "session": "Parade"
+    },
+    {
+      "id": 572,
+      "original_id": "20260725",
+      "lookup": "2026-AUP0725",
+      "name": "DIVINA BALICANO BASBAS",
+      "course": "Bachelor of Science in Nutrition and Dietetics",
+      "college": "College of Health",
+      "team": "COH",
+      "session": "Parade"
+    },
+    {
+      "id": 529,
+      "original_id": "20260208",
+      "lookup": "2026-AUP0208",
+      "name": "AIZ CAYLEIGH DE LA CRUZ SALVADO",
+      "course": "Bachelor of Science in Nursing",
+      "college": "College of Nursing",
+      "team": "CON",
+      "session": "Parade"
+    },
+    {
+      "id": 548,
+      "original_id": "2026AUP0224",
+      "lookup": "2026-AUP0224",
+      "name": "ORVILE ISAGUIRRE SADDUL",
+      "course": "Bachelor of Science in Nursing",
+      "college": "College of Nursing",
+      "team": "CON",
+      "session": "Parade"
+    },
+    {
+      "id": 477,
+      "original_id": "2026-0666",
+      "lookup": "2026-AUP0666",
+      "name": "HANNIYA BALABADAN DIPANTAR",
+      "course": "Bachelor of Science in Nursing",
+      "college": "College of Nursing",
+      "team": "CON",
+      "session": "Parade"
+    },
+    {
+      "id": 441,
+      "original_id": "2026- AUP0343",
+      "lookup": "2026-AUP0343",
+      "name": "FLYNN BULOHABO CALAGO",
+      "course": "Doctor of Dental Medicine",
+      "college": "College of Dentistry",
+      "team": "COD",
+      "session": "Parade"
+    },
+    {
+      "id": 368,
+      "original_id": "2026_AUP0484",
+      "lookup": "2026-AUP0484",
+      "name": "EMJIE GAYATAO",
+      "course": "Bachelor of Arts in Theology",
+      "college": "College of Theology",
+      "team": "COT",
+      "session": "Parade"
+    },
+    {
+      "id": 283,
+      "original_id": "2026-AUP0515",
+      "lookup": "2026-AUP0515",
+      "name": "CHAEEUN LEE",
+      "course": "Doctor of Dental Medicine",
+      "college": "College of Dentistry",
+      "team": "COD",
+      "session": "Parade"
+    },
+    {
+      "id": 253,
+      "original_id": "2026AUP0362",
+      "lookup": "2026-AUP0362",
+      "name": "LYKA ANGELA ANGUE BENCITO",
+      "course": "Bachelor of Science in Medical Laboratory Science",
+      "college": "College of Health",
+      "team": "COH",
+      "session": "Parade"
+    },
+    {
+      "id": 183,
+      "original_id": "2026AUP-0239",
+      "lookup": "2026-AUP0239",
+      "name": "RHIEZA GAEL MAGRO FETIZANAN",
+      "course": "Bachelor of Science in Medical Laboratory Science",
+      "college": "College of Health",
+      "team": "COH",
+      "session": "Parade"
+    },
+    {
+      "id": 155,
+      "original_id": "2026-aup0308",
+      "lookup": "2026-AUP0308",
+      "name": "VENCENT BANTAN DE ASIS",
+      "course": "Bachelor of Science in Information Technology",
+      "college": "College of Business",
+      "team": "COB",
+      "session": "Parade"
+    }
+  ],
+  "invalid": [
+    {
+      "id": 1416,
+      "student_id": "20262639",
+      "attendance_date": "2026-08-02",
+      "session": "opening program",
+      "checked_at": "2026-08-02 00:17:41.789+00"
+    },
+    {
+      "id": 1407,
+      "student_id": "2630119",
+      "attendance_date": "2026-08-02",
+      "session": "opening program",
+      "checked_at": "2026-08-02 00:17:19.843+00"
+    },
+    {
+      "id": 1410,
+      "student_id": "2630152",
+      "attendance_date": "2026-08-02",
+      "session": "opening program",
+      "checked_at": "2026-08-02 00:16:53.942+00"
+    },
+    {
+      "id": 1361,
+      "student_id": "20599691",
+      "attendance_date": "2026-08-02",
+      "session": "opening program",
+      "checked_at": "2026-08-02 00:06:07.444+00"
+    },
+    {
+      "id": 1339,
+      "student_id": "2630134",
+      "attendance_date": "2026-08-02",
+      "session": "opening program",
+      "checked_at": "2026-08-02 00:04:13.174+00"
+    },
+    {
+      "id": 1336,
+      "student_id": "259922",
+      "attendance_date": "2026-08-02",
+      "session": "opening program",
+      "checked_at": "2026-08-02 00:04:00.17+00"
+    },
+    {
+      "id": 1323,
+      "student_id": "2959940",
+      "attendance_date": "2026-08-02",
+      "session": "opening program",
+      "checked_at": "2026-08-02 00:03:03.075+00"
+    },
+    {
+      "id": 1307,
+      "student_id": "205691",
+      "attendance_date": "2026-08-02",
+      "session": "opening program",
+      "checked_at": "2026-08-02 00:01:34.834+00"
+    },
+    {
+      "id": 1281,
+      "student_id": "2960150",
+      "attendance_date": "2026-08-02",
+      "session": "opening program",
+      "checked_at": "2026-08-01 23:59:43.511+00"
+    },
+    {
+      "id": 1263,
+      "student_id": "2630517",
+      "attendance_date": "2026-08-02",
+      "session": "opening program",
+      "checked_at": "2026-08-01 23:58:34.366+00"
+    },
+    {
+      "id": 1252,
+      "student_id": "205725",
+      "attendance_date": "2026-08-02",
+      "session": "opening program",
+      "checked_at": "2026-08-01 23:57:44.895+00"
+    },
+    {
+      "id": 1138,
+      "student_id": "2058569",
+      "attendance_date": "2026-08-02",
+      "session": "opening program",
+      "checked_at": "2026-08-01 23:45:03.703+00"
+    },
+    {
+      "id": 1116,
+      "student_id": "20585609",
+      "attendance_date": "2026-08-02",
+      "session": "opening program",
+      "checked_at": "2026-08-01 23:41:58.788+00"
+    },
+    {
+      "id": 1034,
+      "student_id": "2630215",
+      "attendance_date": "2026-08-02",
+      "session": "opening program",
+      "checked_at": "2026-08-01 23:38:58.669+00"
+    },
+    {
+      "id": 1046,
+      "student_id": "2026-AUP2026",
+      "attendance_date": "2026-08-02",
+      "session": "opening program",
+      "checked_at": "2026-08-01 23:35:29.232+00"
+    },
+    {
+      "id": 946,
+      "student_id": "2630111",
+      "attendance_date": "2026-08-02",
+      "session": "opening program",
+      "checked_at": "2026-08-01 23:28:47.904+00"
+    },
+    {
+      "id": 939,
+      "student_id": "2630179",
+      "attendance_date": "2026-08-02",
+      "session": "opening program",
+      "checked_at": "2026-08-01 23:27:57.909+00"
+    },
+    {
+      "id": 874,
+      "student_id": "2630484",
+      "attendance_date": "2026-08-02",
+      "session": "opening program",
+      "checked_at": "2026-08-01 23:21:51.503+00"
+    },
+    {
+      "id": 852,
+      "student_id": "2026-AUP0934",
+      "attendance_date": "2026-08-02",
+      "session": "opening program",
+      "checked_at": "2026-08-01 23:18:03.932+00"
+    },
+    {
+      "id": 850,
+      "student_id": "2630604",
+      "attendance_date": "2026-08-02",
+      "session": "opening program",
+      "checked_at": "2026-08-01 23:17:47.233+00"
+    },
+    {
+      "id": 799,
+      "student_id": "20262631",
+      "attendance_date": "2026-08-02",
+      "session": "Parade",
+      "checked_at": "2026-08-01 22:19:22.505+00"
+    },
+    {
+      "id": 787,
+      "student_id": ".",
+      "attendance_date": "2026-08-02",
+      "session": "Parade",
+      "checked_at": "2026-08-01 22:16:42.225+00"
+    },
+    {
+      "id": 765,
+      "student_id": "2026-AUPE00109",
+      "attendance_date": "2026-08-02",
+      "session": "Parade",
+      "checked_at": "2026-08-01 22:13:30.324+00"
+    },
+    {
+      "id": 736,
+      "student_id": "2025-AUP0117",
+      "attendance_date": "2026-08-02",
+      "session": "Parade",
+      "checked_at": "2026-08-01 22:09:52.078+00"
+    },
+    {
+      "id": 729,
+      "student_id": "2630117",
+      "attendance_date": "2026-08-02",
+      "session": "Parade",
+      "checked_at": "2026-08-01 22:09:18.368+00"
+    },
+    {
+      "id": 685,
+      "student_id": "00054",
+      "attendance_date": "2026-08-02",
+      "session": "Parade",
+      "checked_at": "2026-08-01 22:06:56.983+00"
+    },
+    {
+      "id": 680,
+      "student_id": "260010",
+      "attendance_date": "2026-08-02",
+      "session": "Parade",
+      "checked_at": "2026-08-01 22:06:43.685+00"
+    },
+    {
+      "id": 562,
+      "student_id": "20602068",
+      "attendance_date": "2026-08-02",
+      "session": "Parade",
+      "checked_at": "2026-08-01 21:58:48.15+00"
+    },
+    {
+      "id": 530,
+      "student_id": "20052668",
+      "attendance_date": "2026-08-02",
+      "session": "Parade",
+      "checked_at": "2026-08-01 21:58:00.017+00"
+    },
+    {
+      "id": 514,
+      "student_id": "2095368",
+      "attendance_date": "2026-08-02",
+      "session": "Parade",
+      "checked_at": "2026-08-01 21:57:17.636+00"
+    },
+    {
+      "id": 446,
+      "student_id": "205984",
+      "attendance_date": "2026-08-02",
+      "session": "Parade",
+      "checked_at": "2026-08-01 21:54:38.116+00"
+    },
+    {
+      "id": 428,
+      "student_id": "230343",
+      "attendance_date": "2026-08-02",
+      "session": "Parade",
+      "checked_at": "2026-08-01 21:54:02.901+00"
+    },
+    {
+      "id": 415,
+      "student_id": "2630405",
+      "attendance_date": "2026-08-02",
+      "session": "Parade",
+      "checked_at": "2026-08-01 21:53:26.127+00"
+    },
+    {
+      "id": 386,
+      "student_id": "2630025",
+      "attendance_date": "2026-08-02",
+      "session": "Parade",
+      "checked_at": "2026-08-01 21:52:22.683+00"
+    },
+    {
+      "id": 355,
+      "student_id": "20630003",
+      "attendance_date": "2026-08-02",
+      "session": "Parade",
+      "checked_at": "2026-08-01 21:51:18.114+00"
+    },
+    {
+      "id": 350,
+      "student_id": "2630010",
+      "attendance_date": "2026-08-02",
+      "session": "Parade",
+      "checked_at": "2026-08-01 21:51:06.668+00"
+    },
+    {
+      "id": 340,
+      "student_id": "20611190",
+      "attendance_date": "2026-08-02",
+      "session": "Parade",
+      "checked_at": "2026-08-01 21:50:48.574+00"
+    },
+    {
+      "id": 241,
+      "student_id": "20611083",
+      "attendance_date": "2026-08-02",
+      "session": "Parade",
+      "checked_at": "2026-08-01 21:45:33.588+00"
+    },
+    {
+      "id": 238,
+      "student_id": "059736",
+      "attendance_date": "2026-08-02",
+      "session": "Parade",
+      "checked_at": "2026-08-01 21:45:22.158+00"
+    },
+    {
+      "id": 158,
+      "student_id": "205900",
+      "attendance_date": "2026-08-02",
+      "session": "Parade",
+      "checked_at": "2026-08-01 21:40:34.609+00"
+    },
+    {
+      "id": 140,
+      "student_id": "20000000",
+      "attendance_date": "2026-08-02",
+      "session": "Parade",
+      "checked_at": "2026-08-01 21:39:26.438+00"
+    }
+  ]
+}

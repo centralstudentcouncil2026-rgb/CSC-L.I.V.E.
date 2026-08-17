@@ -738,7 +738,7 @@
             const PARTICIPANTS_TABLE = "participants";
             const ATTENDANCE_TABLE = "attendance";
             const ATTENDANCE_SETTINGS_TABLE = "attendance_settings";
-            const ATTENDANCE_POINTS_VIEW = "attendance_point_history";
+            const ATTENDANCE_POINTS_VIEW = "attendance_point_logs";
             const MATCHES_TABLE = "scheduled_matches";
             const GAME_HISTORY_TABLE = "game_history";
             const TEAM_POINT_ADJUSTMENTS_TABLE = "team_point_adjustments";
@@ -1395,20 +1395,35 @@
                 const winnerName = normalizeTeamValue(history.winner_team_name);
                 const loserName = normalizeTeamValue(history.loser_team_name);
 
+                const winnerPoints = findFiniteNumber(
+                    history.winner_points_awarded,
+                    history.winner_award,
+                    history.winner_points,
+                    history.points_winner,
+                    history.winning_points
+                );
+                const loserPoints = findFiniteNumber(
+                    history.loser_points_awarded,
+                    history.loser_award,
+                    history.loser_points,
+                    history.points_loser,
+                    history.losing_points
+                );
+
                 if (Number.isFinite(teamId) && Number.isFinite(winnerId) && teamId === winnerId) {
-                    return Number(history.winner_points_awarded ?? history.winner_points ?? 0);
+                    return winnerPoints.found ? winnerPoints.value : null;
                 }
 
                 if (Number.isFinite(teamId) && Number.isFinite(loserId) && teamId === loserId) {
-                    return Number(history.loser_points_awarded ?? history.loser_points ?? 0);
+                    return loserPoints.found ? loserPoints.value : null;
                 }
 
                 if (teamName && teamName === winnerName) {
-                    return Number(history.winner_points_awarded ?? history.winner_points ?? 0);
+                    return winnerPoints.found ? winnerPoints.value : null;
                 }
 
                 if (teamName && teamName === loserName) {
-                    return Number(history.loser_points_awarded ?? history.loser_points ?? 0);
+                    return loserPoints.found ? loserPoints.value : null;
                 }
 
                 return null;

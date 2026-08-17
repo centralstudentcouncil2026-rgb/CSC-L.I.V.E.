@@ -66,13 +66,16 @@ normalized_attendance as (
         a.attendance_date,
         coalesce(nullif(trim(a.attendance_session_title), ''), 'Attendance') as session_title,
         case
-            when a.participant_id is not null
-             and lower(coalesce(p.status, '')) = 'approved'
-                then 'registered_player'
             when coalesce(a.attendance_category, '') in ('faculty', 'department_chair', 'dean', 'sponsor', 'sponsor_game_attendance')
                 then a.attendance_category
             else 'student_player'
         end as resolved_attendance_category,
+        case
+            when a.participant_id is not null
+             and lower(coalesce(p.status, '')) = 'approved'
+                then true
+            else false
+        end as is_registered_player,
         coalesce(a.status, 'Present') as attendance_status,
         a.participant_id,
         case btrim(lower(regexp_replace(coalesce(
@@ -115,7 +118,7 @@ attendance_counts as (
         na.team,
         count(*) as total_present,
         count(*) filter (
-            where na.resolved_attendance_category = 'registered_player'
+            where na.is_registered_player
         ) as registered_player_count,
         count(*) filter (
             where na.resolved_attendance_category = 'student_player'
@@ -151,7 +154,6 @@ select
                 then (ac.student_player_count::numeric / nullif(college_totals.total_students, 0)) * 100
             else 0
         end
-        + (ac.registered_player_count * sp.registered_player_points)
         + (ac.dean_count * sp.dean_points)
         + (ac.faculty_count * sp.faculty_points)
         + (ac.department_chair_count * sp.faculty_points)

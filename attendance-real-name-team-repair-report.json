@@ -1,0 +1,340 @@
+{
+  "target_count": 31,
+  "fixed_count": 29,
+  "unread_count": 2,
+  "fixed": [
+    {
+      "id": 147,
+      "student_id": "2044923",
+      "name": "SEAN ALDRIFF NACION VALENZUELA",
+      "lookup": "2044923",
+      "aup_name": "SEAN ALDRIFF NACION VALENZUELA",
+      "course": "Grade 12",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "opening program"
+    },
+    {
+      "id": 1126,
+      "student_id": "2061637",
+      "name": "ZITTI EIONE SILVERIO MACIAS",
+      "lookup": "2061637",
+      "aup_name": "ZITTI EIONE SILVERIO MACIAS",
+      "course": "Grade 12 ABM",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "opening program"
+    },
+    {
+      "id": 349,
+      "student_id": "2045743",
+      "name": "TRICIA RIVAMONTE SONGCAYAWON",
+      "lookup": "2045743",
+      "aup_name": "TRICIA RIVAMONTE SONGCAYAWON",
+      "course": "Grade 12",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "opening program"
+    },
+    {
+      "id": 135,
+      "student_id": "2061636",
+      "name": "LANZE KERVY BERNARDO LORIEZO",
+      "lookup": "2061636",
+      "aup_name": "LANZE KERVY BERNARDO LORIEZO",
+      "course": "Grade 12",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "opening program"
+    },
+    {
+      "id": 935,
+      "student_id": "2057544",
+      "name": "CARL ELIAS DE GUZMAN SARMIENTO",
+      "lookup": "2057544",
+      "aup_name": "CARL ELIAS DE GUZMAN SARMIENTO",
+      "course": "Grade 12",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "opening program"
+    },
+    {
+      "id": 942,
+      "student_id": "2045017",
+      "name": "ENNIO GABRIEL LIJAUCO BERTO",
+      "lookup": "2045017",
+      "aup_name": "ENNIO GABRIEL LIJAUCO BERTO",
+      "course": "Grade 12",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "opening program"
+    },
+    {
+      "id": 804,
+      "student_id": "2051376",
+      "name": "XIANNA SAFE ABAGA LUCION",
+      "lookup": "2051376",
+      "aup_name": "XIANNA SAFE ABAGA LUCION",
+      "course": "Grade 8",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "Parade"
+    },
+    {
+      "id": 800,
+      "student_id": "2051567",
+      "name": "LAURENCE JOHN JAPON ARGUELLES",
+      "lookup": "2051567",
+      "aup_name": "LAURENCE JOHN JAPON ARGUELLES",
+      "course": "Grade 8",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "Parade"
+    },
+    {
+      "id": 789,
+      "student_id": "2059161",
+      "name": "MARGARITA ABEGAIL PULIDO NOGOY",
+      "lookup": "2059161",
+      "aup_name": "MARGARITA ABEGAIL PULIDO NOGOY",
+      "course": "Grade 8",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "Parade"
+    },
+    {
+      "id": 774,
+      "student_id": "2026AUPE00310",
+      "name": "ALDRIN MEAKO GARCIA DIAZ",
+      "lookup": "2026AUPE00310",
+      "aup_name": "ALDRIN MEAKO GARCIA DIAZ",
+      "course": "Grade 11",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "Parade"
+    },
+    {
+      "id": 771,
+      "student_id": "2057059",
+      "name": "PETER JOHN EROA CARBUNGCO",
+      "lookup": "2057059",
+      "aup_name": "PETER JOHN EROA CARBUNGCO",
+      "course": "Grade 11",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "Parade"
+    },
+    {
+      "id": 756,
+      "student_id": "2049337",
+      "name": "KARL EOIN TRONO DATOY",
+      "lookup": "2049337",
+      "aup_name": "KARL EOIN TRONO DATOY",
+      "course": "Grade 10",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "Parade"
+    },
+    {
+      "id": 751,
+      "student_id": "2061891",
+      "name": "MATT LAWRENCE SIGALES BURAC",
+      "lookup": "2061891",
+      "aup_name": "MATT LAWRENCE SIGALES BURAC",
+      "course": "Grade 8",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "Parade"
+    },
+    {
+      "id": 725,
+      "student_id": "2060588",
+      "name": "ARNEL BILLONES LARBO",
+      "lookup": "2060588",
+      "aup_name": "ARNEL BILLONES LARBO",
+      "course": "Master in Business Administration Major in Hospital and Health Care Management (Academic/Professional Tracks)",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "Parade"
+    },
+    {
+      "id": 676,
+      "student_id": "2026AUPE00056",
+      "name": "RHIAN AVRIL INCISO LOREZCA",
+      "lookup": "2026AUPE00056",
+      "aup_name": "RHIAN AVRIL INCISO LOREZCA",
+      "course": "Grade 11",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "Parade"
+    },
+    {
+      "id": 667,
+      "student_id": "2061911",
+      "name": "ANGEL VINICE MARQUESES SANTIAGO",
+      "lookup": "2061911",
+      "aup_name": "ANGEL VINICE MARQUESES SANTIAGO",
+      "course": "Grade 8",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "Parade"
+    },
+    {
+      "id": 660,
+      "student_id": "2045747",
+      "name": "BREN GWYNETH FADRIQUELA ASI",
+      "lookup": "2045747",
+      "aup_name": "BREN GWYNETH FADRIQUELA ASI",
+      "course": "Grade 12 STEM",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "Parade"
+    },
+    {
+      "id": 648,
+      "student_id": "2026AUPE00029",
+      "name": "ZAREAH JOY HEMOROZ MENDOZA",
+      "lookup": "2026AUPE00029",
+      "aup_name": "ZAREAH JOY HEMOROZ MENDOZA",
+      "course": "Grade 9",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "Parade"
+    },
+    {
+      "id": 636,
+      "student_id": "2060227",
+      "name": "AVRYLL DAVE RAMOS QUEZON",
+      "lookup": "2060227",
+      "aup_name": "AVRYLL DAVE RAMOS QUEZON",
+      "course": "Grade 9",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "Parade"
+    },
+    {
+      "id": 581,
+      "student_id": "2026AUPE00265",
+      "name": "JOHNRAY ABEL FRANCISCO RAVIS",
+      "lookup": "2026AUPE00265",
+      "aup_name": "JOHNRAY ABEL FRANCISCO RAVIS",
+      "course": "Grade 11",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "Parade"
+    },
+    {
+      "id": 574,
+      "student_id": "2057575",
+      "name": "ACE TANGAYAN LIBATO",
+      "lookup": "2057575",
+      "aup_name": "ACE TANGAYAN LIBATO",
+      "course": "Grade 9",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "Parade"
+    },
+    {
+      "id": 566,
+      "student_id": "2058344",
+      "name": "BREANNA NICOLE DEMIAR SOMOSO",
+      "lookup": "2058344",
+      "aup_name": "BREANNA NICOLE DEMIAR SOMOSO",
+      "course": "Grade 11",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "Parade"
+    },
+    {
+      "id": 388,
+      "student_id": "2060398",
+      "name": "JOHANNA ELOISE FYLLAN DINAMPO LUNZAGA",
+      "lookup": "2060398",
+      "aup_name": "JOHANNA ELOISE FYLLAN DINAMPO LUNZAGA",
+      "course": "Grade 10",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "Parade"
+    },
+    {
+      "id": 361,
+      "student_id": "2026-AUP",
+      "name": "MARGARET ALAINE COMIA ESMILLO",
+      "lookup": "2026-AUP",
+      "aup_name": "MARGARET ALAINE COMIA ESMILLO",
+      "course": "Scan RFID or Enter ID Number",
+      "college": "RFID Who",
+      "team": "RFID Who",
+      "session": "Parade"
+    },
+    {
+      "id": 211,
+      "student_id": "2058317",
+      "name": "JOHN MICHAEL AMASA RISARE",
+      "lookup": "2058317",
+      "aup_name": "JOHN MICHAEL AMASA RISARE",
+      "course": "Grade 12 STEM",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "Parade"
+    },
+    {
+      "id": 187,
+      "student_id": "2048248",
+      "name": "ARSENIA CHEM CALINGASAN MANDAPAT",
+      "lookup": "2048248",
+      "aup_name": "ARSENIA CHEM CALINGASAN MANDAPAT",
+      "course": "Grade 11",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "Parade"
+    },
+    {
+      "id": 127,
+      "student_id": "2026AUPE00447",
+      "name": "ARABELLE MATEJA ALIDO-STROTHER",
+      "lookup": "2026AUPE00447",
+      "aup_name": "ARABELLE MATEJA ALIDO-STROTHER",
+      "course": "Grade 9",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "Parade"
+    },
+    {
+      "id": 104,
+      "student_id": "2046762",
+      "name": "GREECA MARKAELA SALANGSANG SABAN",
+      "lookup": "2046762",
+      "aup_name": "GREECA MARKAELA SALANGSANG SABAN",
+      "course": "Grade 10",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "Parade"
+    },
+    {
+      "id": 94,
+      "student_id": "2060499",
+      "name": "ARIANNE JOY LAVAPIE PIALAGO",
+      "lookup": "2060499",
+      "aup_name": "ARIANNE JOY LAVAPIE PIALAGO",
+      "course": "Grade 10",
+      "college": "Scan RFID or Enter ID Number",
+      "team": "Scan RFID or Enter ID Number",
+      "session": "Parade"
+    }
+  ],
+  "unread": [
+    {
+      "id": 735,
+      "student_id": "2026-Aa",
+      "name": "MARGARET ALAINE COMIA ESMILLO",
+      "session": "Parade"
+    },
+    {
+      "id": 395,
+      "student_id": "2026-a",
+      "name": "MARGARET ALAINE COMIA ESMILLO",
+      "session": "Parade"
+    }
+  ]
+}
