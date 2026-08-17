@@ -3212,6 +3212,28 @@
                     return Array.from(new Set(visibleSportIds));
                 }
 
+                function getCommitteeAssignedSportFilterIds() {
+                    if (isCurrentUserAdmin() || canCurrentUserScheduleAllSports()) {
+                        return [];
+                    }
+
+                    return getCurrentUserManageableSportIds();
+                }
+
+                function applyAssignedSportWorkspaceFilter(query) {
+                    const assignedSportIds = getCommitteeAssignedSportFilterIds();
+
+                    if (assignedSportIds.length > 0) {
+                        return query.in("sport_id", assignedSportIds);
+                    }
+
+                    if (!isCurrentUserAdmin() && !canCurrentUserScheduleAllSports()) {
+                        return query.eq("sport_id", -1);
+                    }
+
+                    return query;
+                }
+
                 function applyMatchManagementFilter(query) {
                     if (isCurrentUserAdmin()) {
                         return query;
@@ -3223,13 +3245,7 @@
                         return query.in("sport_id", manageableSportIds);
                     }
 
-                    const creatorKeys = getCurrentUserCreatorKeys();
-
-                    if (creatorKeys.length === 0) {
-                        return query.eq("created_by", "__missing_logged_in_user__");
-                    }
-
-                    return query.in("created_by", creatorKeys);
+                    return query.eq("sport_id", -1);
                 }
 
                 async function updateMatchRecord(matchId, updatePayload, options = {}) {
@@ -4086,6 +4102,62 @@
                     return insertedRow;
                 }
 
+                async function fetchBasketballStatRow(statId) {
+                    const { data, error } = await supabase
+                        .from(BASKETBALL_STATS_TABLE)
+                        .select("*")
+                        .eq("id", statId)
+                        .maybeSingle();
+
+                    if (error) {
+                        console.warn("Basketball stat refresh warning:", error.message || error);
+                        return null;
+                    }
+
+                    return data || null;
+                }
+
+                async function updateBasketballStatValueWithRetry(statRow, field, amount) {
+                    let currentRow = statRow;
+
+                    for (let attempt = 0; attempt < 2; attempt += 1) {
+                        const currentValue = Number(currentRow[field]) || 0;
+                        const nextValue = Math.max(0, currentValue + amount);
+                        let query = supabase
+                            .from(BASKETBALL_STATS_TABLE)
+                            .update({
+                                [field]: nextValue,
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq("id", currentRow.id);
+
+                        if (Number.isFinite(currentValue)) {
+                            query = query.eq(field, currentValue);
+                        }
+
+                        const { data, error } = await query
+                            .select("*")
+                            .maybeSingle();
+
+                        if (error) {
+                            return { data: null, error };
+                        }
+
+                        if (data) {
+                            return { data, error: null };
+                        }
+
+                        const refreshedRow = await fetchBasketballStatRow(currentRow.id);
+                        if (!refreshedRow) break;
+                        currentRow = refreshedRow;
+                    }
+
+                    return {
+                        data: null,
+                        error: new Error("Score changed at the same time. Please try again.")
+                    };
+                }
+
                 async function addBasketballStatValue(statId, field, amount, options = {}) {
                     if (!BASKETBALL_STAT_FIELDS.has(field)) {
                         console.warn("Blocked invalid basketball stat field:", field);
@@ -4105,18 +4177,11 @@
                         return;
                     }
 
-                    const nextValue = Math.max(0, (Number(statRow[field]) || 0) + amount);
-                    const { error } = await supabase
-                        .from(BASKETBALL_STATS_TABLE)
-                        .update({
-                            [field]: nextValue,
-                            updated_at: new Date().toISOString()
-                        })
-                        .eq("id", statRow.id);
+                    const { error } = await updateBasketballStatValueWithRetry(statRow, field, amount);
 
                     if (error) {
                         console.error("Basketball stat update error:", error.message || error);
-                        alert("Unable to update basketball stat. Run the basketball score SQL first.");
+                        alert(error.message || "Unable to update basketball stat. Run the basketball score SQL first.");
                         return;
                     }
 
@@ -4211,12 +4276,17 @@
 
                 function getFilteredMatchesForDisplay(matches) {
                     let filteredMatches = Array.isArray(matches) ? [...matches] : [];
+                    const canUseFilters = canCurrentUserUseMatchViewFilters();
 
-                    if (canCurrentUserUseMatchViewFilters() && activeSportFilterId) {
+                    if (!canUseFilters) {
+                        filteredMatches = filteredMatches.filter(match => isMatchAssignedToCurrentUser(match));
+                    }
+
+                    if (canUseFilters && activeSportFilterId) {
                         filteredMatches = filteredMatches.filter(match => String(match.sport_id) === String(activeSportFilterId));
                     }
 
-                    if (activeMatchScopeFilter === "mine") {
+                    if (canUseFilters && activeMatchScopeFilter === "mine") {
                         filteredMatches = filteredMatches.filter(match => isMatchOwner(match));
                     }
 
@@ -4224,7 +4294,8 @@
                 }
 
                 function canCurrentUserUseMatchViewFilters() {
-                    return currentUser?.assignedSportId === OVERALL_COMMITTEE_SPORT_ID
+                    return isCurrentUserAdmin()
+                        || currentUser?.assignedSportId === OVERALL_COMMITTEE_SPORT_ID
                         || normalizeSportText(currentUser?.assignedSportName) === normalizeSportText(OVERALL_COMMITTEE_SPORT_NAME);
                 }
 
@@ -4252,7 +4323,7 @@
                 }
 
                 function setActiveMatchScopeFilter(scope) {
-                    activeMatchScopeFilter = scope === "all" && canCurrentUserUseMatchViewFilters() ? "all" : "mine";
+                    activeMatchScopeFilter = scope === "all" || !canCurrentUserUseMatchViewFilters() ? "all" : "mine";
                     localStorage.setItem(COMMITTEE_MATCH_SCOPE_KEY, activeMatchScopeFilter);
 
                     document.querySelectorAll(".match-scope-tab").forEach(button => {
@@ -6795,7 +6866,11 @@
                 }
 
                 async function loadSavedMatches() {
-                    const { data, error } = await supabase
+                    if (!isCurrentUserAdmin() && !canCurrentUserScheduleAllSports() && registeredSportsData.length === 0) {
+                        await loadSportsForMatches();
+                    }
+
+                    let matchQuery = supabase
                         .from(MATCHES_TABLE)
                         .select(`
                             id,
@@ -6824,8 +6899,11 @@
                             sport:sports!scheduled_matches_sport_id_fkey(id, sport_name),
                             team_one:sports_leaderboard!scheduled_matches_team_one_fkey(team),
                             team_two:sports_leaderboard!scheduled_matches_team_two_fkey(team)
-                        `)
-                        .order("match_time", { ascending: true });
+                        `);
+
+                    matchQuery = applyAssignedSportWorkspaceFilter(matchQuery);
+
+                    const { data, error } = await matchQuery.order("match_time", { ascending: true });
 
                     if (error) {
                         console.error("Error loading saved matches:", error.message || error);
@@ -8243,8 +8321,8 @@
 
                         if (pendingCommitteeReloads.overview) reloads.push(loadOverviewCounts());
                         if (pendingCommitteeReloads.leaderboard) reloads.push(loadLeaderboard());
-                        if (pendingCommitteeReloads.sports) reloads.push(loadSportsForMatches());
-                        if (pendingCommitteeReloads.teams) reloads.push(loadRegisteredTeams());
+                        if (pendingCommitteeReloads.sports) await loadSportsForMatches();
+                        if (pendingCommitteeReloads.teams) await loadRegisteredTeams();
                         if (pendingCommitteeReloads.matches) reloads.push(loadSavedMatches());
                         if (pendingCommitteeReloads.announcements) reloads.push(loadCommitteeAnnouncements());
                         if (pendingCommitteeReloads.contacts) reloads.push(loadContactPersonnel());
@@ -8311,11 +8389,15 @@
                     loadLeaderboard(),
                     loadCommitteeAnnouncements(),
                     loadContactPersonnel(),
-                    loadCommitteeConversations(),
-                    loadSportsForMatches(),
-                    loadRegisteredTeams(),
-                    loadSavedMatches()
+                    loadCommitteeConversations()
                 ]);
+
+                await Promise.all([
+                    loadSportsForMatches(),
+                    loadRegisteredTeams()
+                ]);
+
+                await loadSavedMatches();
 
                 placeMatchControlsForTab(document.querySelector(".tab-content:not(.hidden)")?.id || "overview");
                 window.addEventListener("resize", function () {
@@ -8409,6 +8491,49 @@
 
                     updateMessageNotification();
                     loadCommitteeAnnouncements();
+                }
+
+                function isCurrentCommitteeProfilePayload(payload) {
+                    const changedProfile = payload?.new || payload?.old || {};
+                    const changedId = String(changedProfile.id || "").trim();
+                    const changedEmail = normalizeComparableValue(changedProfile.email);
+
+                    return Boolean(
+                        (changedId && String(currentUser?.id || "") === changedId)
+                        || (changedEmail && normalizeComparableValue(currentUser?.email) === changedEmail)
+                    );
+                }
+
+                async function handleCommitteeProfileRealtime(payload) {
+                    const ownProfileChanged = isCurrentCommitteeProfilePayload(payload);
+                    const reloadTasks = {
+                        contacts: true,
+                        conversations: true
+                    };
+
+                    if (ownProfileChanged) {
+                        const previousSportKey = `${currentUser?.assignedSportId || ""}|${normalizeSportCompact(currentUser?.assignedSportName || "")}`;
+                        const refreshedUser = await loadCurrentDashboardUser();
+                        if (!refreshedUser) return;
+
+                        const nextSportKey = `${refreshedUser.assignedSportId || ""}|${normalizeSportCompact(refreshedUser.assignedSportName || "")}`;
+                        if (previousSportKey !== nextSportKey) {
+                            activeSportFilterId = "";
+                            if (sportFilterSelect) sportFilterSelect.value = "";
+                            closeMatchModalFunction();
+                            closeResultModalFunction();
+                            closeBasketballPointModalFunction();
+                            setActiveMatchScopeFilter("all");
+                            Object.assign(reloadTasks, {
+                                overview: true,
+                                sports: true,
+                                matches: true,
+                                leaderboard: true
+                            });
+                        }
+                    }
+
+                    scheduleCommitteeRealtimeReload(reloadTasks, 0, { force: true });
                 }
 
                 setInterval(async () => {
@@ -8549,7 +8674,7 @@
                             schema: "public",
                             table: "user_profiles"
                         },
-                        () => scheduleCommitteeRealtimeReload({ contacts: true }, 0, { force: true })
+                        handleCommitteeProfileRealtime
                     )
                     .on(
                         "postgres_changes",
