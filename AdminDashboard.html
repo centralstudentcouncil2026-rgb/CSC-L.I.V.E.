@@ -2040,6 +2040,80 @@
                                     Check Attendance
                                 </button>
                             </form>
+
+                            <div class="my-5 border-t border-gray-200"></div>
+
+                            <details class="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                                <summary class="cursor-pointer text-sm font-black text-amber-900">
+                                    Manual Attendance Entry
+                                </summary>
+
+                                <form id="manualAttendanceForm" class="mt-4 space-y-3">
+                                    <div>
+                                        <label for="manualAttendanceStudentId" class="mb-1 block text-xs font-black uppercase tracking-wide text-amber-900">ID Number</label>
+                                        <input
+                                            id="manualAttendanceStudentId"
+                                            type="text"
+                                            required
+                                            autocomplete="off"
+                                            placeholder="Student ID or temporary ID"
+                                            class="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-100">
+                                    </div>
+
+                                    <div>
+                                        <label for="manualAttendanceName" class="mb-1 block text-xs font-black uppercase tracking-wide text-amber-900">Full Name</label>
+                                        <input
+                                            id="manualAttendanceName"
+                                            type="text"
+                                            required
+                                            autocomplete="off"
+                                            placeholder="Student full name"
+                                            class="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-100">
+                                    </div>
+
+                                    <div>
+                                        <label for="manualAttendanceTeam" class="mb-1 block text-xs font-black uppercase tracking-wide text-amber-900">Team / College</label>
+                                        <select
+                                            id="manualAttendanceTeam"
+                                            required
+                                            class="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-100">
+                                            <option value="">Loading teams...</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label for="manualAttendanceCategory" class="mb-1 block text-xs font-black uppercase tracking-wide text-amber-900">Attendance Type</label>
+                                        <select
+                                            id="manualAttendanceCategory"
+                                            required
+                                            class="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-100">
+                                            <option value="student_player">Student Attendee</option>
+                                            <option value="registered_player">Registered Player</option>
+                                            <option value="faculty">Faculty</option>
+                                            <option value="department_chair">Department Chair</option>
+                                            <option value="dean">Dean</option>
+                                            <option value="sponsor">Sponsor</option>
+                                            <option value="sponsor_game_attendance">Sponsor Game Attendance</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label for="manualAttendanceCourse" class="mb-1 block text-xs font-black uppercase tracking-wide text-amber-900">Course / Notes</label>
+                                        <input
+                                            id="manualAttendanceCourse"
+                                            type="text"
+                                            autocomplete="off"
+                                            placeholder="Optional"
+                                            class="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-100">
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        class="w-full rounded-lg bg-amber-600 px-4 py-2 text-sm font-black text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60">
+                                        Add Manual Attendance
+                                    </button>
+                                </form>
+                            </details>
                         </div>
                     </div>
 
@@ -3295,6 +3369,12 @@
             const attendanceSettingsSaveButton = document.getElementById("attendanceSettingsSaveButton");
             const attendanceSettingsStatus = document.getElementById("attendanceSettingsStatus");
             const attendanceStudentId = document.getElementById("attendanceStudentId");
+            const manualAttendanceForm = document.getElementById("manualAttendanceForm");
+            const manualAttendanceStudentId = document.getElementById("manualAttendanceStudentId");
+            const manualAttendanceName = document.getElementById("manualAttendanceName");
+            const manualAttendanceTeam = document.getElementById("manualAttendanceTeam");
+            const manualAttendanceCategory = document.getElementById("manualAttendanceCategory");
+            const manualAttendanceCourse = document.getElementById("manualAttendanceCourse");
             const attendanceResult = document.getElementById("attendanceResult");
             const attendanceEmptyState = document.getElementById("attendanceEmptyState");
             const studentFeedbackTableBody = document.getElementById("studentFeedbackTableBody");
@@ -7643,6 +7723,7 @@
                 renderTeams();
                 renderParticipantTeamFilter();
                 renderParticipantTeamOptions();
+                renderManualAttendanceTeamOptions();
                 renderPrintTeamOptions();
                 if (!hasUserChangedAttendanceCollegeTotals()) {
                     renderAttendanceCollegeTotals(getSavedAttendanceCollegeTotals());
@@ -9337,6 +9418,10 @@
                 setTeamSelectOptions(participantHomeCollege, selectedHomeCollege ?? participantHomeCollege.value, "Select home college");
                 setTeamSelectOptions(participantTeam, selectedTeam ?? participantTeam.value, "Select team to join");
                 setTeamSelectOptions(participantImportCollege, selectedImportCollege ?? participantImportCollege.value, "Select import college");
+            }
+
+            function renderManualAttendanceTeamOptions() {
+                setTeamSelectOptions(manualAttendanceTeam, manualAttendanceTeam?.value || "", "Select team / college");
             }
 
             function updateParticipantImportEditVisibility() {
@@ -11107,6 +11192,157 @@
                 showDashboardToast("Announcement deleted.");
             }
 
+            async function addManualAttendance(event) {
+                event.preventDefault();
+
+                const manualStudentId = manualAttendanceStudentId.value.trim();
+                const manualName = manualAttendanceName.value.trim();
+                const manualTeam = normalizeParticipantTeam(manualAttendanceTeam.value);
+                const manualCategory = manualAttendanceCategory.value || "student_player";
+                const manualCourse = manualAttendanceCourse.value.trim();
+                const submitButton = manualAttendanceForm.querySelector('button[type="submit"]');
+
+                if (!manualStudentId || !manualName || !manualTeam) {
+                    showAttendanceResult("error", `
+                        <p class="font-semibold">Manual attendance details are incomplete.</p>
+                        <p>Please enter the ID number, full name, and team / college.</p>
+                    `);
+                    return;
+                }
+
+                submitButton.disabled = true;
+                submitButton.textContent = "Adding...";
+
+                try {
+                    await loadAttendanceSettings();
+
+                    if (!isAttendanceSessionOpen()) {
+                        showAttendanceResult("warning", `
+                            <p class="font-semibold">Attendance session is closed.</p>
+                            <p>Please set and open the attendance session before adding manual attendance.</p>
+                        `);
+                        return;
+                    }
+
+                    const configuredAttendanceDate = getAttendanceSessionDate();
+                    const configuredAttendanceTitle = getAttendanceSessionTitle();
+                    const sessionRow = await ensureAttendanceSessionRow(
+                        configuredAttendanceTitle,
+                        configuredAttendanceDate,
+                        getAttendanceSessionStartsAt(),
+                        getAttendanceSessionClosesAt()
+                    );
+
+                    const attendanceRecord = {
+                        attendance_session_id: sessionRow?.id || activeAttendanceSettings?.attendance_session_id || null,
+                        participant_id: null,
+                        student_id: manualStudentId,
+                        participant_name: manualName,
+                        team: manualTeam,
+                        home_college: manualTeam,
+                        status: "Present",
+                        attendance_date: configuredAttendanceDate,
+                        checked_at: new Date().toISOString(),
+                        attendance_session_type: activeAttendanceSettings?.session_type || "regular",
+                        attendance_session_title: configuredAttendanceTitle,
+                        attendance_category: manualCategory,
+                        attendance_point_settings: normalizeAttendancePointSettings(activeAttendanceSettings?.point_settings)
+                    };
+                    const optionalProfileData = {
+                        attendance_rfid_value: manualStudentId,
+                        attendance_course: manualCourse || null,
+                        attendance_source: "manual_entry"
+                    };
+
+                    const { data: savedAttendance, error: attendanceError, alreadyRecorded } = await saveAttendanceRecord(attendanceRecord, optionalProfileData);
+
+                    if (attendanceError) {
+                        throw attendanceError;
+                    }
+
+                    const attendanceDate = savedAttendance?.attendance_date || configuredAttendanceDate;
+                    let attendancePointsNotice = "";
+                    await refreshAttendancePointLog(attendanceDate, configuredAttendanceTitle);
+
+                    const { data: teamAttendancePoints, error: teamAttendanceError } = await supabase
+                        .from(ATTENDANCE_POINTS_VIEW)
+                        .select("total_points, total_present")
+                        .eq("attendance_date", attendanceDate)
+                        .eq("session_title", configuredAttendanceTitle)
+                        .eq("team", manualTeam)
+                        .maybeSingle();
+
+                    if (teamAttendanceError) {
+                        console.warn("Unable to load manual attendance point summary:", teamAttendanceError.message || teamAttendanceError);
+                        attendancePointsNotice = `<p class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800">Attendance was saved. Run the attendance scoring SQL if points do not appear yet.</p>`;
+                    } else if (teamAttendancePoints) {
+                        attendancePointsNotice = `<p class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-bold text-blue-800">${escapeHTML(manualTeam)} has ${Number(teamAttendancePoints.total_present || 0).toLocaleString()} present record(s) for ${escapeHTML(attendanceDate)}. Current computed attendance merit: +${Number(teamAttendancePoints.total_points || 0).toLocaleString()} points.</p>`;
+                    }
+
+                    showAttendanceResult("success", `
+                        <div class="space-y-3">
+                            <div>
+                                <p class="text-lg font-bold">${alreadyRecorded ? "Attendance already recorded." : "Manual attendance added."}</p>
+                                <p class="text-sm">${alreadyRecorded ? `This ID already has attendance for ${escapeHTML(configuredAttendanceTitle)} on the selected date, so the first saved record was kept.` : `The manually entered attendee has been marked <strong>Present</strong> for ${escapeHTML(configuredAttendanceTitle)}.`}</p>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white bg-opacity-70 rounded-lg p-3 border border-green-100">
+                                <div>
+                                    <p class="text-xs uppercase tracking-wide text-green-700">Name</p>
+                                    <p class="font-semibold">${escapeHTML(manualName)}</p>
+                                </div>
+
+                                <div>
+                                    <p class="text-xs uppercase tracking-wide text-green-700">ID Number</p>
+                                    <p class="font-semibold">${escapeHTML(manualStudentId)}</p>
+                                </div>
+
+                                <div>
+                                    <p class="text-xs uppercase tracking-wide text-green-700">Team / College</p>
+                                    <p class="font-semibold">${escapeHTML(manualTeam)}</p>
+                                </div>
+
+                                <div>
+                                    <p class="text-xs uppercase tracking-wide text-green-700">Attendance Type</p>
+                                    <p class="font-semibold">${escapeHTML(getAttendanceCategoryLabel(manualCategory))}</p>
+                                </div>
+
+                                <div>
+                                    <p class="text-xs uppercase tracking-wide text-green-700">Attendance Date</p>
+                                    <p class="font-semibold">${escapeHTML(attendanceDate)}</p>
+                                </div>
+
+                                <div>
+                                    <p class="text-xs uppercase tracking-wide text-green-700">Session</p>
+                                    <p class="font-semibold">${escapeHTML(savedAttendance?.attendance_session_title || configuredAttendanceTitle)}</p>
+                                </div>
+                            </div>
+
+                            ${attendancePointsNotice}
+                        </div>
+                    `);
+
+                    await loadAdminOverviewCounts();
+
+                    const previousTeam = manualTeam;
+                    const previousCategory = manualCategory;
+                    manualAttendanceForm.reset();
+                    renderManualAttendanceTeamOptions();
+                    manualAttendanceTeam.value = previousTeam;
+                    manualAttendanceCategory.value = previousCategory;
+                    setTimeout(() => manualAttendanceStudentId.focus(), 50);
+                } catch (err) {
+                    console.error("Manual attendance error:", err.message || err);
+                    showAttendanceResult("error", `
+                        <p class="font-semibold">Failed to add manual attendance.</p>
+                        <p>${escapeHTML(err.message || "Please check the manual attendance details and database connection.")}</p>
+                    `);
+                } finally {
+                    submitButton.disabled = false;
+                    submitButton.textContent = "Add Manual Attendance";
+                }
+            }
+
             async function checkAttendance(event) {
                 event.preventDefault();
 
@@ -11453,6 +11689,7 @@
             attendanceSessionTitle.addEventListener("change", handleAttendanceSessionSelectionChange);
             attendanceSettingsForm.addEventListener("submit", saveAttendanceSettings);
             attendanceForm.addEventListener("submit", checkAttendance);
+            manualAttendanceForm.addEventListener("submit", addManualAttendance);
             announcementForm.addEventListener("submit", saveAnnouncement);
 
             let adminLastInteractionAt = 0;
