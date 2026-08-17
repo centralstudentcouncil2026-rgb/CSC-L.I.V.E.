@@ -12,9 +12,8 @@ begin
         where attendance_date >= date '2026-08-16'
           and nullif(trim(coalesce(session_title, '')), '') is not null
     loop
-        if public.refresh_attendance_point_log(session_row.attendance_date, session_row.session_title) then
-            refreshed_count := refreshed_count + 1;
-        end if;
+        perform public.refresh_attendance_point_log(session_row.attendance_date, session_row.session_title);
+        refreshed_count := refreshed_count + 1;
     end loop;
 
     raise notice 'Refreshed % attendance session log(s) from 2026-08-16 onward.', refreshed_count;
