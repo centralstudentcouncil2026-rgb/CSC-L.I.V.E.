@@ -248,6 +248,9 @@ begin
                     'sponsor',
                     'sponsor_game_attendance'
                 ) then attendance_row.attendance_category
+                when attendance_row.participant_id is not null
+                 and lower(coalesce(participant.status, '')) = 'approved'
+                    then 'registered_player'
                 else 'student_player'
             end as resolved_attendance_category,
             coalesce(attendance_row.status, 'Present') as attendance_status,
