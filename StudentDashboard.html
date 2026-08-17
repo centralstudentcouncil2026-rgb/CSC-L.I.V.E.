@@ -525,7 +525,7 @@
 
             <!-- Schedule Filters -->
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 space-y-4">
-                <div class="grid grid-cols-2 items-end gap-3 lg:flex lg:items-center lg:justify-between lg:gap-4">
+                <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-3 lg:flex lg:items-center lg:justify-between lg:gap-4">
                     <div class="min-w-0 space-y-2 lg:flex lg:items-center lg:gap-3 lg:space-y-0">
                         <label for="scheduleDateFilter" class="block text-[10px] font-black uppercase tracking-widest text-slate-800 sm:text-xs whitespace-nowrap">
                             Match Date
@@ -557,6 +557,18 @@
                             id="gameCategoryFilter"
                             class="w-full min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 sm:px-4 sm:text-sm lg:w-64">
                             <option value="All">All Registered Sports</option>
+                        </select>
+                    </div>
+
+                    <div class="min-w-0 space-y-2 lg:flex lg:items-center lg:gap-3 lg:space-y-0">
+                        <label for="scheduleTeamFilter" class="block text-[10px] font-black uppercase tracking-widest text-slate-800 sm:text-xs whitespace-nowrap">
+                            Team
+                        </label>
+
+                        <select
+                            id="scheduleTeamFilter"
+                            class="w-full min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 sm:px-4 sm:text-sm lg:w-56">
+                            <option value="All">All Teams</option>
                         </select>
                     </div>
                 </div>
@@ -813,6 +825,7 @@
             const studentMatchesGrid = document.getElementById("studentMatchesGrid");
             const scheduleDateFilter = document.getElementById("scheduleDateFilter");
             const gameCategoryFilter = document.getElementById("gameCategoryFilter");
+            const scheduleTeamFilter = document.getElementById("scheduleTeamFilter");
 
             const matchDetailsModal = document.getElementById("matchDetailsModal");
             const closeMatchDetailsModal = document.getElementById("closeMatchDetailsModal");
@@ -821,11 +834,13 @@
 
             const STUDENT_SCHEDULE_FILTER_KEY = "cscLiveStudentScheduleFilter";
             const STUDENT_SPORT_CATEGORY_FILTER_KEY = "cscLiveStudentSportCategoryFilter";
+            const STUDENT_SCHEDULE_TEAM_FILTER_KEY = "cscLiveStudentScheduleTeamFilter";
             const VALID_STUDENT_SCHEDULE_FILTERS = ["Next", "Ongoing", "Done"];
             let activeScheduleFilter = VALID_STUDENT_SCHEDULE_FILTERS.includes(localStorage.getItem(STUDENT_SCHEDULE_FILTER_KEY))
                 ? localStorage.getItem(STUDENT_SCHEDULE_FILTER_KEY)
                 : "Next";
             let activeSportCategoryFilter = localStorage.getItem(STUDENT_SPORT_CATEGORY_FILTER_KEY) || "All";
+            let activeScheduleTeamFilter = localStorage.getItem(STUDENT_SCHEDULE_TEAM_FILTER_KEY) || "All";
             let studentMatchesData = [];
             let basketballStatsByMatch = new Map();
             let evaluationFormUrl = "";
@@ -1827,6 +1842,32 @@
                 }
             }
 
+            function renderScheduleTeamFilterOptions() {
+                if (!scheduleTeamFilter) return;
+
+                const previousValue = activeScheduleTeamFilter || "All";
+                const teamNames = [...new Set(
+                    (studentMatchesData || [])
+                        .flatMap(match => [
+                            getTeamName(match, "one"),
+                            getTeamName(match, "two")
+                        ])
+                        .map(name => String(name || "").trim())
+                        .filter(Boolean)
+                )].sort((a, b) => a.localeCompare(b));
+
+                scheduleTeamFilter.innerHTML = `
+                    <option value="All">All Teams</option>
+                    ${teamNames.map(name => `<option value="${escapeHTML(name)}">${escapeHTML(name)}</option>`).join("")}
+                `;
+
+                activeScheduleTeamFilter = previousValue === "All" || teamNames.includes(previousValue)
+                    ? previousValue
+                    : "All";
+                localStorage.setItem(STUDENT_SCHEDULE_TEAM_FILTER_KEY, activeScheduleTeamFilter);
+                scheduleTeamFilter.value = activeScheduleTeamFilter;
+            }
+
             function getStatusMeta(status) {
                 if (status === "Done") {
                     return {
@@ -2792,6 +2833,7 @@
                 const basketballSignature = JSON.stringify([...basketballStatsByMatch.entries()]);
                 const matchesSignature = JSON.stringify(studentMatchesData) + basketballSignature;
                 if (matchesSignature !== lastMatchesSignature) {
+                    renderScheduleTeamFilterOptions();
                     renderMatches();
                     lastMatchesSignature = matchesSignature;
                 }
@@ -2826,8 +2868,15 @@
                     );
                 }
 
+                if (activeScheduleTeamFilter !== "All") {
+                    filtered = filtered.filter(m =>
+                        getTeamName(m, "one") === activeScheduleTeamFilter ||
+                        getTeamName(m, "two") === activeScheduleTeamFilter
+                    );
+                }
+
                 if (filtered.length === 0) {
-                    studentMatchesGrid.innerHTML = `<div class="col-span-full py-20 text-center bg-white rounded-2xl border border-slate-200 text-slate-400 italic">No ${escapeHTML(getStatusMeta(activeScheduleFilter).label.toLowerCase())} matches found for ${escapeHTML(formatDateFilterLabel(activeDateFilter))} in the selected game category.</div>`;
+                    studentMatchesGrid.innerHTML = `<div class="col-span-full py-20 text-center bg-white rounded-2xl border border-slate-200 text-slate-400 italic">No ${escapeHTML(getStatusMeta(activeScheduleFilter).label.toLowerCase())} matches found for ${escapeHTML(formatDateFilterLabel(activeDateFilter))} with the selected filters.</div>`;
                     return;
                 }
 
@@ -3102,6 +3151,14 @@
                 gameCategoryFilter.addEventListener("change", function () {
                     activeSportCategoryFilter = this.value || "All";
                     localStorage.setItem(STUDENT_SPORT_CATEGORY_FILTER_KEY, activeSportCategoryFilter);
+                    renderMatches();
+                });
+            }
+
+            if (scheduleTeamFilter) {
+                scheduleTeamFilter.addEventListener("change", function () {
+                    activeScheduleTeamFilter = this.value || "All";
+                    localStorage.setItem(STUDENT_SCHEDULE_TEAM_FILTER_KEY, activeScheduleTeamFilter);
                     renderMatches();
                 });
             }
