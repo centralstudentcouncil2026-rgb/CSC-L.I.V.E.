@@ -410,6 +410,7 @@ declare
     normalized_role text := lower(trim(coalesce(p_role, '')));
     authenticated_email text := lower(trim(coalesce(auth.jwt() ->> 'email', '')));
     resolved_sport_id bigint;
+    resolved_sport_name text := nullif(trim(coalesce(p_assigned_sport_name, '')), '');
 begin
     if current_user_id is null then
         raise exception 'You must be logged in to create a profile.';
@@ -428,14 +429,21 @@ begin
         resolved_sport_id := trim(both '"' from p_assigned_sport_id::text)::bigint;
     end if;
 
+    if normalized_role = 'committee' and resolved_sport_id is null and resolved_sport_name is null then
+        raise exception 'Committee accounts must choose a sport assignment.';
+    end if;
+
+    if normalized_role = 'committee' and lower(coalesce(resolved_sport_name, '')) = 'overall committee' then
+        raise exception 'Overall Committee access can only be assigned by an admin.';
+    end if;
+
     insert into public.user_profiles (
         id, email, full_name, mobile_number, role, approval_status,
         reviewed_at, reviewed_by, assigned_sport_id, assigned_sport_name
     )
     values (
         current_user_id, trim(p_email), trim(p_full_name), trim(p_mobile_number),
-        normalized_role, 'pending', null, null, resolved_sport_id,
-        nullif(trim(coalesce(p_assigned_sport_name, '')), '')
+        normalized_role, 'pending', null, null, resolved_sport_id, resolved_sport_name
     )
     on conflict (id)
     do update set

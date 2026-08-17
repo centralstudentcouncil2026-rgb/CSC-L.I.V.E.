@@ -23,8 +23,19 @@ as $$
                       select 1
                       from public.sports sport
                       where sport.id = match_sport_id
-                        and regexp_replace(lower(coalesce(sport.sport_name, '')), '[^a-z0-9]+', '', 'g')
-                            = regexp_replace(lower(coalesce(profile.assigned_sport_name, '')), '[^a-z0-9]+', '', 'g')
+                        and (
+                            regexp_replace(lower(coalesce(sport.sport_name, '')), '[^a-z0-9]+', '', 'g')
+                                = regexp_replace(lower(coalesce(profile.assigned_sport_name, '')), '[^a-z0-9]+', '', 'g')
+                            or (
+                                length(regexp_replace(lower(coalesce(profile.assigned_sport_name, '')), '[^a-z0-9]+', '', 'g')) > 0
+                                and (
+                                    regexp_replace(lower(coalesce(sport.sport_name, '')), '[^a-z0-9]+', '', 'g')
+                                        like '%' || regexp_replace(lower(coalesce(profile.assigned_sport_name, '')), '[^a-z0-9]+', '', 'g') || '%'
+                                    or regexp_replace(lower(coalesce(profile.assigned_sport_name, '')), '[^a-z0-9]+', '', 'g')
+                                        like '%' || regexp_replace(lower(coalesce(sport.sport_name, '')), '[^a-z0-9]+', '', 'g') || '%'
+                                )
+                            )
+                        )
                   )
               )
         ),

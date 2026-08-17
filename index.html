@@ -525,7 +525,7 @@
                                 <span aria-hidden="true">Select</span>
                             </button>
                             <p class="small-text text-xs text-gray-500">
-                                Choose one registered sport. An admin can edit this assignment later.
+                                Choose one registered sport assignment. An admin can edit this after approval.
                             </p>
                         </div>
 
@@ -713,6 +713,9 @@
 
             const isAdmin = role === "admin";
             registerSportAssignmentGroup.classList.toggle("hidden", isAdmin);
+            if (isAdmin) {
+                selectedRegisterSport = null;
+            }
             selectedRegisterSportLabel.textContent = isAdmin
                 ? "Admin"
                 : selectedRegisterSport?.sport_name || "Choose the sport you will handle";
@@ -797,16 +800,9 @@
         function renderRegisterSports() {
             if (!registerSportList) return;
             const groupedSports = getRegisterSportGroups();
-            const sportOptions = [OVERALL_COMMITTEE_ASSIGNMENT, ...groupedSports];
+            const sportOptions = [...groupedSports];
 
             registerSportList.innerHTML = `
-                <button
-                    type="button"
-                    data-register-sport-id="${OVERALL_COMMITTEE_ASSIGNMENT.id}"
-                    class="register-sport-option w-full rounded-xl border px-4 py-3 text-left text-sm font-bold transition ${String(selectedRegisterSport?.id || "") === OVERALL_COMMITTEE_ASSIGNMENT.id ? "border-blue-600 bg-blue-50 text-blue-800" : "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100"}">
-                    Overall Committee
-                    <span class="mt-1 block text-xs font-semibold text-amber-700">Can schedule matches for all sports categories.</span>
-                </button>
                 ${groupedSports.length === 0 ? `<p class="rounded-xl bg-gray-50 p-4 text-sm font-semibold text-gray-500">No registered sports are available yet.</p>` : ""}
             ` + groupedSports.map(sport => `
                 <button
@@ -1072,6 +1068,14 @@
 
             if (selectedRegisterRole === "committee" && !selectedRegisterSport) {
                 showAlert("error", "Please choose the sport you will handle.");
+                openRegisterSportModalFunction();
+                return;
+            }
+
+            if (selectedRegisterRole === "committee" && selectedRegisterSport?.id === OVERALL_COMMITTEE_ASSIGNMENT.id) {
+                showAlert("error", "Please choose a registered sport. Overall Committee access can only be assigned by an admin after approval.");
+                selectedRegisterSport = null;
+                selectedRegisterSportLabel.textContent = "Choose the sport you will handle";
                 openRegisterSportModalFunction();
                 return;
             }
