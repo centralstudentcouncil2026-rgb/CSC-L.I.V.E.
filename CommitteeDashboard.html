@@ -2620,7 +2620,7 @@
                 const PARTICIPANTS_TABLE = "participants";
                 const ATTENDANCE_TABLE = "attendance";
                 const ATTENDANCE_SETTINGS_TABLE = "attendance_settings";
-                const ATTENDANCE_POINTS_VIEW = "attendance_point_history";
+                const ATTENDANCE_POINTS_VIEW = "attendance_point_logs";
                 const MATCHES_TABLE = "scheduled_matches";
                 const GAME_HISTORY_TABLE = "game_history";
                 const TEAM_POINT_ADJUSTMENTS_TABLE = "team_point_adjustments";
@@ -5548,7 +5548,7 @@
                         Leaderboard source of truth:
                         - Teams are listed from sports_leaderboard only to get the registered team names.
                         - Points, wins, and losses are computed directly from game_history.
-                        - Attendance points are computed from attendance_point_history using the current shared parameters.
+                        - Attendance points are read from attendance_point_logs so official standings do not move when parameters change later.
                         - It does NOT read sports_leaderboard.points / wins / losses anymore.
                     */
                 const [

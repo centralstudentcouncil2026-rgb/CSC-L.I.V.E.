@@ -3171,7 +3171,7 @@
             const ATTENDANCE_TABLE = "attendance";
             const ATTENDANCE_SETTINGS_TABLE = "attendance_settings";
             const ATTENDANCE_SESSIONS_TABLE = "attendance_sessions";
-            const ATTENDANCE_POINTS_VIEW = "attendance_point_history";
+            const ATTENDANCE_POINTS_VIEW = "attendance_point_logs";
             const RFID_PROFILES_TABLE = "rfid_profiles";
             const GAME_HISTORY_TABLE = "game_history";
             const TEAM_POINT_ADJUSTMENTS_TABLE = "team_point_adjustments";
@@ -3808,6 +3808,14 @@
                                     <span class="mb-1 block text-xs font-bold text-blue-900">Total Students</span>
                                     <input type="number" min="0" step="1" value="${escapeHTML(savedTotals.total_students ?? savedTotals.total_student_players ?? 0)}" data-total-students class="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-bold">
                                 </label>
+                                <label class="block">
+                                    <span class="mb-1 block text-xs font-bold text-blue-900">Total Faculty</span>
+                                    <input type="number" min="0" step="1" value="${escapeHTML(savedTotals.total_faculty ?? 0)}" data-total-faculty class="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-bold">
+                                </label>
+                                <label class="block">
+                                    <span class="mb-1 block text-xs font-bold text-blue-900">Total Department Chairs</span>
+                                    <input type="number" min="0" step="1" value="${escapeHTML(savedTotals.total_department_chairs ?? 0)}" data-total-department-chairs class="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-bold">
+                                </label>
                             </div>
                         </div>
                     `;
@@ -3848,8 +3856,8 @@
                         totals[collegeId] = {
                             college_name: row.dataset.collegeName || collegeId,
                             total_students: getNumericInputValue(row.querySelector("[data-total-students]"), 0),
-                            total_faculty: 0,
-                            total_department_chairs: 0
+                            total_faculty: getNumericInputValue(row.querySelector("[data-total-faculty]"), 0),
+                            total_department_chairs: getNumericInputValue(row.querySelector("[data-total-department-chairs]"), 0)
                         };
                     }
 
@@ -11197,7 +11205,7 @@
 
                     if (attendanceCollege) {
                         const { data: teamAttendancePoints, error: teamAttendanceError } = await supabase
-                            .from("attendance_point_history")
+                            .from(ATTENDANCE_POINTS_VIEW)
                             .select("total_points, total_present, registered_player_count, student_player_count, faculty_count, department_chair_count, dean_count, student_from_college_count, sponsor_count, sponsor_game_attendance_count")
                             .eq("attendance_date", attendanceDate)
                             .eq("session_title", configuredAttendanceTitle)
