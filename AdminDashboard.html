@@ -4314,18 +4314,29 @@
 
             function sortAccountsByAssignedGame(accounts) {
                 return [...accounts].sort((a, b) => {
-                    const aAssigned = getAccountAssignedSportSortLabel(a);
-                    const bAssigned = getAccountAssignedSportSortLabel(b);
-                    const assignmentDiff = Number(aAssigned === "No game assigned") - Number(bAssigned === "No game assigned");
+                    const aIsAdmin = getAccountRoleLabel(a.role) === "Admin";
+                    const bIsAdmin = getAccountRoleLabel(b.role) === "Admin";
+                    const roleDiff = Number(bIsAdmin) - Number(aIsAdmin);
 
-                    if (assignmentDiff !== 0) {
-                        return assignmentDiff;
+                    if (roleDiff !== 0) {
+                        return roleDiff;
                     }
 
-                    const gameDiff = compareAccountText(aAssigned, bAssigned);
+                    const aAssigned = getAccountAssignedSportSortLabel(a);
+                    const bAssigned = getAccountAssignedSportSortLabel(b);
 
-                    if (gameDiff !== 0) {
-                        return gameDiff;
+                    if (!aIsAdmin && !bIsAdmin) {
+                        const assignmentDiff = Number(aAssigned === "No game assigned") - Number(bAssigned === "No game assigned");
+
+                        if (assignmentDiff !== 0) {
+                            return assignmentDiff;
+                        }
+
+                        const gameDiff = compareAccountText(aAssigned, bAssigned);
+
+                        if (gameDiff !== 0) {
+                            return gameDiff;
+                        }
                     }
 
                     const statusDiff = getAccountStatusSortRank(a.approval_status) - getAccountStatusSortRank(b.approval_status);
