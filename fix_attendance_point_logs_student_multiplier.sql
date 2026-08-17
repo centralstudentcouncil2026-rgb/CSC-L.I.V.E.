@@ -20,7 +20,7 @@ begin
 end
 $$;
 
--- Optional check for the COB Afternoon Session sample.
+-- Optional checks for the COB August 16 samples.
 select
     attendance_date,
     session_title,
@@ -36,5 +36,5 @@ select
     computed_at
 from public.attendance_point_logs
 where attendance_date = date '2026-08-16'
-  and session_title = 'Afternoon Session'
-  and team = 'COB';
+  and team = 'COB'
+order by session_title;

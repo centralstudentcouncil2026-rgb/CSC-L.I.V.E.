@@ -94,26 +94,28 @@ begin
 
     select coalesce(
         (
-            select session_row.point_settings
+            select nullif(session_row.point_settings, '{}'::jsonb)
             from public.attendance_sessions session_row
             where session_row.attendance_date = p_attendance_date
               and lower(trim(session_row.category)) = lower(normalized_session_title)
+              and nullif(session_row.point_settings, '{}'::jsonb) is not null
             order by session_row.updated_at desc nulls last, session_row.id desc
             limit 1
         ),
         (
-            select attendance_row.attendance_point_settings
+            select nullif(attendance_row.attendance_point_settings, '{}'::jsonb)
             from public.attendance attendance_row
             where attendance_row.attendance_date = p_attendance_date
               and lower(trim(coalesce(attendance_row.attendance_session_title, ''))) = lower(normalized_session_title)
-              and attendance_row.attendance_point_settings is not null
+              and nullif(attendance_row.attendance_point_settings, '{}'::jsonb) is not null
             order by attendance_row.checked_at desc nulls last, attendance_row.id desc
             limit 1
         ),
         (
-            select settings.point_settings
+            select nullif(settings.point_settings, '{}'::jsonb)
             from public.attendance_settings settings
             where settings.id = 1
+              and nullif(settings.point_settings, '{}'::jsonb) is not null
             limit 1
         ),
         '{}'::jsonb
@@ -246,9 +248,6 @@ begin
                     'sponsor',
                     'sponsor_game_attendance'
                 ) then attendance_row.attendance_category
-                when attendance_row.participant_id is not null
-                 and lower(coalesce(participant.status, '')) = 'approved'
-                    then 'registered_player'
                 else 'student_player'
             end as resolved_attendance_category,
             coalesce(attendance_row.status, 'Present') as attendance_status,
