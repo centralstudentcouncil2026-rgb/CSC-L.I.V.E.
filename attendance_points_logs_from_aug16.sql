@@ -27,7 +27,9 @@ create table if not exists public.attendance_point_logs (
     sponsor_game_attendance_points numeric not null default 15,
     total_points numeric not null default 0,
     point_settings jsonb not null default '{}'::jsonb,
+    scoring_breakdown jsonb not null default '{}'::jsonb,
     locked_at timestamptz not null default now(),
+    computed_at timestamptz not null default now(),
     source text not null default 'refresh_attendance_point_log'
 );
 
@@ -56,7 +58,9 @@ alter table public.attendance_point_logs
     add column if not exists sponsor_game_attendance_points numeric not null default 15,
     add column if not exists total_points numeric not null default 0,
     add column if not exists point_settings jsonb not null default '{}'::jsonb,
+    add column if not exists scoring_breakdown jsonb not null default '{}'::jsonb,
     add column if not exists locked_at timestamptz not null default now(),
+    add column if not exists computed_at timestamptz not null default now(),
     add column if not exists source text not null default 'refresh_attendance_point_log';
 
 create index if not exists attendance_point_logs_date_session_team_idx
@@ -145,21 +149,49 @@ begin
         sponsor_game_attendance_points,
         total_points,
         point_settings,
+        scoring_breakdown,
         locked_at,
+        computed_at,
         source
     )
     with safe_parameters as (
         select
             case
-                when coalesce(selected_point_settings #>> '{parameters,registered_player_points}', '') ~ '^\d+(\.\d+)?$'
-                 and (selected_point_settings #>> '{parameters,registered_player_points}')::numeric between 0 and 1000
-                    then (selected_point_settings #>> '{parameters,registered_player_points}')::numeric
+                when coalesce(
+                    selected_point_settings #>> '{parameters,registered_player_points}',
+                    selected_point_settings #>> '{opening_program,registered_player_points}',
+                    ''
+                ) ~ '^\d+(\.\d+)?$'
+                 and coalesce(
+                    selected_point_settings #>> '{parameters,registered_player_points}',
+                    selected_point_settings #>> '{opening_program,registered_player_points}'
+                 )::numeric between 0 and 1000
+                    then coalesce(
+                        selected_point_settings #>> '{parameters,registered_player_points}',
+                        selected_point_settings #>> '{opening_program,registered_player_points}'
+                    )::numeric
                 else 5
             end as registered_player_points,
             case
-                when coalesce(selected_point_settings #>> '{parameters,student_player_points}', selected_point_settings #>> '{parameters,student_from_college_points}', '') ~ '^\d+(\.\d+)?$'
-                 and coalesce(selected_point_settings #>> '{parameters,student_player_points}', selected_point_settings #>> '{parameters,student_from_college_points}')::numeric between 0 and 1000
-                    then coalesce(selected_point_settings #>> '{parameters,student_player_points}', selected_point_settings #>> '{parameters,student_from_college_points}')::numeric
+                when coalesce(
+                    selected_point_settings #>> '{parameters,student_player_points}',
+                    selected_point_settings #>> '{parameters,student_from_college_points}',
+                    selected_point_settings #>> '{sunday_devotional,student_player_points}',
+                    selected_point_settings #>> '{opening_program,student_from_college_points}',
+                    ''
+                ) ~ '^\d+(\.\d+)?$'
+                 and coalesce(
+                    selected_point_settings #>> '{parameters,student_player_points}',
+                    selected_point_settings #>> '{parameters,student_from_college_points}',
+                    selected_point_settings #>> '{sunday_devotional,student_player_points}',
+                    selected_point_settings #>> '{opening_program,student_from_college_points}'
+                 )::numeric between 0 and 1000
+                    then coalesce(
+                        selected_point_settings #>> '{parameters,student_player_points}',
+                        selected_point_settings #>> '{parameters,student_from_college_points}',
+                        selected_point_settings #>> '{sunday_devotional,student_player_points}',
+                        selected_point_settings #>> '{opening_program,student_from_college_points}'
+                    )::numeric
                 else 0
             end as student_player_points,
             case
@@ -274,7 +306,7 @@ begin
           and normalized_attendance.team in ('CAH', 'COB', 'COD', 'COH', 'COM', 'CON', 'COT', 'CSET', 'CTE', 'Academy', 'Faculty')
         group by normalized_attendance.attendance_date, normalized_attendance.session_title, normalized_attendance.team
     ),
-    scored_attendance as (
+    scored_components as (
         select
             attendance_counts.*,
             coalesce(college_totals.total_students, 0) as total_students,
@@ -287,27 +319,25 @@ begin
             safe_parameters.dean_points,
             safe_parameters.sponsor_points,
             safe_parameters.sponsor_game_attendance_points,
-            round((
-                (attendance_counts.registered_player_count * safe_parameters.registered_player_points)
-                + case
-                    when coalesce(college_totals.total_students, 0) > 0
-                        then ((attendance_counts.student_player_count::numeric / nullif(college_totals.total_students, 0)) * 100) * safe_parameters.student_player_points
-                    else 0
-                end
-                + case
-                    when coalesce(college_totals.total_faculty, 0) > 0
-                        then ((attendance_counts.faculty_count::numeric / nullif(college_totals.total_faculty, 0)) * 100) * safe_parameters.faculty_points
-                    else 0
-                end
-                + case
-                    when coalesce(college_totals.total_department_chairs, 0) > 0
-                        then ((attendance_counts.department_chair_count::numeric / nullif(college_totals.total_department_chairs, 0)) * 100) * safe_parameters.department_chair_points
-                    else 0
-                end
-                + (attendance_counts.dean_count * safe_parameters.dean_points)
-                + (attendance_counts.sponsor_count * safe_parameters.sponsor_points)
-                + (attendance_counts.sponsor_game_attendance_count * safe_parameters.sponsor_game_attendance_points)
-            ), 2) as total_points
+            (attendance_counts.registered_player_count * safe_parameters.registered_player_points) as registered_player_score,
+            case
+                when coalesce(college_totals.total_students, 0) > 0
+                    then ((attendance_counts.student_player_count::numeric / nullif(college_totals.total_students, 0)) * 100) * safe_parameters.student_player_points
+                else 0
+            end as student_player_score,
+            case
+                when coalesce(college_totals.total_faculty, 0) > 0
+                    then ((attendance_counts.faculty_count::numeric / nullif(college_totals.total_faculty, 0)) * 100) * safe_parameters.faculty_points
+                else 0
+            end as faculty_score,
+            case
+                when coalesce(college_totals.total_department_chairs, 0) > 0
+                    then ((attendance_counts.department_chair_count::numeric / nullif(college_totals.total_department_chairs, 0)) * 100) * safe_parameters.department_chair_points
+                else 0
+            end as department_chair_score,
+            (attendance_counts.dean_count * safe_parameters.dean_points) as dean_score,
+            (attendance_counts.sponsor_count * safe_parameters.sponsor_points) as sponsor_score,
+            (attendance_counts.sponsor_game_attendance_count * safe_parameters.sponsor_game_attendance_points) as sponsor_game_attendance_score
         from attendance_counts
         cross join safe_parameters
         left join lateral (
@@ -332,6 +362,39 @@ begin
                or lower(value ->> 'college_name') = lower(attendance_counts.team)
             limit 1
         ) college_totals on true
+    ),
+    scored_attendance as (
+        select
+            scored_components.*,
+            round((
+                scored_components.registered_player_score
+                + scored_components.student_player_score
+                + scored_components.faculty_score
+                + scored_components.department_chair_score
+                + scored_components.dean_score
+                + scored_components.sponsor_score
+                + scored_components.sponsor_game_attendance_score
+            ), 2) as total_points,
+            jsonb_build_object(
+                'registered_players', round(scored_components.registered_player_score, 2),
+                'student_attendees', round(scored_components.student_player_score, 2),
+                'student_attendee_formula', jsonb_build_object(
+                    'count', scored_components.student_player_count,
+                    'total_students', scored_components.total_students,
+                    'percentage', case
+                        when scored_components.total_students > 0
+                            then round((scored_components.student_player_count::numeric / scored_components.total_students) * 100, 2)
+                        else 0
+                    end,
+                    'multiplier', scored_components.student_player_points
+                ),
+                'faculty', round(scored_components.faculty_score, 2),
+                'department_chairs', round(scored_components.department_chair_score, 2),
+                'deans', round(scored_components.dean_score, 2),
+                'sponsors', round(scored_components.sponsor_score, 2),
+                'game_sponsors', round(scored_components.sponsor_game_attendance_score, 2)
+            ) as scoring_breakdown
+        from scored_components
     )
     select
         scored_attendance.attendance_date,
@@ -358,6 +421,8 @@ begin
         scored_attendance.sponsor_game_attendance_points,
         scored_attendance.total_points,
         selected_point_settings,
+        scored_attendance.scoring_breakdown,
+        now(),
         now(),
         'refresh_attendance_point_log'
     from scored_attendance;
