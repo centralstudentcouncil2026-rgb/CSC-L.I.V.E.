@@ -7155,31 +7155,16 @@
                                     <div class="flex items-center justify-between gap-3">
                                         <div class="text-center flex-1">
                                             <p class="text-lg font-extrabold leading-tight text-blue-700">${escapeHTML(firstTeamName)}</p>
+                                            <p class="mt-1 text-[10px] font-black uppercase tracking-wide text-blue-600">Declared Points: ${formatDeclaredScore(teamOneDeclaredScore)}</p>
                                         </div>
 
                                         <div class="px-2">
-                                            <p class="text-gray-600 font-medium">vs</p>
+                                            <p class="text-red-600 font-black italic">VS</p>
                                         </div>
 
                                         <div class="text-center flex-1">
                                             <p class="text-lg font-extrabold leading-tight text-emerald-700">${escapeHTML(secondTeamName)}</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="mb-3 rounded-lg border border-blue-100 bg-blue-50 p-3">
-                                    <p class="mb-2 text-xs font-bold uppercase tracking-wide text-blue-700">Declared Score</p>
-                                    <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                                        <div class="rounded-lg bg-white p-3 text-center">
-                                            <p class="mb-1 text-xs font-bold uppercase tracking-wide text-blue-600">${escapeHTML(firstTeamName)}</p>
-                                            <p class="text-2xl font-black text-blue-700">${formatDeclaredScore(teamOneDeclaredScore)}</p>
-                                        </div>
-
-                                        <p class="text-xs font-black uppercase tracking-wide text-blue-700">vs</p>
-
-                                        <div class="rounded-lg bg-white p-3 text-center">
-                                            <p class="mb-1 text-xs font-bold uppercase tracking-wide text-emerald-600">${escapeHTML(secondTeamName)}</p>
-                                            <p class="text-2xl font-black text-emerald-700">${formatDeclaredScore(teamTwoDeclaredScore)}</p>
+                                            <p class="mt-1 text-[10px] font-black uppercase tracking-wide text-emerald-600">Declared Points: ${formatDeclaredScore(teamTwoDeclaredScore)}</p>
                                         </div>
                                     </div>
                                 </div>
