@@ -2154,7 +2154,7 @@
                     Select the winning team to continue.
                 </div>
 
-                <form id="resultForm" class="space-y-4">
+                <form id="resultForm" class="space-y-4" autocomplete="off">
                     <input type="hidden" id="resultMatchId">
 
                     <div>
@@ -2193,6 +2193,7 @@
                                 required
                                 min="0"
                                 step="0.01"
+                                autocomplete="off"
                                 placeholder="Winner points"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2">
                         </label>
@@ -2205,6 +2206,7 @@
                                 required
                                 min="0"
                                 step="0.01"
+                                autocomplete="off"
                                 placeholder="Loser points"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2">
                         </label>
@@ -7825,6 +7827,8 @@
                     pendingResultMatch = match;
                     resultForm.reset();
                     resultMatchId.value = match.id;
+                    winnerActualPointsInput.value = "0";
+                    loserActualPointsInput.value = "0";
 
                     const firstTeamId = getTeamId(match, "one");
                     const secondTeamId = getTeamId(match, "two");
