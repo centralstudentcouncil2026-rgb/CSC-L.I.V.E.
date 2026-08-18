@@ -3520,6 +3520,21 @@
                 return Number.isFinite(numberValue) ? numberValue : 0;
             }
 
+            function findPointValue(...values) {
+                for (const value of values) {
+                    if (value === null || value === undefined || value === "") {
+                        continue;
+                    }
+
+                    const numericValue = Number(value);
+                    if (Number.isFinite(numericValue)) {
+                        return numericValue;
+                    }
+                }
+
+                return 0;
+            }
+
             function formatDateTime(value) {
                 if (!value) {
                     return "-";
@@ -7559,7 +7574,7 @@
                     const winner = findTeam(winnerId, winnerName);
                     if (winner) {
                         const adjustment = getTeamHistoryAdjustment(history, winnerId, winnerName);
-                        winner.stats.points += toNumber(history.winner_points_awarded || history.winner_award || history.winner_points || history.points_winner) + adjustment.merit - adjustment.demerit;
+                        winner.stats.points += findPointValue(history.winner_points_awarded, history.winner_award, history.winner_points, history.points_winner) + adjustment.merit - adjustment.demerit;
                         winner.stats.wins += 1;
                         winner.stats.merit += adjustment.merit;
                         winner.stats.demerit += adjustment.demerit;
@@ -7568,7 +7583,7 @@
                     const loser = findTeam(loserId, loserName);
                     if (loser) {
                         const adjustment = getTeamHistoryAdjustment(history, loserId, loserName);
-                        loser.stats.points += toNumber(history.loser_points_awarded || history.loser_award || history.loser_points || history.points_loser) + adjustment.merit - adjustment.demerit;
+                        loser.stats.points += findPointValue(history.loser_points_awarded, history.loser_award, history.loser_points, history.points_loser) + adjustment.merit - adjustment.demerit;
                         loser.stats.losses += 1;
                         loser.stats.merit += adjustment.merit;
                         loser.stats.demerit += adjustment.demerit;
@@ -8943,11 +8958,11 @@
                 const loserName = normalizeText(getHistoryTeamName(history, "loser"));
 
                 if (winnerName === normalizedTeam) {
-                    return toNumber(history.winner_points_awarded || history.winner_award || history.winner_points || history.points_winner);
+                    return findPointValue(history.winner_points_awarded, history.winner_award, history.winner_points, history.points_winner);
                 }
 
                 if (loserName === normalizedTeam) {
-                    return toNumber(history.loser_points_awarded || history.loser_award || history.loser_points || history.points_loser);
+                    return findPointValue(history.loser_points_awarded, history.loser_award, history.loser_points, history.points_loser);
                 }
 
                 return 0;
