@@ -3142,6 +3142,46 @@
                     });
                 }
 
+                function findPointValue(...values) {
+                    for (const value of values) {
+                        if (value === null || value === undefined || value === "") {
+                            continue;
+                        }
+
+                        const numericValue = Number(value);
+                        if (Number.isFinite(numericValue)) {
+                            return {
+                                found: true,
+                                value: numericValue
+                            };
+                        }
+                    }
+
+                    return {
+                        found: false,
+                        value: 0
+                    };
+                }
+
+                function getCollegeTeamAlias(value) {
+                    const rawValue = String(value || "").trim();
+                    const normalizedValue = rawValue.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+                    const aliases = {
+                        "college of science engineering and technology": "CSET",
+                        "college of nursing": "CON",
+                        "college of business": "COB",
+                        "college of arts and humanities": "CAH",
+                        "college of theology": "COT",
+                        "college of health": "COH",
+                        "college of medicine": "COM",
+                        "college of teacher education": "CTE",
+                        "college of teachers education": "CTE",
+                        "college of dentistry": "COD"
+                    };
+
+                    return aliases[normalizedValue] || rawValue;
+                }
+
                 function isCurrentUserAdmin() {
                     return normalizeComparableValue(currentUser?.role) === "admin";
                 }
