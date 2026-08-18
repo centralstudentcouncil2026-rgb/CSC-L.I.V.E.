@@ -6998,6 +6998,52 @@
                     return getLocalDateInputValue(match?.match_time);
                 }
 
+                function getDeclaredScoreForTeam(history, teamId, teamName) {
+                    if (!history) {
+                        return {
+                            found: false,
+                            value: 0
+                        };
+                    }
+
+                    const normalizedTeamName = String(teamName || "").trim().toLowerCase();
+                    const isWinner = (history.winner_team_id && Number(history.winner_team_id) === Number(teamId))
+                        || (normalizedTeamName && String(history.winner_team_name || "").trim().toLowerCase() === normalizedTeamName);
+                    const isLoser = (history.loser_team_id && Number(history.loser_team_id) === Number(teamId))
+                        || (normalizedTeamName && String(history.loser_team_name || "").trim().toLowerCase() === normalizedTeamName);
+
+                    if (isWinner) {
+                        return findPointValue(
+                            history.winner_points_awarded,
+                            history.winner_award,
+                            history.winner_points,
+                            history.points_winner,
+                            history.winning_points
+                        );
+                    }
+
+                    if (isLoser) {
+                        return findPointValue(
+                            history.loser_points_awarded,
+                            history.loser_award,
+                            history.loser_points,
+                            history.points_loser,
+                            history.losing_points
+                        );
+                    }
+
+                    return {
+                        found: false,
+                        value: 0
+                    };
+                }
+
+                function formatDeclaredScore(score) {
+                    return score?.found
+                        ? Number(score.value || 0).toLocaleString()
+                        : "-";
+                }
+
                 function renderMatchesIntoGrid(gridElement, matches, statusLabel) {
                     gridElement.innerHTML = "";
                     const isOngoingGrid = statusLabel === "Ongoing";
@@ -7047,6 +7093,8 @@
                         const periodLimit = isBasketballSport(match) ? 4 : isVolleyballSport(match) ? 5 : 0;
 
                         if (isDone) {
+                            const teamOneDeclaredScore = getDeclaredScoreForTeam(history, getTeamId(match, "one"), firstTeamName);
+                            const teamTwoDeclaredScore = getDeclaredScoreForTeam(history, getTeamId(match, "two"), secondTeamName);
                             const doneCard = document.createElement("div");
                             doneCard.className = "p-4 bg-white border-0 shadow-md rounded-lg";
 
@@ -7075,6 +7123,23 @@
 
                                         <div class="text-center flex-1">
                                             <p class="text-lg font-extrabold leading-tight text-emerald-700">${escapeHTML(secondTeamName)}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3 rounded-lg border border-blue-100 bg-blue-50 p-3">
+                                    <p class="mb-2 text-xs font-bold uppercase tracking-wide text-blue-700">Declared Score</p>
+                                    <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                                        <div class="rounded-lg bg-white p-3 text-center">
+                                            <p class="mb-1 text-xs font-bold uppercase tracking-wide text-blue-600">${escapeHTML(firstTeamName)}</p>
+                                            <p class="text-2xl font-black text-blue-700">${formatDeclaredScore(teamOneDeclaredScore)}</p>
+                                        </div>
+
+                                        <p class="text-xs font-black uppercase tracking-wide text-blue-700">vs</p>
+
+                                        <div class="rounded-lg bg-white p-3 text-center">
+                                            <p class="mb-1 text-xs font-bold uppercase tracking-wide text-emerald-600">${escapeHTML(secondTeamName)}</p>
+                                            <p class="text-2xl font-black text-emerald-700">${formatDeclaredScore(teamTwoDeclaredScore)}</p>
                                         </div>
                                     </div>
                                 </div>
