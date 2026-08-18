@@ -1878,6 +1878,8 @@
                             <input
                                 id="doneMatchesDateFilter"
                                 type="date"
+                                min="2026-01-04"
+                                step="7"
                                 aria-label="Filter next and done matches by date"
                                 class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
 
@@ -2959,6 +2961,13 @@
 
                 function getLocalISODate() {
                     return new Date().toLocaleDateString("en-CA");
+                }
+
+                function getSundayDateValue(dateValue = getLocalISODate()) {
+                    const parsed = new Date(`${dateValue || getLocalISODate()}T00:00:00`);
+                    const safeDate = Number.isNaN(parsed.getTime()) ? new Date(`${getLocalISODate()}T00:00:00`) : parsed;
+                    safeDate.setDate(safeDate.getDate() - safeDate.getDay());
+                    return safeDate.toLocaleDateString("en-CA");
                 }
 
                 function normalizeStatus(value) {
@@ -8252,7 +8261,8 @@
                     }
                 });
                 doneMatchesDateFilter.addEventListener("change", function () {
-                    activeDoneMatchesDate = this.value || "";
+                    activeDoneMatchesDate = this.value ? getSundayDateValue(this.value) : "";
+                    this.value = activeDoneMatchesDate;
                     renderMatches(matchesData);
                 });
                 clearDoneMatchesDateFilter.addEventListener("click", function () {
