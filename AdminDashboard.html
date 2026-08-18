@@ -3124,7 +3124,7 @@
             const descs = {
                 overview: 'Welcome to the admin dashboard. Manage all aspects of the sports system.',
                 teams: 'Create, edit, and manage sports teams.',
-                games: 'Create sports and configure the points assigned per game.',
+                games: 'Create sports and configure registration limits. Match points are declared by committees.',
                 participants: 'Add, edit, and manage registered participants.',
                 attendance: 'Check participant attendance using a Student ID.',
                 announcements: 'Create announcements for committees and students.',
@@ -8109,7 +8109,9 @@
                 const sportData = {
                     sport_name: sportName,
                     game_type: gameType,
-                    player_limit: playerLimit
+                    player_limit: playerLimit,
+                    winner_points: 0,
+                    loser_points: 0
                 };
 
                 let result;
