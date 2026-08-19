@@ -8238,6 +8238,16 @@
                     const winnerName = resultType === "no_winner" ? "No winner" : winnerId === teamOneId ? teamOneName : teamTwoName;
                     const loserName = resultType === "no_winner" ? "No team arrived" : loserId === teamOneId ? teamOneName : teamTwoName;
 
+                    if (resultType === "default") {
+                        const defaultPointRule = readSportPointRule(getMatchSportRecord(pendingResultMatch), "default");
+                        winnerPointsAwarded = defaultPointRule.winnerPoints;
+                        loserPointsAwarded = 0;
+                        winnerActualPointsInput.value = String(winnerPointsAwarded);
+                        loserActualPointsInput.value = "0";
+                        bestPlayerRaw = "Win by default";
+                        bestPlayer = bestPlayerRaw;
+                    }
+
                     if (resultType === "no_winner") {
                         winnerPointsAwarded = 0;
                         loserPointsAwarded = 0;
