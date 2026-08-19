@@ -7608,6 +7608,12 @@
                 return { merit: 0, demerit: 0 };
             }
 
+            function isNoWinnerHistory(history) {
+                const resultText = normalizeText(history?.result);
+                const bestPlayerText = normalizeText(history?.best_player);
+                return resultText.includes("no winner") || bestPlayerText.includes("no team arrived");
+            }
+
             function buildTeamStats(teams, historyRows = [], attendanceRows = [], adjustmentRows = []) {
                 const statsById = new Map();
                 const aliases = new Map();
@@ -7641,6 +7647,22 @@
                 };
 
                 (historyRows || []).forEach(history => {
+                    if (isNoWinnerHistory(history)) {
+                        [
+                            { id: history.team_one_id, name: history.team_one_name },
+                            { id: history.team_two_id, name: history.team_two_name }
+                        ].forEach(teamRef => {
+                            const team = findTeam(teamRef.id, teamRef.name);
+                            if (team) {
+                                const adjustment = getTeamHistoryAdjustment(history, teamRef.id, teamRef.name);
+                                team.stats.points += adjustment.merit - adjustment.demerit;
+                                team.stats.merit += adjustment.merit;
+                                team.stats.demerit += adjustment.demerit;
+                            }
+                        });
+                        return;
+                    }
+
                     const winnerId = history.winner_team_id ?? history.winning_team_id ?? history.winner_id ?? history.team_winner_id;
                     const winnerName = history.winner_team_name || history.winning_team_name || history.winner_name || history.winner;
                     const loserId = history.loser_team_id ?? history.losing_team_id ?? history.loser_id ?? history.team_loser_id;

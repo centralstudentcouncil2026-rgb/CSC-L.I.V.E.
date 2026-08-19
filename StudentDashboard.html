@@ -1472,6 +1472,14 @@
                 if (!history) return null;
 
                 const teamId = getTeamId(match, teamSide);
+                if (isNoWinnerHistory(history)) {
+                    const teamOneId = getTeamId(match, "one");
+                    const teamTwoId = getTeamId(match, "two");
+                    if (Number.isFinite(teamId) && (teamId === teamOneId || teamId === teamTwoId)) {
+                        return 0;
+                    }
+                }
+
                 const teamName = normalizeTeamValue(getTeamName(match, teamSide));
                 const winnerId = Number(history.winner_team_id);
                 const loserId = Number(history.loser_team_id);
@@ -2172,6 +2180,19 @@
                 });
 
                 (historyRows || []).forEach(history => {
+                    if (isNoWinnerHistory(history)) {
+                        [
+                            { id: history.team_one_id, name: history.team_one_name },
+                            { id: history.team_two_id, name: history.team_two_name }
+                        ].forEach(teamRef => {
+                            const team = getRegisteredTeamStat(teamRef.id, teamRef.name);
+                            if (team) {
+                                team.points += getHistoryTeamAdjustment(history, teamRef.id, teamRef.name);
+                            }
+                        });
+                        return;
+                    }
+
                     const winnerId = getFirstValue(
                         history.winner_team_id,
                         history.winning_team_id,
@@ -2313,6 +2334,12 @@
                 }
 
                 return 0;
+            }
+
+            function isNoWinnerHistory(history) {
+                const resultText = normalizeText(history?.result);
+                const bestPlayerText = normalizeText(history?.best_player);
+                return resultText.includes("no winner") || bestPlayerText.includes("no team arrived");
             }
 
             function getHistoryTeamAdjustment(history, teamId, teamName) {
@@ -2491,8 +2518,12 @@
                 const teamHistory = (historyRows || []).filter(h => 
                     (h.winner_team_id && Number(h.winner_team_id) === Number(teamId)) ||
                     (h.loser_team_id && Number(h.loser_team_id) === Number(teamId)) ||
+                    (h.team_one_id && Number(h.team_one_id) === Number(teamId)) ||
+                    (h.team_two_id && Number(h.team_two_id) === Number(teamId)) ||
                     normalizeTeamName(h.winner_team_name) === selectedName ||
-                    normalizeTeamName(h.loser_team_name) === selectedName
+                    normalizeTeamName(h.loser_team_name) === selectedName ||
+                    normalizeTeamName(h.team_one_name) === selectedName ||
+                    normalizeTeamName(h.team_two_name) === selectedName
                 );
 
                 const sortedHistory = teamHistory.sort((a, b) => new Date(b.declared_at || b.created_at) - new Date(a.declared_at || a.created_at));
@@ -2620,9 +2651,12 @@
                     });
 
                     const gameCards = visibleHistory.map(game => {
-                        const isWin = (game.winner_team_id && Number(game.winner_team_id) === Number(teamId)) || normalizeTeamName(game.winner_team_name) === selectedName;
-                        const opponent = isWin ? game.loser_team_name : game.winner_team_name;
-                        const pts = resolveHistoryPoints(game, isWin ? "winner" : "loser");
+                        const isNoWinner = isNoWinnerHistory(game);
+                        const isWin = !isNoWinner && ((game.winner_team_id && Number(game.winner_team_id) === Number(teamId)) || normalizeTeamName(game.winner_team_name) === selectedName);
+                        const opponent = isNoWinner
+                            ? ((game.team_one_id && Number(game.team_one_id) === Number(teamId)) || normalizeTeamName(game.team_one_name) === selectedName ? game.team_two_name : game.team_one_name)
+                            : isWin ? game.loser_team_name : game.winner_team_name;
+                        const pts = isNoWinner ? 0 : resolveHistoryPoints(game, isWin ? "winner" : "loser");
                         const adjustments = getTeamAdjustments(game);
 
                         if (adjustmentFilter !== "All") {
@@ -2664,14 +2698,14 @@
                         }
 
                         return `
-                            <div class="p-5 rounded-2xl border ${isWin ? 'border-emerald-200 bg-emerald-50/50' : 'border-red-200 bg-red-50/50'} relative overflow-hidden">
+                            <div class="p-5 rounded-2xl border ${isNoWinner ? 'border-slate-200 bg-slate-50/50' : isWin ? 'border-emerald-200 bg-emerald-50/50' : 'border-red-200 bg-red-50/50'} relative overflow-hidden">
                                 <div class="flex justify-between items-start gap-3 mb-4">
                                     <div>
                                         <p class="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-1">${escapeHTML(getHistorySportName(game))}</p>
                                         <p class="font-black text-slate-950 text-lg">vs ${escapeHTML(opponent)}</p>
                                     </div>
-                                    <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${isWin ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}">
-                                        ${isWin ? 'Victory' : 'Defeated'}
+                                    <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${isNoWinner ? 'bg-slate-100 text-slate-800' : isWin ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}">
+                                        ${isNoWinner ? 'No Winner' : isWin ? 'Victory' : 'Defeated'}
                                     </span>
                                 </div>
                                 <div class="student-history-card-grid grid gap-3 text-sm sm:gap-4">

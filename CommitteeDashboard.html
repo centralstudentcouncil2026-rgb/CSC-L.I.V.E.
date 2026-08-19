@@ -2180,6 +2180,7 @@
                             class="w-full border border-gray-300 rounded-lg px-3 py-2">
                             <option value="regular">Regular Result</option>
                             <option value="default">Default / Forfeit</option>
+                            <option value="no_winner">No Winner / No Team Arrived</option>
                         </select>
 
                         <p id="resultPointRuleLabel" class="mt-1 text-xs font-semibold text-gray-500">
@@ -3463,6 +3464,13 @@
                 }
 
                 function readSportPointRule(sport, resultType = "regular") {
+                    if (resultType === "no_winner") {
+                        return {
+                            winnerPoints: 0,
+                            loserPoints: 0
+                        };
+                    }
+
                     const defaults = getSportPointDefaults(sport?.game_type);
                     const winKey = resultType === "default" ? "forfeit_winner_points" : "winner_points";
                     const loseKey = resultType === "default" ? "forfeit_loser_points" : "loser_points";
@@ -5784,6 +5792,12 @@
                     return 0;
                 }
 
+                function isNoWinnerHistory(history) {
+                    const resultText = String(history?.result || "").trim().toLowerCase();
+                    const bestPlayerText = String(history?.best_player || "").trim().toLowerCase();
+                    return resultText.includes("no winner") || bestPlayerText.includes("no team arrived");
+                }
+
                 function buildAttendancePointRows(attendanceRows) {
                     return (attendanceRows || [])
                         .map(row => ({
@@ -5878,6 +5892,19 @@
                     (teams || []).forEach(addRegisteredTeam);
 
                     (historyRows || []).forEach(history => {
+                    if (isNoWinnerHistory(history)) {
+                        [
+                            { id: history.team_one_id, name: history.team_one_name },
+                            { id: history.team_two_id, name: history.team_two_name }
+                        ].forEach(teamRef => {
+                            const team = getRegisteredTeamStat(teamRef.id, teamRef.name);
+                            if (team) {
+                                team.points += getHistoryTeamAdjustment(history, teamRef.id, teamRef.name);
+                            }
+                        });
+                        return;
+                    }
+
                     const winnerPoints = getHistoryPoints(history, "winner");
                     const loserPoints = getHistoryPoints(history, "loser");
                     const winnerId = history.winner_team_id ?? history.winning_team_id ?? history.winner_id ?? history.team_winner_id;
@@ -6072,7 +6099,7 @@
                         supabase
                             .from(GAME_HISTORY_TABLE)
                             .select("*")
-                            .or(`winner_team_id.eq.${teamId},loser_team_id.eq.${teamId}`)
+                            .or(`winner_team_id.eq.${teamId},loser_team_id.eq.${teamId},team_one_id.eq.${teamId},team_two_id.eq.${teamId}`)
                             .order("declared_at", { ascending: false }),
                         supabase
                             .from(ATTENDANCE_POINTS_VIEW)
@@ -6218,10 +6245,15 @@
                         `);
 
                         const gameCards = visibleHistory.map(game => {
-                            const isWinner = Number(game.winner_team_id) === Number(teamId);
-                            const opponent = isWinner ? game.loser_team_name : game.winner_team_name;
-                            const resultLabel = isWinner ? "Victory" : "Defeated";
-                            const resultClass = isWinner
+                            const isNoWinner = isNoWinnerHistory(game);
+                            const isWinner = !isNoWinner && Number(game.winner_team_id) === Number(teamId);
+                            const opponent = isNoWinner
+                                ? (Number(game.team_one_id) === Number(teamId) ? game.team_two_name : game.team_one_name)
+                                : isWinner ? game.loser_team_name : game.winner_team_name;
+                            const resultLabel = isNoWinner ? "No Winner" : isWinner ? "Victory" : "Defeated";
+                            const resultClass = isNoWinner
+                                ? "bg-slate-100 text-slate-800"
+                                : isWinner
                                 ? "bg-green-100 text-green-800"
                                 : "bg-red-100 text-red-800";
                             const adjustments = getTeamAdjustments(game);
@@ -6282,12 +6314,12 @@
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                                         <div>
                                             <p class="text-gray-600">Winner</p>
-                                            <p class="font-semibold">${escapeHTML(game.winner_team_name || "-")}</p>
+                                            <p class="font-semibold">${escapeHTML(isNoWinner ? "No winner" : (game.winner_team_name || "-"))}</p>
                                         </div>
 
                                         <div>
                                             <p class="text-gray-600">Loser</p>
-                                            <p class="font-semibold">${escapeHTML(game.loser_team_name || "-")}</p>
+                                            <p class="font-semibold">${escapeHTML(isNoWinner ? "No team arrived" : (game.loser_team_name || "-"))}</p>
                                         </div>
 
                                         <div>
@@ -7118,6 +7150,21 @@
                     }
 
                     const normalizedTeamName = String(teamName || "").trim().toLowerCase();
+
+                    if (isNoWinnerHistory(history)) {
+                        const isListedTeam = (history.team_one_id && Number(history.team_one_id) === Number(teamId))
+                            || (history.team_two_id && Number(history.team_two_id) === Number(teamId))
+                            || (normalizedTeamName && String(history.team_one_name || "").trim().toLowerCase() === normalizedTeamName)
+                            || (normalizedTeamName && String(history.team_two_name || "").trim().toLowerCase() === normalizedTeamName);
+
+                        if (isListedTeam) {
+                            return {
+                                found: true,
+                                value: 0
+                            };
+                        }
+                    }
+
                     const isWinner = (history.winner_team_id && Number(history.winner_team_id) === Number(teamId))
                         || (normalizedTeamName && String(history.winner_team_name || "").trim().toLowerCase() === normalizedTeamName);
                     const isLoser = (history.loser_team_id && Number(history.loser_team_id) === Number(teamId))
@@ -7888,26 +7935,45 @@
                     const teamOneId = getTeamId(pendingResultMatch, "one");
                     const teamTwoId = getTeamId(pendingResultMatch, "two");
                     const sport = getMatchSportRecord(pendingResultMatch);
-                    const resultType = resultTypeSelect?.value === "default" ? "default" : "regular";
+                    const resultType = resultTypeSelect?.value === "default"
+                        ? "default"
+                        : resultTypeSelect?.value === "no_winner"
+                            ? "no_winner"
+                            : "regular";
                     const pointRule = readSportPointRule(sport, resultType);
                     const isDefaultResult = resultType === "default";
+                    const isNoWinnerResult = resultType === "no_winner";
 
                     winnerActualPointsInput.value = String(pointRule.winnerPoints);
                     loserActualPointsInput.value = String(pointRule.loserPoints);
-                    bestPlayerInput.readOnly = isDefaultResult;
-                    bestPlayerInput.classList.toggle("bg-gray-50", isDefaultResult);
-                    bestPlayerInput.classList.toggle("cursor-not-allowed", isDefaultResult);
-                    bestPlayerInput.placeholder = isDefaultResult
-                        ? "Win by default"
-                        : "Enter the best player's name";
+                    winnerTeamSelect.disabled = isNoWinnerResult;
+                    winnerTeamSelect.required = !isNoWinnerResult;
+                    if (isNoWinnerResult) {
+                        winnerTeamSelect.value = "";
+                    }
 
-                    if (isDefaultResult) {
+                    bestPlayerInput.readOnly = isDefaultResult || isNoWinnerResult;
+                    bestPlayerInput.classList.toggle("bg-gray-50", isDefaultResult || isNoWinnerResult);
+                    bestPlayerInput.classList.toggle("cursor-not-allowed", isDefaultResult || isNoWinnerResult);
+                    bestPlayerInput.placeholder = isNoWinnerResult
+                        ? "No team arrived"
+                        : isDefaultResult
+                            ? "Win by default"
+                            : "Enter the best player's name";
+
+                    if (isNoWinnerResult) {
+                        bestPlayerInput.value = "No team arrived";
+                    } else if (isDefaultResult) {
                         bestPlayerInput.value = "Win by default";
                     } else if (bestPlayerInput.value.trim().toLowerCase() === "win by default") {
                         bestPlayerInput.value = "";
+                    } else if (bestPlayerInput.value.trim().toLowerCase() === "no team arrived") {
+                        bestPlayerInput.value = "";
                     }
 
-                    const ruleName = resultType === "default" ? "Default / Forfeit" : "Regular Result";
+                    const ruleName = isNoWinnerResult
+                        ? "No Winner"
+                        : resultType === "default" ? "Default / Forfeit" : "Regular Result";
                     const selectedWinnerName = winnerId === teamOneId
                         ? getTeamName(pendingResultMatch, "one")
                         : winnerId === teamTwoId
@@ -7915,7 +7981,9 @@
                             : "winner";
 
                     if (resultPointRuleLabel) {
-                        resultPointRuleLabel.textContent = `${ruleName}: ${selectedWinnerName} gets ${pointRule.winnerPoints}; the other team gets ${pointRule.loserPoints}.`;
+                        resultPointRuleLabel.textContent = isNoWinnerResult
+                            ? "No Winner: no match points are awarded. Merit and demerit adjustments can still be saved."
+                            : `${ruleName}: ${selectedWinnerName} gets ${pointRule.winnerPoints}; the other team gets ${pointRule.loserPoints}.`;
                     }
                 }
 
@@ -7941,6 +8009,7 @@
                     winnerActualPointsInput.value = "0";
                     loserActualPointsInput.value = "0";
                     resultTypeSelect.value = "regular";
+                    winnerTeamSelect.disabled = false;
                     bestPlayerInput.readOnly = false;
                     bestPlayerInput.classList.remove("bg-gray-50", "cursor-not-allowed");
                     resetResultAdjustmentFields();
@@ -8011,6 +8080,7 @@
                     resultModal.classList.add("hidden");
                     resultModal.classList.remove("flex");
                     resultForm.reset();
+                    winnerTeamSelect.disabled = false;
                     bestPlayerInput.readOnly = false;
                     bestPlayerInput.classList.remove("bg-gray-50", "cursor-not-allowed");
                     resetResultAdjustmentFields();
@@ -8044,7 +8114,11 @@
                     const teamOneTotals = getBasketballTotals(pendingResultMatch, "one");
                     const teamTwoTotals = getBasketballTotals(pendingResultMatch, "two");
                     let winnerId = Number(winnerTeamSelect.value);
-                    const resultType = resultTypeSelect?.value === "default" ? "default" : "regular";
+                    const resultType = resultTypeSelect?.value === "default"
+                        ? "default"
+                        : resultTypeSelect?.value === "no_winner"
+                            ? "no_winner"
+                            : "regular";
                     let bestPlayerRaw = bestPlayerInput.value.trim();
                     let bestPlayer = bestPlayerRaw;
                     let winnerPointsAwarded = Number(winnerActualPointsInput.value);
@@ -8084,7 +8158,7 @@
                         loserPointsAwarded = pointRule.loserPoints;
                     }
 
-                    if (!winnerId) {
+                    if (resultType !== "no_winner" && !winnerId) {
                         alert("Please select the winning team.");
                         return;
                     }
@@ -8098,6 +8172,9 @@
 
                         if (resultType === "default") {
                             bestPlayerRaw = "Win by default";
+                            bestPlayer = bestPlayerRaw;
+                        } else if (resultType === "no_winner") {
+                            bestPlayerRaw = "No team arrived";
                             bestPlayer = bestPlayerRaw;
                         }
                     }
@@ -8144,14 +8221,14 @@
                     const teamOneName = getTeamName(pendingResultMatch, "one");
                     const teamTwoName = getTeamName(pendingResultMatch, "two");
 
-                    if (winnerId !== teamOneId && winnerId !== teamTwoId) {
+                    if (resultType !== "no_winner" && winnerId !== teamOneId && winnerId !== teamTwoId) {
                         alert("Winner must be one of the teams in the match.");
                         return;
                     }
 
-                    const loserId = winnerId === teamOneId ? teamTwoId : teamOneId;
-                    const winnerName = winnerId === teamOneId ? teamOneName : teamTwoName;
-                    const loserName = loserId === teamOneId ? teamOneName : teamTwoName;
+                    const loserId = resultType === "no_winner" ? null : winnerId === teamOneId ? teamTwoId : teamOneId;
+                    const winnerName = resultType === "no_winner" ? "No winner" : winnerId === teamOneId ? teamOneName : teamTwoName;
+                    const loserName = resultType === "no_winner" ? "No team arrived" : loserId === teamOneId ? teamOneName : teamTwoName;
 
                     submitButton.disabled = true;
                     submitButton.textContent = "Saving...";
@@ -8165,7 +8242,7 @@
                             team_two_id: teamTwoId,
                             team_one_name: teamOneName,
                             team_two_name: teamTwoName,
-                            winner_team_id: winnerId,
+                            winner_team_id: resultType === "no_winner" ? null : winnerId,
                             winner_team_name: winnerName,
                             loser_team_id: loserId,
                             loser_team_name: loserName,
@@ -8182,7 +8259,9 @@
                             best_player: bestPlayer,
                             match_time: pendingResultMatch.match_time,
                             location: pendingResultMatch.location || "",
-                            result: `${winnerName} won against ${loserName}`,
+                            result: resultType === "no_winner"
+                                ? "No winner - no team arrived"
+                                : `${winnerName} won against ${loserName}`,
                             declared_at: new Date().toISOString()
                         };
 
