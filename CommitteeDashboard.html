@@ -7890,9 +7890,22 @@
                     const sport = getMatchSportRecord(pendingResultMatch);
                     const resultType = resultTypeSelect?.value === "default" ? "default" : "regular";
                     const pointRule = readSportPointRule(sport, resultType);
+                    const isDefaultResult = resultType === "default";
 
                     winnerActualPointsInput.value = String(pointRule.winnerPoints);
                     loserActualPointsInput.value = String(pointRule.loserPoints);
+                    bestPlayerInput.readOnly = isDefaultResult;
+                    bestPlayerInput.classList.toggle("bg-gray-50", isDefaultResult);
+                    bestPlayerInput.classList.toggle("cursor-not-allowed", isDefaultResult);
+                    bestPlayerInput.placeholder = isDefaultResult
+                        ? "Win by default"
+                        : "Enter the best player's name";
+
+                    if (isDefaultResult) {
+                        bestPlayerInput.value = "Win by default";
+                    } else if (bestPlayerInput.value.trim().toLowerCase() === "win by default") {
+                        bestPlayerInput.value = "";
+                    }
 
                     const ruleName = resultType === "default" ? "Default / Forfeit" : "Regular Result";
                     const selectedWinnerName = winnerId === teamOneId
@@ -7928,6 +7941,8 @@
                     winnerActualPointsInput.value = "0";
                     loserActualPointsInput.value = "0";
                     resultTypeSelect.value = "regular";
+                    bestPlayerInput.readOnly = false;
+                    bestPlayerInput.classList.remove("bg-gray-50", "cursor-not-allowed");
                     resetResultAdjustmentFields();
                     if (resultPointRuleLabel) {
                         resultPointRuleLabel.textContent = "Select a winner to apply the saved point rule.";
@@ -7996,6 +8011,8 @@
                     resultModal.classList.add("hidden");
                     resultModal.classList.remove("flex");
                     resultForm.reset();
+                    bestPlayerInput.readOnly = false;
+                    bestPlayerInput.classList.remove("bg-gray-50", "cursor-not-allowed");
                     resetResultAdjustmentFields();
                     pendingResultMatch = null;
                 }
@@ -8079,7 +8096,7 @@
                         winnerActualPointsInput.value = String(winnerPointsAwarded);
                         loserActualPointsInput.value = String(loserPointsAwarded);
 
-                        if (resultType === "default" && !bestPlayerRaw) {
+                        if (resultType === "default") {
                             bestPlayerRaw = "Win by default";
                             bestPlayer = bestPlayerRaw;
                         }
