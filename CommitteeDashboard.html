@@ -7140,6 +7140,12 @@
                     return getLocalDateInputValue(match?.match_time);
                 }
 
+                function isNoWinnerMatchHistory(history) {
+                    const resultText = String(history?.result || "").trim().toLowerCase();
+                    const bestPlayerText = String(history?.best_player || "").trim().toLowerCase();
+                    return resultText.includes("no winner") || bestPlayerText.includes("no team arrived");
+                }
+
                 function getDeclaredScoreForTeam(history, teamId, teamName) {
                     if (!history) {
                         return {
@@ -7150,7 +7156,7 @@
 
                     const normalizedTeamName = String(teamName || "").trim().toLowerCase();
 
-                    if (isNoWinnerHistory(history)) {
+                    if (isNoWinnerMatchHistory(history)) {
                         const isListedTeam = (history.team_one_id && Number(history.team_one_id) === Number(teamId))
                             || (history.team_two_id && Number(history.team_two_id) === Number(teamId))
                             || (normalizedTeamName && String(history.team_one_name || "").trim().toLowerCase() === normalizedTeamName)
