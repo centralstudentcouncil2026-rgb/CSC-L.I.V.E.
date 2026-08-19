@@ -8228,7 +8228,7 @@
                         return;
                     }
 
-                    const loserId = resultType === "no_winner" ? null : winnerId === teamOneId ? teamTwoId : teamOneId;
+                    const loserId = resultType === "no_winner" ? teamTwoId : winnerId === teamOneId ? teamTwoId : teamOneId;
                     const winnerName = resultType === "no_winner" ? "No winner" : winnerId === teamOneId ? teamOneName : teamTwoName;
                     const loserName = resultType === "no_winner" ? "No team arrived" : loserId === teamOneId ? teamOneName : teamTwoName;
 
@@ -8244,7 +8244,7 @@
                             team_two_id: teamTwoId,
                             team_one_name: teamOneName,
                             team_two_name: teamTwoName,
-                            winner_team_id: resultType === "no_winner" ? null : winnerId,
+                            winner_team_id: resultType === "no_winner" ? teamOneId : winnerId,
                             winner_team_name: winnerName,
                             loser_team_id: loserId,
                             loser_team_name: loserName,
