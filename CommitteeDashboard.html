@@ -2242,7 +2242,7 @@
                                 <p id="teamOneAdjustmentTitle" class="mb-3 text-sm font-black text-blue-800">Team 1</p>
                                 <label class="block mb-2">
                                     <span class="block text-xs font-bold text-slate-600 mb-1">Merit Points</span>
-                                    <input id="teamOneMeritPointsInput" type="number" min="0" step="0.01" value="0" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold">
+                                    <input id="teamOneMeritPointsInput" type="number" min="0" step="0.01" value="0" autocomplete="off" inputmode="decimal" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold">
                                 </label>
                                 <label class="block mb-2">
                                     <span class="block text-xs font-bold text-slate-600 mb-1">Merit Remarks</span>
@@ -2250,7 +2250,7 @@
                                 </label>
                                 <label class="block mb-2">
                                     <span class="block text-xs font-bold text-slate-600 mb-1">Demerit Points</span>
-                                    <input id="teamOneDemeritPointsInput" type="number" min="0" step="0.01" value="0" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold">
+                                    <input id="teamOneDemeritPointsInput" type="number" min="0" step="0.01" value="0" autocomplete="off" inputmode="decimal" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold">
                                 </label>
                                 <label class="block">
                                     <span class="block text-xs font-bold text-slate-600 mb-1">Demerit Remarks</span>
@@ -2262,7 +2262,7 @@
                                 <p id="teamTwoAdjustmentTitle" class="mb-3 text-sm font-black text-emerald-800">Team 2</p>
                                 <label class="block mb-2">
                                     <span class="block text-xs font-bold text-slate-600 mb-1">Merit Points</span>
-                                    <input id="teamTwoMeritPointsInput" type="number" min="0" step="0.01" value="0" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold">
+                                    <input id="teamTwoMeritPointsInput" type="number" min="0" step="0.01" value="0" autocomplete="off" inputmode="decimal" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold">
                                 </label>
                                 <label class="block mb-2">
                                     <span class="block text-xs font-bold text-slate-600 mb-1">Merit Remarks</span>
@@ -2270,7 +2270,7 @@
                                 </label>
                                 <label class="block mb-2">
                                     <span class="block text-xs font-bold text-slate-600 mb-1">Demerit Points</span>
-                                    <input id="teamTwoDemeritPointsInput" type="number" min="0" step="0.01" value="0" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold">
+                                    <input id="teamTwoDemeritPointsInput" type="number" min="0" step="0.01" value="0" autocomplete="off" inputmode="decimal" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold">
                                 </label>
                                 <label class="block">
                                     <span class="block text-xs font-bold text-slate-600 mb-1">Demerit Remarks</span>
@@ -7906,6 +7906,17 @@
                     }
                 }
 
+                function resetResultAdjustmentFields() {
+                    teamOneMeritPointsInput.value = "0";
+                    teamOneMeritRemarksInput.value = "";
+                    teamOneDemeritPointsInput.value = "0";
+                    teamOneDemeritRemarksInput.value = "";
+                    teamTwoMeritPointsInput.value = "0";
+                    teamTwoMeritRemarksInput.value = "";
+                    teamTwoDemeritPointsInput.value = "0";
+                    teamTwoDemeritRemarksInput.value = "";
+                }
+
                 function openResultModalFunction(match) {
                     if (!enforceMatchPermission(match)) {
                         return;
@@ -7917,6 +7928,7 @@
                     winnerActualPointsInput.value = "0";
                     loserActualPointsInput.value = "0";
                     resultTypeSelect.value = "regular";
+                    resetResultAdjustmentFields();
                     if (resultPointRuleLabel) {
                         resultPointRuleLabel.textContent = "Select a winner to apply the saved point rule.";
                     }
@@ -7984,6 +7996,7 @@
                     resultModal.classList.add("hidden");
                     resultModal.classList.remove("flex");
                     resultForm.reset();
+                    resetResultAdjustmentFields();
                     pendingResultMatch = null;
                 }
 
