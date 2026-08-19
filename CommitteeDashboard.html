@@ -8319,12 +8319,13 @@
 
                     if (error) {
                         console.error("Error saving match:", error.message || error);
-                        alert("Error saving match to Supabase.");
+                        alert(error.message || "Error saving match to Supabase.");
                         return;
                     }
 
                     alert("Match scheduled successfully!");
                     setActiveStatusTab("Next");
+                    clearMatchDateFilter(false);
                     closeMatchModalFunction();
 
                     await Promise.all([
@@ -8377,10 +8378,16 @@
                     this.value = activeDoneMatchesDate;
                     renderMatches(matchesData);
                 });
-                clearDoneMatchesDateFilter.addEventListener("click", function () {
+                function clearMatchDateFilter(shouldRender = true) {
                     activeDoneMatchesDate = "";
                     doneMatchesDateFilter.value = "";
-                    renderMatches(matchesData);
+                    if (shouldRender) {
+                        renderMatches(matchesData);
+                    }
+                }
+
+                clearDoneMatchesDateFilter.addEventListener("click", function () {
+                    clearMatchDateFilter();
                 });
 
                 contactsSportSelect.addEventListener("change", function () {
