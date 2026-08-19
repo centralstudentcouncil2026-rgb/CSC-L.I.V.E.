@@ -1758,13 +1758,15 @@
                         <h3 class="text-xl font-bold text-gray-900">Sports and Game Categories</h3>
                     </div>
 
-                    <table class="w-full">
+                    <table class="w-full min-w-[1120px]">
                         <thead>
                             <tr class="border-b border-gray-200">
                                 <th class="text-left py-3 px-4 font-semibold text-gray-700">Sport</th>
                                 <th class="text-left py-3 px-4 font-semibold text-gray-700">Type</th>
                                 <th class="text-left py-3 px-4 font-semibold text-gray-700">Players / Team</th>
                                 <th class="text-left py-3 px-4 font-semibold text-gray-700">Slots Available</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Declared Points</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">Default / Forfeit</th>
                                 <th class="text-left py-3 px-4 font-semibold text-gray-700">Updated</th>
                                 <th class="text-left py-3 px-4 font-semibold text-gray-700">Actions</th>
                             </tr>
@@ -1772,7 +1774,7 @@
 
                         <tbody id="sportsTableBody">
                             <tr>
-                                <td colspan="6" class="py-4 px-4 text-gray-600">
+                                <td colspan="8" class="py-4 px-4 text-gray-600">
                                     Loading sports...
                                 </td>
                             </tr>
@@ -2688,6 +2690,44 @@
                     </p>
                 </div>
 
+                <div class="rounded-xl border border-blue-100 bg-blue-50 p-4">
+                    <div class="mb-3">
+                        <p class="text-xs font-black uppercase tracking-widest text-blue-700">Declared Match Points</p>
+                        <p class="text-xs font-semibold text-blue-900">These values are auto-filled when committee declares a regular result.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <label class="block">
+                            <span class="mb-1 block text-xs font-bold text-slate-600">Victory Points</span>
+                            <input id="sportWinnerPointsInput" type="number" min="0" step="0.01" class="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-bold">
+                        </label>
+
+                        <label class="block">
+                            <span class="mb-1 block text-xs font-bold text-slate-600">Defeat Points</span>
+                            <input id="sportLoserPointsInput" type="number" min="0" step="0.01" class="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-bold">
+                        </label>
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-amber-100 bg-amber-50 p-4">
+                    <div class="mb-3">
+                        <p class="text-xs font-black uppercase tracking-widest text-amber-700">Default / Forfeit Points</p>
+                        <p class="text-xs font-semibold text-amber-900">Use these when one team wins because the other team is not present.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <label class="block">
+                            <span class="mb-1 block text-xs font-bold text-slate-600">Present Team Points</span>
+                            <input id="sportForfeitWinnerPointsInput" type="number" min="0" step="0.01" class="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm font-bold">
+                        </label>
+
+                        <label class="block">
+                            <span class="mb-1 block text-xs font-bold text-slate-600">Default Team Points</span>
+                            <input id="sportForfeitLoserPointsInput" type="number" min="0" step="0.01" class="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm font-bold">
+                        </label>
+                    </div>
+                </div>
+
                 <div class="flex justify-end space-x-2 pt-4">
                     <button 
                         type="button"
@@ -3309,6 +3349,10 @@
             const sportNameInput = document.getElementById("sportNameInput");
             const sportGameTypeInput = document.getElementById("sportGameTypeInput");
             const sportPlayerLimitInput = document.getElementById("sportPlayerLimitInput");
+            const sportWinnerPointsInput = document.getElementById("sportWinnerPointsInput");
+            const sportLoserPointsInput = document.getElementById("sportLoserPointsInput");
+            const sportForfeitWinnerPointsInput = document.getElementById("sportForfeitWinnerPointsInput");
+            const sportForfeitLoserPointsInput = document.getElementById("sportForfeitLoserPointsInput");
             const sportsTableBody = document.getElementById("sportsTableBody");
 
             const openParticipantModalButton = document.getElementById("openParticipantModal");
@@ -3518,6 +3562,37 @@
             function toNumber(value) {
                 const numberValue = Number(value);
                 return Number.isFinite(numberValue) ? numberValue : 0;
+            }
+
+            function getSportPointDefaults(gameType) {
+                return normalizeGameType(gameType) === "minor"
+                    ? {
+                        winner_points: 100,
+                        loser_points: 50,
+                        forfeit_winner_points: 20,
+                        forfeit_loser_points: 0
+                    }
+                    : {
+                        winner_points: 200,
+                        loser_points: 100,
+                        forfeit_winner_points: 50,
+                        forfeit_loser_points: 0
+                    };
+            }
+
+            function readSportPointValue(input, fallback) {
+                const rawValue = String(input?.value ?? "").trim();
+                if (rawValue === "") return fallback;
+                const numericValue = Number(rawValue);
+                return Number.isFinite(numericValue) && numericValue >= 0 ? numericValue : null;
+            }
+
+            function setSportPointInputsFromDefaults(gameType) {
+                const defaults = getSportPointDefaults(gameType);
+                if (sportWinnerPointsInput) sportWinnerPointsInput.value = defaults.winner_points;
+                if (sportLoserPointsInput) sportLoserPointsInput.value = defaults.loser_points;
+                if (sportForfeitWinnerPointsInput) sportForfeitWinnerPointsInput.value = defaults.forfeit_winner_points;
+                if (sportForfeitLoserPointsInput) sportForfeitLoserPointsInput.value = defaults.forfeit_loser_points;
             }
 
             function findPointValue(...values) {
@@ -7926,6 +8001,7 @@
                 sportId.value = "";
                 sportGameTypeInput.value = "major";
                 sportPlayerLimitInput.value = "";
+                setSportPointInputsFromDefaults("major");
 
                 sportModal.classList.remove("hidden");
                 sportModal.classList.add("flex");
@@ -7937,6 +8013,11 @@
                 sportNameInput.value = sport.sport_name;
                 sportGameTypeInput.value = normalizeGameType(sport.game_type || sport.sport_type || sport.category_type);
                 sportPlayerLimitInput.value = getSportPlayerLimit(sport) || "";
+                const defaults = getSportPointDefaults(sportGameTypeInput.value);
+                sportWinnerPointsInput.value = sport.winner_points ?? defaults.winner_points;
+                sportLoserPointsInput.value = sport.loser_points ?? defaults.loser_points;
+                sportForfeitWinnerPointsInput.value = sport.forfeit_winner_points ?? defaults.forfeit_winner_points;
+                sportForfeitLoserPointsInput.value = sport.forfeit_loser_points ?? defaults.forfeit_loser_points;
 
                 sportModal.classList.remove("hidden");
                 sportModal.classList.add("flex");
@@ -7948,12 +8029,13 @@
                 sportForm.reset();
                 sportId.value = "";
                 sportPlayerLimitInput.value = "";
+                setSportPointInputsFromDefaults("major");
             }
 
             async function loadSports() {
                 const { data, error } = await supabase
                     .from(SPORTS_TABLE)
-                    .select("id, sport_name, game_type, player_limit, created_at, updated_at")
+                    .select("id, sport_name, game_type, player_limit, winner_points, loser_points, forfeit_winner_points, forfeit_loser_points, created_at, updated_at")
                     .order("sport_name", { ascending: true });
 
                 if (error) {
@@ -7986,7 +8068,7 @@
                 if (sportsData.length === 0) {
                     sportsTableBody.innerHTML = `
                         <tr>
-                            <td colspan="6" class="py-4 px-4 text-gray-600">
+                            <td colspan="8" class="py-4 px-4 text-gray-600">
                                 No sports added yet.
                             </td>
                         </tr>
@@ -7999,6 +8081,11 @@
                     row.className = "border-b border-gray-100 hover:bg-gray-50";
                     const playerLimit = getSportPlayerLimit(sport);
                     const availableSlots = getSportTotalAvailableSlots(sport);
+                    const defaults = getSportPointDefaults(sport.game_type);
+                    const winnerPoints = sport.winner_points ?? defaults.winner_points;
+                    const loserPoints = sport.loser_points ?? defaults.loser_points;
+                    const forfeitWinnerPoints = sport.forfeit_winner_points ?? defaults.forfeit_winner_points;
+                    const forfeitLoserPoints = sport.forfeit_loser_points ?? defaults.forfeit_loser_points;
 
                     row.innerHTML = `
                         <td class="py-3 px-4 font-medium text-gray-900">
@@ -8017,6 +8104,16 @@
 
                         <td class="py-3 px-4 text-gray-600">
                             ${availableSlots === null ? "-" : escapeHTML(availableSlots)}
+                        </td>
+
+                        <td class="py-3 px-4 text-gray-600">
+                            <span class="block text-xs font-bold text-green-700">Win: ${escapeHTML(winnerPoints)}</span>
+                            <span class="block text-xs font-bold text-red-700">Lose: ${escapeHTML(loserPoints)}</span>
+                        </td>
+
+                        <td class="py-3 px-4 text-gray-600">
+                            <span class="block text-xs font-bold text-green-700">Present: ${escapeHTML(forfeitWinnerPoints)}</span>
+                            <span class="block text-xs font-bold text-red-700">Default: ${escapeHTML(forfeitLoserPoints)}</span>
                         </td>
 
                         <td class="py-3 px-4 text-gray-600">
@@ -8094,6 +8191,11 @@
                 const sportName = sportNameInput.value.trim();
                 const gameType = normalizeGameType(sportGameTypeInput.value);
                 const playerLimit = sportPlayerLimitInput.value ? Number(sportPlayerLimitInput.value) : null;
+                const defaults = getSportPointDefaults(gameType);
+                const winnerPoints = readSportPointValue(sportWinnerPointsInput, defaults.winner_points);
+                const loserPoints = readSportPointValue(sportLoserPointsInput, defaults.loser_points);
+                const forfeitWinnerPoints = readSportPointValue(sportForfeitWinnerPointsInput, defaults.forfeit_winner_points);
+                const forfeitLoserPoints = readSportPointValue(sportForfeitLoserPointsInput, defaults.forfeit_loser_points);
 
                 if (!sportName) {
                     alert("Please enter a sport name.");
@@ -8106,12 +8208,19 @@
                     return;
                 }
 
+                if ([winnerPoints, loserPoints, forfeitWinnerPoints, forfeitLoserPoints].some(value => value === null)) {
+                    alert("Please enter valid non-negative point values for this sport.");
+                    return;
+                }
+
                 const sportData = {
                     sport_name: sportName,
                     game_type: gameType,
                     player_limit: playerLimit,
-                    winner_points: 0,
-                    loser_points: 0
+                    winner_points: winnerPoints,
+                    loser_points: loserPoints,
+                    forfeit_winner_points: forfeitWinnerPoints,
+                    forfeit_loser_points: forfeitLoserPoints
                 };
 
                 let result;
@@ -11548,6 +11657,11 @@
             cancelTeamAdjustmentModal.addEventListener("click", closeTeamAdjustmentModalFunction);
 
             sportForm.addEventListener("submit", saveSport);
+            sportGameTypeInput.addEventListener("change", function () {
+                if (!sportId.value) {
+                    setSportPointInputsFromDefaults(this.value);
+                }
+            });
             openSportModal.addEventListener("click", openAddSportModal);
             closeSportModal.addEventListener("click", closeSportModalFunction);
             cancelSportModal.addEventListener("click", closeSportModalFunction);

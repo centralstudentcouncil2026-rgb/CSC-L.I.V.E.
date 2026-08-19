@@ -2172,6 +2172,23 @@
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Result Type
+                        </label>
+
+                        <select
+                            id="resultTypeSelect"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                            <option value="regular">Regular Result</option>
+                            <option value="default">Default / Forfeit</option>
+                        </select>
+
+                        <p id="resultPointRuleLabel" class="mt-1 text-xs font-semibold text-gray-500">
+                            Select a winner to apply the saved point rule.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
                             Best Player of the Game
                         </label>
 
@@ -2186,7 +2203,7 @@
 
                     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <label class="block">
-                            <span class="block text-sm font-medium text-gray-700 mb-1">Winner Actual Points</span>
+                            <span class="block text-sm font-medium text-gray-700 mb-1">Winner Awarded Points</span>
                             <input
                                 type="number"
                                 id="winnerActualPointsInput"
@@ -2194,12 +2211,13 @@
                                 min="0"
                                 step="0.01"
                                 autocomplete="off"
+                                readonly
                                 placeholder="Winner points"
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                                class="w-full border border-gray-300 bg-gray-50 rounded-lg px-3 py-2">
                         </label>
 
                         <label class="block">
-                            <span class="block text-sm font-medium text-gray-700 mb-1">Loser Actual Points</span>
+                            <span class="block text-sm font-medium text-gray-700 mb-1">Loser Awarded Points</span>
                             <input
                                 type="number"
                                 id="loserActualPointsInput"
@@ -2207,8 +2225,9 @@
                                 min="0"
                                 step="0.01"
                                 autocomplete="off"
+                                readonly
                                 placeholder="Loser points"
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                                class="w-full border border-gray-300 bg-gray-50 rounded-lg px-3 py-2">
                         </label>
                     </div>
 
@@ -2735,6 +2754,8 @@
                 const resultMatchId = document.getElementById("resultMatchId");
                 const resultMatchSummary = document.getElementById("resultMatchSummary");
                 const winnerTeamSelect = document.getElementById("winnerTeamSelect");
+                const resultTypeSelect = document.getElementById("resultTypeSelect");
+                const resultPointRuleLabel = document.getElementById("resultPointRuleLabel");
                 const bestPlayerInput = document.getElementById("bestPlayerInput");
                 const winnerActualPointsInput = document.getElementById("winnerActualPointsInput");
                 const loserActualPointsInput = document.getElementById("loserActualPointsInput");
@@ -3411,8 +3432,47 @@
                     return match.sport?.sport_name || match.sport_name || "Unknown Sport";
                 }
 
+                function getMatchSportRecord(match) {
+                    return match?.sport
+                        || registeredSportsData.find(sport => String(sport.id) === String(match?.sport_id))
+                        || null;
+                }
+
                 function normalizeSportName(value) {
                     return String(value || "").trim().toLowerCase();
+                }
+
+                function normalizeGameType(value) {
+                    return String(value || "").trim().toLowerCase() === "minor" ? "minor" : "major";
+                }
+
+                function getSportPointDefaults(gameType) {
+                    return normalizeGameType(gameType) === "minor"
+                        ? {
+                            winner_points: 100,
+                            loser_points: 50,
+                            forfeit_winner_points: 20,
+                            forfeit_loser_points: 0
+                        }
+                        : {
+                            winner_points: 200,
+                            loser_points: 100,
+                            forfeit_winner_points: 50,
+                            forfeit_loser_points: 0
+                        };
+                }
+
+                function readSportPointRule(sport, resultType = "regular") {
+                    const defaults = getSportPointDefaults(sport?.game_type);
+                    const winKey = resultType === "default" ? "forfeit_winner_points" : "winner_points";
+                    const loseKey = resultType === "default" ? "forfeit_loser_points" : "loser_points";
+                    const winnerPoints = Number(sport?.[winKey] ?? defaults[winKey]);
+                    const loserPoints = Number(sport?.[loseKey] ?? defaults[loseKey]);
+
+                    return {
+                        winnerPoints: Number.isFinite(winnerPoints) ? winnerPoints : defaults[winKey],
+                        loserPoints: Number.isFinite(loserPoints) ? loserPoints : defaults[loseKey]
+                    };
                 }
 
                 function isBasketballSport(matchOrName) {
@@ -6851,7 +6911,7 @@
                 async function loadSportsForMatches() {
                     const { data, error } = await supabase
                         .from(SPORTS_TABLE)
-                        .select("id, sport_name")
+                        .select("id, sport_name, game_type, winner_points, loser_points, forfeit_winner_points, forfeit_loser_points")
                         .order("sport_name", { ascending: true });
 
                     matchSport.innerHTML = `<option value="">Select sport or game category</option>`;
@@ -6947,7 +7007,7 @@
                             created_by,
                             created_by_role,
                             created_by_name,
-                            sport:sports!scheduled_matches_sport_id_fkey(id, sport_name),
+                            sport:sports!scheduled_matches_sport_id_fkey(id, sport_name, game_type, winner_points, loser_points, forfeit_winner_points, forfeit_loser_points),
                             team_one:sports_leaderboard!scheduled_matches_team_one_fkey(team),
                             team_two:sports_leaderboard!scheduled_matches_team_two_fkey(team)
                         `);
@@ -7819,6 +7879,33 @@
                     });
                 }
 
+                function applyDeclaredPointRule() {
+                    if (!pendingResultMatch || hasPlayerScoreSheet(pendingResultMatch)) {
+                        return;
+                    }
+
+                    const winnerId = Number(winnerTeamSelect.value);
+                    const teamOneId = getTeamId(pendingResultMatch, "one");
+                    const teamTwoId = getTeamId(pendingResultMatch, "two");
+                    const sport = getMatchSportRecord(pendingResultMatch);
+                    const resultType = resultTypeSelect?.value === "default" ? "default" : "regular";
+                    const pointRule = readSportPointRule(sport, resultType);
+
+                    winnerActualPointsInput.value = String(pointRule.winnerPoints);
+                    loserActualPointsInput.value = String(pointRule.loserPoints);
+
+                    const ruleName = resultType === "default" ? "Default / Forfeit" : "Regular Result";
+                    const selectedWinnerName = winnerId === teamOneId
+                        ? getTeamName(pendingResultMatch, "one")
+                        : winnerId === teamTwoId
+                            ? getTeamName(pendingResultMatch, "two")
+                            : "winner";
+
+                    if (resultPointRuleLabel) {
+                        resultPointRuleLabel.textContent = `${ruleName}: ${selectedWinnerName} gets ${pointRule.winnerPoints}; the other team gets ${pointRule.loserPoints}.`;
+                    }
+                }
+
                 function openResultModalFunction(match) {
                     if (!enforceMatchPermission(match)) {
                         return;
@@ -7829,6 +7916,10 @@
                     resultMatchId.value = match.id;
                     winnerActualPointsInput.value = "0";
                     loserActualPointsInput.value = "0";
+                    resultTypeSelect.value = "regular";
+                    if (resultPointRuleLabel) {
+                        resultPointRuleLabel.textContent = "Select a winner to apply the saved point rule.";
+                    }
 
                     const firstTeamId = getTeamId(match, "one");
                     const secondTeamId = getTeamId(match, "two");
@@ -7843,6 +7934,7 @@
                     teamTwoAdjustmentTitle.textContent = secondTeamName || "Team 2";
 
                     winnerTeamSelect.closest("div")?.classList.toggle("hidden", usesScoreSheet);
+                    resultTypeSelect.closest("div")?.classList.toggle("hidden", usesScoreSheet);
                     winnerActualPointsInput.closest("label")?.classList.toggle("hidden", usesScoreSheet);
                     loserActualPointsInput.closest("label")?.classList.toggle("hidden", usesScoreSheet);
                     winnerTeamSelect.required = !usesScoreSheet;
@@ -7882,6 +7974,7 @@
                         <option value="${firstTeamId}">${escapeHTML(firstTeamName)}</option>
                         <option value="${secondTeamId}">${escapeHTML(secondTeamName)}</option>
                     `;
+                    applyDeclaredPointRule();
 
                     resultModal.classList.remove("hidden");
                     resultModal.classList.add("flex");
@@ -7921,7 +8014,8 @@
                     const teamOneTotals = getBasketballTotals(pendingResultMatch, "one");
                     const teamTwoTotals = getBasketballTotals(pendingResultMatch, "two");
                     let winnerId = Number(winnerTeamSelect.value);
-                    const bestPlayerRaw = bestPlayerInput.value.trim();
+                    const resultType = resultTypeSelect?.value === "default" ? "default" : "regular";
+                    let bestPlayerRaw = bestPlayerInput.value.trim();
                     let bestPlayer = bestPlayerRaw;
                     let winnerPointsAwarded = Number(winnerActualPointsInput.value);
                     let loserPointsAwarded = Number(loserActualPointsInput.value);
@@ -7955,13 +8049,27 @@
                         winnerId = teamOneTotals.points > teamTwoTotals.points
                             ? getTeamId(pendingResultMatch, "one")
                             : getTeamId(pendingResultMatch, "two");
-                        winnerPointsAwarded = Math.max(teamOneTotals.points, teamTwoTotals.points);
-                        loserPointsAwarded = Math.min(teamOneTotals.points, teamTwoTotals.points);
+                        const pointRule = readSportPointRule(getMatchSportRecord(pendingResultMatch), "regular");
+                        winnerPointsAwarded = pointRule.winnerPoints;
+                        loserPointsAwarded = pointRule.loserPoints;
                     }
 
                     if (!winnerId) {
                         alert("Please select the winning team.");
                         return;
+                    }
+
+                    if (!usesScoreSheet) {
+                        const pointRule = readSportPointRule(getMatchSportRecord(pendingResultMatch), resultType);
+                        winnerPointsAwarded = pointRule.winnerPoints;
+                        loserPointsAwarded = pointRule.loserPoints;
+                        winnerActualPointsInput.value = String(winnerPointsAwarded);
+                        loserActualPointsInput.value = String(loserPointsAwarded);
+
+                        if (resultType === "default" && !bestPlayerRaw) {
+                            bestPlayerRaw = "Win by default";
+                            bestPlayer = bestPlayerRaw;
+                        }
                     }
 
                     if (!bestPlayerRaw) {
@@ -7990,13 +8098,13 @@
                     }
 
                     if (!Number.isFinite(winnerPointsAwarded) || winnerPointsAwarded < 0) {
-                        alert("Please enter valid actual points for the winning team.");
+                        alert("Please enter valid awarded points for the winning team.");
                         winnerActualPointsInput.focus();
                         return;
                     }
 
                     if (!Number.isFinite(loserPointsAwarded) || loserPointsAwarded < 0) {
-                        alert("Please enter valid actual points for the losing team.");
+                        alert("Please enter valid awarded points for the losing team.");
                         loserActualPointsInput.focus();
                         return;
                     }
@@ -8460,6 +8568,8 @@
                     }
                 });
                 resultForm.addEventListener("submit", saveMatchResult);
+                winnerTeamSelect.addEventListener("change", applyDeclaredPointRule);
+                resultTypeSelect.addEventListener("change", applyDeclaredPointRule);
                 closeBasketballPointModal.addEventListener("click", closeBasketballPointModalFunction);
                 basketballPointModal.addEventListener("click", function (event) {
                     if (event.target === basketballPointModal) {
