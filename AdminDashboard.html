@@ -7614,6 +7614,13 @@
                 return resultText.includes("no winner") || bestPlayerText.includes("no team arrived");
             }
 
+            function isDefaultForfeitHistory(history) {
+                const bestPlayerText = normalizeText(history?.best_player);
+                return bestPlayerText.includes("win by default")
+                    || bestPlayerText.includes("won by default")
+                    || bestPlayerText.includes("winner by default");
+            }
+
             function buildTeamStats(teams, historyRows = [], attendanceRows = [], adjustmentRows = []) {
                 const statsById = new Map();
                 const aliases = new Map();
@@ -7680,7 +7687,10 @@
                     const loser = findTeam(loserId, loserName);
                     if (loser) {
                         const adjustment = getTeamHistoryAdjustment(history, loserId, loserName);
-                        loser.stats.points += findPointValue(history.loser_points_awarded, history.loser_award, history.loser_points, history.points_loser) + adjustment.merit - adjustment.demerit;
+                        const loserPoints = isDefaultForfeitHistory(history)
+                            ? 0
+                            : findPointValue(history.loser_points_awarded, history.loser_award, history.loser_points, history.points_loser);
+                        loser.stats.points += loserPoints + adjustment.merit - adjustment.demerit;
                         loser.stats.losses += 1;
                         loser.stats.merit += adjustment.merit;
                         loser.stats.demerit += adjustment.demerit;

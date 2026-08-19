@@ -2309,6 +2309,10 @@
             }
 
             function resolveHistoryPoints(history, side) {
+                if (side === "loser" && isDefaultForfeitHistory(history)) {
+                    return 0;
+                }
+
                 const explicitWinnerPoints = findFiniteNumber(
                     history.winner_points_awarded,
                     history.winner_award,
@@ -2340,6 +2344,13 @@
                 const resultText = normalizeText(history?.result);
                 const bestPlayerText = normalizeText(history?.best_player);
                 return resultText.includes("no winner") || bestPlayerText.includes("no team arrived");
+            }
+
+            function isDefaultForfeitHistory(history) {
+                const bestPlayerText = normalizeText(history?.best_player);
+                return bestPlayerText.includes("win by default")
+                    || bestPlayerText.includes("won by default")
+                    || bestPlayerText.includes("winner by default");
             }
 
             function getHistoryTeamAdjustment(history, teamId, teamName) {

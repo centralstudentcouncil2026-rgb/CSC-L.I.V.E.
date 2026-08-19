@@ -5762,6 +5762,10 @@
                 }
 
                 function getHistoryPoints(history, side) {
+                    if (side === "loser" && isDefaultForfeitHistory(history)) {
+                        return 0;
+                    }
+
                     const explicitPoints = side === "winner"
                         ? findPointValue(history.winner_points_awarded, history.winner_award, history.winner_points, history.points_winner, history.winning_points)
                         : findPointValue(history.loser_points_awarded, history.loser_award, history.loser_points, history.points_loser, history.losing_points);
@@ -5795,6 +5799,13 @@
                     const resultText = String(history?.result || "").trim().toLowerCase();
                     const bestPlayerText = String(history?.best_player || "").trim().toLowerCase();
                     return resultText.includes("no winner") || bestPlayerText.includes("no team arrived");
+                }
+
+                function isDefaultForfeitHistory(history) {
+                    const bestPlayerText = String(history?.best_player || "").trim().toLowerCase();
+                    return bestPlayerText.includes("win by default")
+                        || bestPlayerText.includes("won by default")
+                        || bestPlayerText.includes("winner by default");
                 }
 
                 function buildAttendancePointRows(attendanceRows) {
@@ -7146,6 +7157,13 @@
                     return resultText.includes("no winner") || bestPlayerText.includes("no team arrived");
                 }
 
+                function isDefaultForfeitMatchHistory(history) {
+                    const bestPlayerText = String(history?.best_player || "").trim().toLowerCase();
+                    return bestPlayerText.includes("win by default")
+                        || bestPlayerText.includes("won by default")
+                        || bestPlayerText.includes("winner by default");
+                }
+
                 function getDeclaredScoreForTeam(history, teamId, teamName) {
                     if (!history) {
                         return {
@@ -7186,6 +7204,13 @@
                     }
 
                     if (isLoser) {
+                        if (isDefaultForfeitMatchHistory(history)) {
+                            return {
+                                found: true,
+                                value: 0
+                            };
+                        }
+
                         return findPointValue(
                             history.loser_points_awarded,
                             history.loser_award,
