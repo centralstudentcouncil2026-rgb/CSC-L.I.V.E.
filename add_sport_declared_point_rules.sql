@@ -25,7 +25,7 @@ set
     end,
     forfeit_winner_points = case
         when lower(coalesce(game_type, 'major')) = 'minor' then 20
-        else 50
+        else 100
     end,
     forfeit_loser_points = 0;
 
