@@ -7957,12 +7957,13 @@
                 }
 
                 function applyDeclaredPointRule() {
-                    if (!pendingResultMatch || hasPlayerScoreSheet(pendingResultMatch)) {
+                    if (!pendingResultMatch) {
                         return;
                     }
 
                     const selectedWinnerValue = String(winnerTeamSelect.value || "");
                     const isNoWinnerResult = selectedWinnerValue === "no_winner";
+                    const usesScoreSheet = hasPlayerScoreSheet(pendingResultMatch);
                     const winnerId = Number(selectedWinnerValue);
                     const teamOneId = getTeamId(pendingResultMatch, "one");
                     const teamTwoId = getTeamId(pendingResultMatch, "two");
@@ -7977,6 +7978,40 @@
 
                     winnerActualPointsInput.value = String(pointRule.winnerPoints);
                     loserActualPointsInput.value = String(pointRule.loserPoints);
+
+                    if (usesScoreSheet) {
+                        winnerTeamSelect.closest("div")?.classList.toggle("hidden", !isDefaultResult);
+                        winnerTeamSelect.required = isDefaultResult;
+                        winnerActualPointsInput.required = true;
+                        loserActualPointsInput.required = true;
+
+                        bestPlayerInput.readOnly = isDefaultResult;
+                        bestPlayerInput.classList.toggle("bg-gray-50", isDefaultResult);
+                        bestPlayerInput.classList.toggle("cursor-not-allowed", isDefaultResult);
+                        bestPlayerInput.placeholder = isDefaultResult
+                            ? "Win by default"
+                            : "Enter Player of the Game ID number";
+
+                        if (isDefaultResult) {
+                            bestPlayerInput.value = "Win by default";
+                        } else if (bestPlayerInput.value.trim().toLowerCase() === "win by default") {
+                            bestPlayerInput.value = "";
+                        }
+
+                        if (resultPointRuleLabel) {
+                            const selectedWinnerName = winnerId === teamOneId
+                                ? getTeamName(pendingResultMatch, "one")
+                                : winnerId === teamTwoId
+                                    ? getTeamName(pendingResultMatch, "two")
+                                    : "present team";
+                            resultPointRuleLabel.textContent = isDefaultResult
+                                ? `Default / Forfeit: ${selectedWinnerName} gets ${pointRule.winnerPoints}; the defaulting team gets ${pointRule.loserPoints}.`
+                                : `Regular Result: winner is declared automatically from the score sheet. Winner gets ${pointRule.winnerPoints}; loser gets ${pointRule.loserPoints}.`;
+                        }
+
+                        return;
+                    }
+
                     resultTypeSelect.disabled = isNoWinnerResult;
                     resultTypeSelect.classList.toggle("bg-gray-50", isNoWinnerResult);
                     resultTypeSelect.classList.toggle("cursor-not-allowed", isNoWinnerResult);
@@ -8060,12 +8095,12 @@
                     teamTwoAdjustmentTitle.textContent = secondTeamName || "Team 2";
 
                     winnerTeamSelect.closest("div")?.classList.toggle("hidden", usesScoreSheet);
-                    resultTypeSelect.closest("div")?.classList.toggle("hidden", usesScoreSheet);
-                    winnerActualPointsInput.closest("label")?.classList.toggle("hidden", usesScoreSheet);
-                    loserActualPointsInput.closest("label")?.classList.toggle("hidden", usesScoreSheet);
+                    resultTypeSelect.closest("div")?.classList.remove("hidden");
+                    winnerActualPointsInput.closest("label")?.classList.remove("hidden");
+                    loserActualPointsInput.closest("label")?.classList.remove("hidden");
                     winnerTeamSelect.required = !usesScoreSheet;
-                    winnerActualPointsInput.required = !usesScoreSheet;
-                    loserActualPointsInput.required = !usesScoreSheet;
+                    winnerActualPointsInput.required = true;
+                    loserActualPointsInput.required = true;
                     bestPlayerInput.placeholder = usesScoreSheet
                         ? "Enter Player of the Game ID number"
                         : "Enter the best player's name";
@@ -8099,7 +8134,7 @@
                         <option value="">Select winner</option>
                         <option value="${firstTeamId}">${escapeHTML(firstTeamName)}</option>
                         <option value="${secondTeamId}">${escapeHTML(secondTeamName)}</option>
-                        <option value="no_winner">No Winner / No Team Arrived</option>
+                        ${usesScoreSheet ? "" : `<option value="no_winner">No Winner / No Team Arrived</option>`}
                     `;
                     applyDeclaredPointRule();
 
@@ -8177,7 +8212,7 @@
                     const teamTwoDemeritPoints = readAdjustmentPoints(teamTwoDemeritPointsInput, "Team 2 demerit points");
                     if (teamTwoDemeritPoints === null) return;
 
-                    if (usesScoreSheet) {
+                    if (usesScoreSheet && resultType !== "default") {
                         if (teamOneTotals.points === teamTwoTotals.points) {
                             alert(`${isBasketballMatch ? "Basketball" : "Volleyball"} scores are tied. Update the score sheet before marking Done.`);
                             return;
@@ -8196,7 +8231,7 @@
                         return;
                     }
 
-                    if (!usesScoreSheet) {
+                    if (!usesScoreSheet || resultType === "default") {
                         const pointRule = readSportPointRule(getMatchSportRecord(pendingResultMatch), resultType);
                         winnerPointsAwarded = pointRule.winnerPoints;
                         loserPointsAwarded = pointRule.loserPoints;
@@ -8220,7 +8255,7 @@
                         return;
                     }
 
-                    if (usesScoreSheet) {
+                    if (usesScoreSheet && resultType !== "default") {
                         const bestPlayerParticipant = await findParticipantByIdNumber(bestPlayerRaw);
                         if (!bestPlayerParticipant) {
                             const allowUnknownBestPlayer = await showDashboardConfirm(`Player of the Game ID ${bestPlayerRaw} was not found in participants. Save anyway?`, {
