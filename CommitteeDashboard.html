@@ -4262,7 +4262,7 @@
                 }
 
                 async function findParticipantByIdNumber(idNumber) {
-                    const safeId = String(idNumber || "").trim();
+                    const safeId = extractParticipantIdNumber(idNumber);
                     if (!safeId) return null;
 
                     const { data, error } = await supabase
@@ -4277,6 +4277,23 @@
                     }
 
                     return Array.isArray(data) && data.length ? data[0] : null;
+                }
+
+                function extractParticipantIdNumber(value) {
+                    const text = String(value || "").trim();
+                    if (!text) return "";
+
+                    const parenthesizedValues = [...text.matchAll(/\(([^)]+)\)/g)];
+                    if (parenthesizedValues.length > 0) {
+                        return String(parenthesizedValues[parenthesizedValues.length - 1][1] || "").trim();
+                    }
+
+                    const idPatternMatch = text.match(/\b\d{4}[-\s]?[A-Z]{2,}[A-Z0-9-]*\b/i);
+                    if (idPatternMatch) {
+                        return idPatternMatch[0].trim();
+                    }
+
+                    return text;
                 }
 
                 async function saveBasketballPlayerFromInput(input) {
@@ -8882,6 +8899,23 @@
                     let winnerPointsAwarded = Number(winnerActualPointsInput.value);
                     let loserPointsAwarded = Number(loserActualPointsInput.value);
 
+                    if (isEditRequestMode && pendingResultMatch.game_history) {
+                        const history = pendingResultMatch.game_history;
+                        if (!winnerId && history.winner_team_id) {
+                            winnerId = Number(history.winner_team_id);
+                        }
+                        if (!Number.isFinite(winnerPointsAwarded)) {
+                            winnerPointsAwarded = Number(history.winner_points_awarded ?? history.winner_points ?? 0);
+                        }
+                        if (!Number.isFinite(loserPointsAwarded)) {
+                            loserPointsAwarded = Number(history.loser_points_awarded ?? history.loser_points ?? 0);
+                        }
+                        if (!bestPlayerRaw) {
+                            bestPlayerRaw = String(history.best_player || "").trim();
+                            bestPlayer = bestPlayerRaw;
+                        }
+                    }
+
                     const readAdjustmentPoints = (input, label) => {
                         const rawValue = String(input.value || "").trim();
                         const value = rawValue === "" ? 0 : Number(rawValue);
@@ -8902,7 +8936,7 @@
                     const teamTwoDemeritPoints = readAdjustmentPoints(teamTwoDemeritPointsInput, "Team 2 demerit points");
                     if (teamTwoDemeritPoints === null) return;
 
-                    if (usesScoreSheet && resultType !== "default") {
+                    if (usesScoreSheet && resultType !== "default" && !isEditRequestMode) {
                         if (teamOneScoreSheetPoints === teamTwoScoreSheetPoints) {
                             alert(`${isBasketballMatch ? "Basketball" : "Volleyball"} scores are tied. Update the score sheet before marking Done.`);
                             return;
@@ -8946,9 +8980,10 @@
                     }
 
                     if (usesScoreSheet && resultType !== "default") {
-                        const bestPlayerParticipant = await findParticipantByIdNumber(bestPlayerRaw);
+                        const bestPlayerLookupId = extractParticipantIdNumber(bestPlayerRaw);
+                        const bestPlayerParticipant = await findParticipantByIdNumber(bestPlayerLookupId);
                         if (!bestPlayerParticipant) {
-                            const allowUnknownBestPlayer = await showDashboardConfirm(`Player of the Game ID ${bestPlayerRaw} was not found in participants. Save anyway?`, {
+                            const allowUnknownBestPlayer = await showDashboardConfirm(`Player of the Game ID ${bestPlayerLookupId || bestPlayerRaw} was not found in participants. Save anyway?`, {
                                 title: "Save Unknown Player",
                                 confirmText: "Save Anyway"
                             });
@@ -8958,7 +8993,7 @@
                             }
                         }
                         bestPlayer = bestPlayerParticipant
-                            ? `${getParticipantDisplayName(bestPlayerParticipant) || bestPlayerRaw} (${bestPlayerRaw})`
+                            ? `${getParticipantDisplayName(bestPlayerParticipant) || bestPlayerLookupId} (${bestPlayerLookupId})`
                             : bestPlayerRaw;
                     }
 
