@@ -4412,9 +4412,7 @@
                 }
 
                 function canCurrentUserUseMatchViewFilters() {
-                    return isCurrentUserAdmin()
-                        || currentUser?.assignedSportId === OVERALL_COMMITTEE_SPORT_ID
-                        || normalizeSportText(currentUser?.assignedSportName) === normalizeSportText(OVERALL_COMMITTEE_SPORT_NAME);
+                    return isCurrentUserAdmin() || isOverallCommitteeUser();
                 }
 
                 function updateSportFilterButtonVisibility() {
@@ -6918,10 +6916,14 @@
                         .replace(/[^a-z0-9]+/g, "");
                 }
 
+                function isOverallCommitteeUser(user = currentUser) {
+                    return user?.assignedSportId === OVERALL_COMMITTEE_SPORT_ID
+                        || normalizeSportText(user?.assignedSportName) === normalizeSportText(OVERALL_COMMITTEE_SPORT_NAME)
+                        || normalizeSportCompact(user?.assignedSportName) === normalizeSportCompact(OVERALL_COMMITTEE_SPORT_NAME);
+                }
+
                 function canCurrentUserScheduleAllSports() {
-                    return isCurrentUserAdmin()
-                        || currentUser?.assignedSportId === OVERALL_COMMITTEE_SPORT_ID
-                        || normalizeSportText(currentUser?.assignedSportName) === normalizeSportText(OVERALL_COMMITTEE_SPORT_NAME);
+                    return isCurrentUserAdmin() || isOverallCommitteeUser();
                 }
 
                 function isSportVisibleForCurrentUser(sport) {
@@ -8797,6 +8799,9 @@
                 });
 
                 if (!await loadCurrentDashboardUser()) return;
+                if (canCurrentUserUseMatchViewFilters() && !VALID_MATCH_SCOPES.includes(localStorage.getItem(COMMITTEE_MATCH_SCOPE_KEY))) {
+                    activeMatchScopeFilter = "all";
+                }
                 setActiveMatchScopeFilter(activeMatchScopeFilter);
                 placeMatchControlsForTab(document.querySelector(".tab-content:not(.hidden)")?.id || "overview");
                 revealPlacedMatchControls();
