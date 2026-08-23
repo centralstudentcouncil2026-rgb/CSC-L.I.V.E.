@@ -6908,6 +6908,27 @@
                 `;
             }
 
+            async function loadAllRows(buildQuery, pageSize = 1000) {
+                const rows = [];
+
+                for (let start = 0; ; start += pageSize) {
+                    const { data, error } = await buildQuery().range(start, start + pageSize - 1);
+
+                    if (error) {
+                        return { data: rows, error };
+                    }
+
+                    const pageRows = data || [];
+                    rows.push(...pageRows);
+
+                    if (pageRows.length < pageSize) {
+                        break;
+                    }
+                }
+
+                return { data: rows, error: null };
+            }
+
             async function loadOverviewMatches() {
                 const matchSelectWithRelations = `
                     id,
@@ -6931,10 +6952,12 @@
                     team_two:sports_leaderboard!scheduled_matches_team_two_fkey(team)
                 `;
 
-                const { data, error } = await supabase
-                    .from(MATCHES_TABLE)
-                    .select(matchSelectWithRelations)
-                    .order("match_time", { ascending: true });
+                const { data, error } = await loadAllRows(
+                    () => supabase
+                        .from(MATCHES_TABLE)
+                        .select(matchSelectWithRelations)
+                        .order("match_time", { ascending: true })
+                );
 
                 if (!error) {
                     return data || [];
@@ -6942,10 +6965,12 @@
 
                 console.warn("Overview relation match load failed. Falling back to plain scheduled_matches select:", error.message || error);
 
-                const fallback = await supabase
-                    .from(MATCHES_TABLE)
-                    .select("*")
-                    .order("match_time", { ascending: true });
+                const fallback = await loadAllRows(
+                    () => supabase
+                        .from(MATCHES_TABLE)
+                        .select("*")
+                        .order("match_time", { ascending: true })
+                );
 
                 if (fallback.error) {
                     console.error("Error loading overview matches:", fallback.error.message || fallback.error);
@@ -7582,11 +7607,13 @@
             }
 
             async function loadPendingMatchEditRequests() {
-                const { data, error } = await supabase
-                    .from(MATCH_EDIT_REQUESTS_TABLE)
-                    .select("*")
-                    .eq("status", "pending")
-                    .order("requested_at", { ascending: false });
+                const { data, error } = await loadAllRows(
+                    () => supabase
+                        .from(MATCH_EDIT_REQUESTS_TABLE)
+                        .select("*")
+                        .eq("status", "pending")
+                        .order("requested_at", { ascending: false })
+                );
 
                 if (error) {
                     console.warn("Pending match edit requests load warning:", error.message || error);
@@ -7685,20 +7712,26 @@
                     attendanceStats,
                     pendingEditRequests
                 ] = await Promise.all([
-                    supabase
-                        .from(TEAMS_TABLE)
-                        .select(`id, ${TEAM_NAME_COLUMN}`)
-                        .order(TEAM_NAME_COLUMN, { ascending: true }),
+                    loadAllRows(
+                        () => supabase
+                            .from(TEAMS_TABLE)
+                            .select(`id, ${TEAM_NAME_COLUMN}`)
+                            .order(TEAM_NAME_COLUMN, { ascending: true })
+                    ),
 
-                    supabase
-                        .from(SPORTS_TABLE)
-                        .select("id, sport_name, game_type, created_at, updated_at")
-                        .order("sport_name", { ascending: true }),
+                    loadAllRows(
+                        () => supabase
+                            .from(SPORTS_TABLE)
+                            .select("id, sport_name, game_type, created_at, updated_at")
+                            .order("sport_name", { ascending: true })
+                    ),
 
-                    supabase
-                        .from(PARTICIPANTS_TABLE)
-                        .select("id, name, student_id, team, status, created_at")
-                        .order("created_at", { ascending: false }),
+                    loadAllRows(
+                        () => supabase
+                            .from(PARTICIPANTS_TABLE)
+                            .select("id, name, student_id, team, status, created_at")
+                            .order("created_at", { ascending: false })
+                    ),
 
                     loadOverviewMatches(),
                     loadOverviewAttendanceStats(),
