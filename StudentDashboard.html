@@ -823,6 +823,23 @@
             const GAME_HISTORY_TABLE = "game_history";
             const TEAM_POINT_ADJUSTMENTS_TABLE = "team_point_adjustments";
             const BASKETBALL_STATS_TABLE = "basketball_match_player_stats";
+            const VOLLEYBALL_SCORE_TABLE = "volleyball_match_period_scores";
+            const BASKETBALL_PLAYER_STAT_DEFINITIONS = [
+                { field: "points", label: "PTS" },
+                { field: "fouls", label: "FLS" }
+            ];
+            const VOLLEYBALL_PLAYER_STAT_DEFINITIONS = [
+                { field: "receiving", label: "Receiving" },
+                { field: "digging", label: "Digging" },
+                { field: "setting", label: "Setting" },
+                { field: "attacks", label: "Attacks" },
+                { field: "blockings", label: "Blockings" },
+                { field: "service_ace", label: "Service Ace" }
+            ];
+            const PLAYER_SCORE_SHEET_FIELDS = new Set([
+                ...BASKETBALL_PLAYER_STAT_DEFINITIONS.map(stat => stat.field),
+                ...VOLLEYBALL_PLAYER_STAT_DEFINITIONS.map(stat => stat.field)
+            ]);
             const SPORTS_TABLE = "sports";
             const STUDENT_FEEDBACK_TABLE = "student_feedback";
             const APP_SETTINGS_TABLE = "app_settings";
@@ -878,6 +895,7 @@
             let activeScheduleTeamFilter = localStorage.getItem(STUDENT_SCHEDULE_TEAM_FILTER_KEY) || "All";
             let studentMatchesData = [];
             let basketballStatsByMatch = new Map();
+            let volleyballScoresByMatch = new Map();
             let evaluationFormUrl = "";
             let registeredSports = [];
             let matchReloadTimer = null;
@@ -1445,6 +1463,26 @@
                 return basketballStatsByMatch.get(Number(matchId)) || [];
             }
 
+            function getScoreSheetStatDefinitions(match) {
+                return isVolleyballSport(match)
+                    ? VOLLEYBALL_PLAYER_STAT_DEFINITIONS
+                    : BASKETBALL_PLAYER_STAT_DEFINITIONS;
+            }
+
+            function getVolleyballScoresForMatch(matchId) {
+                return volleyballScoresByMatch.get(Number(matchId)) || [];
+            }
+
+            function getStudentVolleyballTeamScore(match, teamSide, gamePeriod = null) {
+                const teamId = getTeamId(match, teamSide);
+                return getVolleyballScoresForMatch(match.id)
+                    .filter(score =>
+                        Number(score.team_id) === Number(teamId)
+                        && (gamePeriod === null || Number(score.game_period || 1) === Number(gamePeriod))
+                    )
+                    .reduce((total, row) => total + (Number(row.points) || 0), 0);
+            }
+
             function stripPlayerIdSuffix(value) {
                 return String(value || "")
                     .replace(/\s*\([^)]*\d[^)]*\)\s*$/g, "")
@@ -1527,6 +1565,9 @@
                 }
 
                 if (hasPlayerScoreSheet(match)) {
+                    if (isVolleyballSport(match)) {
+                        return getStudentVolleyballTeamScore(match, teamSide, null);
+                    }
                     return getStudentBasketballTotals(match, teamSide).points;
                 }
 
@@ -1557,11 +1598,14 @@
                     }
 
                     const existing = mergedRows.get(key);
+                    const statValues = {};
+                    PLAYER_SCORE_SHEET_FIELDS.forEach(field => {
+                        statValues[field] = Math.max(Number(existing[field]) || 0, Number(row[field]) || 0);
+                    });
                     mergedRows.set(key, {
                         ...existing,
                         ...row,
-                        points: Math.max(Number(existing.points) || 0, Number(row.points) || 0),
-                        fouls: Math.max(Number(existing.fouls) || 0, Number(row.fouls) || 0),
+                        ...statValues,
                         is_active: Boolean(existing.is_active || row.is_active),
                         player_name: row.player_name || existing.player_name,
                         id_number: row.id_number || existing.id_number,
@@ -1575,6 +1619,7 @@
             function getStudentBasketballTeamRows(match, teamSide, activeOnly = false, finalMode = false) {
                 const teamId = getTeamId(match, teamSide);
                 const activePeriod = getBasketballActivePeriod(match);
+                const statDefinitions = getScoreSheetStatDefinitions(match);
                 const allTeamRows = getSafeBasketballStatRows(getBasketballStatsForMatch(match.id))
                     .filter(row => Number(row.team_id) === Number(teamId));
 
@@ -1587,26 +1632,29 @@
 
                         const existing = playerRows.get(key) || {
                             ...row,
-                            points: 0,
-                            fouls: 0,
+                            ...Object.fromEntries(statDefinitions.map(stat => [stat.field, 0])),
                             is_active: false
                         };
+                        const statValues = {};
+                        statDefinitions.forEach(stat => {
+                            statValues[stat.field] = (Number(existing[stat.field]) || 0) + (Number(row[stat.field]) || 0);
+                        });
 
                         playerRows.set(key, {
                             ...existing,
                             ...row,
-                            points: (Number(existing.points) || 0) + (Number(row.points) || 0),
-                            fouls: (Number(existing.fouls) || 0) + (Number(row.fouls) || 0),
+                            ...statValues,
                             is_active: Boolean(existing.is_active || row.is_active),
                             player_name: row.player_name || existing.player_name
                         });
                     });
 
                     return Array.from(playerRows.values())
-                        .filter(row => (Number(row.points) || 0) > 0 || (Number(row.fouls) || 0) > 0 || row.is_active)
+                        .filter(row => statDefinitions.some(stat => (Number(row[stat.field]) || 0) > 0) || row.is_active)
                         .sort((first, second) => {
-                            const pointDiff = (Number(second.points) || 0) - (Number(first.points) || 0);
-                            if (pointDiff !== 0) return pointDiff;
+                            const statDiff = statDefinitions.reduce((total, stat) => total + (Number(second[stat.field]) || 0), 0)
+                                - statDefinitions.reduce((total, stat) => total + (Number(first[stat.field]) || 0), 0);
+                            if (statDiff !== 0) return statDiff;
                             return getDisplayPlayerName(first).localeCompare(getDisplayPlayerName(second));
                         });
                 }
@@ -1619,10 +1667,13 @@
                         const cumulativeRows = allTeamRows.filter(teamRow =>
                             normalizeTeamValue(teamRow.id_number || teamRow.participant_id) === key
                         );
+                        const cumulativeStats = {};
+                        statDefinitions.forEach(stat => {
+                            cumulativeStats[stat.field] = cumulativeRows.reduce((total, teamRow) => total + (Number(teamRow[stat.field]) || 0), 0);
+                        });
                         return {
                             ...row,
-                            points: cumulativeRows.reduce((total, teamRow) => total + (Number(teamRow.points) || 0), 0),
-                            fouls: cumulativeRows.reduce((total, teamRow) => total + (Number(teamRow.fouls) || 0), 0)
+                            ...cumulativeStats
                         };
                     })
                     .sort((first, second) => {
@@ -1637,14 +1688,16 @@
 
             function getStudentBasketballTotals(match, teamSide, gamePeriod = null) {
                 const teamId = getTeamId(match, teamSide);
+                const statDefinitions = getScoreSheetStatDefinitions(match);
                 return getSafeBasketballStatRows(getBasketballStatsForMatch(match.id))
                     .filter(row => Number(row.team_id) === Number(teamId))
                     .filter(row => gamePeriod === null || Number(row.game_period || 1) === Number(gamePeriod))
                     .reduce((totals, row) => {
-                        totals.points += Number(row.points) || 0;
-                        totals.fouls += Number(row.fouls) || 0;
+                        statDefinitions.forEach(stat => {
+                            totals[stat.field] = (totals[stat.field] || 0) + (Number(row[stat.field]) || 0);
+                        });
                         return totals;
-                    }, { points: 0, fouls: 0 });
+                    }, Object.fromEntries(statDefinitions.map(stat => [stat.field, 0])));
             }
 
             function renderStudentBasketballScoreSheet(match, options = {}) {
@@ -1656,21 +1709,28 @@
                 const finalMode = match.status === "Done";
                 const isVolleyballMatch = isVolleyballSport(match);
                 const faultLabel = getScoreSheetFaultLabel(match);
+                const statDefinitions = getScoreSheetStatDefinitions(match);
                 const periodName = isVolleyballMatch ? "set" : "quarter";
                 const scoreSheetTitle = finalMode
                     ? (isVolleyballMatch ? "Volleyball Game Stats" : "Basketball Game Stats")
                     : (isVolleyballMatch ? "Volleyball Score Sheet Preview" : "Basketball Score Sheet Preview");
                 const teamOneGameTotals = getStudentBasketballTotals(match, "one");
                 const teamTwoGameTotals = getStudentBasketballTotals(match, "two");
+                const teamOneVolleyballPoints = getStudentVolleyballTeamScore(match, "one", null);
+                const teamTwoVolleyballPoints = getStudentVolleyballTeamScore(match, "two", null);
 
                 const renderTeamPreview = (teamSide, theme) => {
                     const teamName = getTeamName(match, teamSide);
                     const rows = getStudentBasketballTeamRows(match, teamSide, !finalMode, finalMode);
                     const gameTotals = teamSide === "one" ? teamOneGameTotals : teamTwoGameTotals;
+                    const scorePoints = isVolleyballMatch
+                        ? (teamSide === "one" ? teamOneVolleyballPoints : teamTwoVolleyballPoints)
+                        : gameTotals.points;
                     const visibleRows = rows.length ? rows : [];
                     const emptyMessage = finalMode
                         ? "No player stats were recorded for this team."
                         : `No active players selected for this ${periodName} yet.`;
+                    const tableMinWidth = isVolleyballMatch ? "min-w-[42rem]" : "";
 
                     return `
                         <div class="student-basketball-score-team rounded-2xl border ${theme.border} ${theme.bg} overflow-hidden">
@@ -1680,17 +1740,19 @@
                                     ${renderDeclaredTeamPoints(match, teamSide, `mt-1 text-[9px] font-black uppercase tracking-wide ${theme.text}`)}
                                 </div>
                                 <div class="shrink-0 text-right">
-                                    <p class="text-lg font-black leading-none ${theme.text} sm:text-2xl">${gameTotals.points}</p>
+                                    <p class="text-lg font-black leading-none ${theme.text} sm:text-2xl">${scorePoints}</p>
+                                    ${isVolleyballMatch ? `<p class="text-[9px] font-black uppercase ${theme.text}">Match PTS</p>` : ""}
                                 </div>
                             </div>
                             <div class="max-h-44 overflow-y-auto border-t ${theme.border}">
-                                <table class="student-basketball-score-table w-full table-fixed text-[10px] sm:text-xs">
+                                <table class="student-basketball-score-table w-full ${tableMinWidth} table-fixed text-[10px] sm:text-xs">
                                     <thead class="${theme.header}">
                                         <tr>
                                             <th class="w-6 py-1.5 text-left sm:w-8 sm:py-2">#</th>
                                             <th class="py-1.5 text-left sm:py-2">Player</th>
-                                            <th class="w-10 whitespace-nowrap py-1.5 text-center sm:w-12 sm:py-2">PTS</th>
-                                            <th class="w-10 whitespace-nowrap py-1.5 text-center sm:w-12 sm:py-2">${faultLabel}</th>
+                                            ${statDefinitions.map(stat => `
+                                                <th class="w-16 whitespace-nowrap py-1.5 text-center sm:py-2">${escapeHTML(stat.label)}</th>
+                                            `).join("")}
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -1698,12 +1760,13 @@
                                             <tr class="border-t border-white/70 bg-white/75">
                                                 <td class="py-1.5 font-black sm:py-2">${index + 1}</td>
                                                 <td class="student-basketball-score-player truncate py-1.5 font-bold text-slate-800 sm:py-2">${escapeHTML(getDisplayPlayerName(row))}</td>
-                                                <td class="py-1.5 text-center font-black ${theme.text} sm:py-2">${Number(row.points) || 0}</td>
-                                                <td class="py-1.5 text-center font-black text-red-600 sm:py-2">${Number(row.fouls) || 0}</td>
+                                                ${statDefinitions.map(stat => `
+                                                    <td class="py-1.5 text-center font-black ${theme.text} sm:py-2">${Number(row[stat.field]) || 0}</td>
+                                                `).join("")}
                                             </tr>
                                         `).join("") : `
                                             <tr>
-                                                <td colspan="4" class="px-3 py-4 text-center text-[11px] font-semibold text-slate-500">
+                                                <td colspan="${statDefinitions.length + 2}" class="px-3 py-4 text-center text-[11px] font-semibold text-slate-500">
                                                     ${escapeHTML(emptyMessage)}
                                                 </td>
                                             </tr>
@@ -2885,6 +2948,7 @@
                 studentMatchesData = data || [];
                 const matchIds = studentMatchesData.map(m => m.id);
                 basketballStatsByMatch = new Map();
+                volleyballScoresByMatch = new Map();
                 if (matchIds.length > 0) {
                     const { data: historyRows, error: historyError } = await supabase.from(GAME_HISTORY_TABLE).select("*").in("match_id", matchIds);
                     if (!historyError && Array.isArray(historyRows)) {
@@ -2909,9 +2973,27 @@
                             basketballStatsByMatch.get(key).push(row);
                         });
                     }
+
+                    const { data: volleyballScoreRows, error: volleyballScoreError } = await supabase
+                        .from(VOLLEYBALL_SCORE_TABLE)
+                        .select("*")
+                        .in("match_id", matchIds);
+
+                    if (volleyballScoreError) {
+                        console.warn("Student volleyball score load warning:", volleyballScoreError.message || volleyballScoreError);
+                    } else if (Array.isArray(volleyballScoreRows)) {
+                        volleyballScoreRows.forEach(row => {
+                            const key = Number(row.match_id);
+                            if (!volleyballScoresByMatch.has(key)) {
+                                volleyballScoresByMatch.set(key, []);
+                            }
+                            volleyballScoresByMatch.get(key).push(row);
+                        });
+                    }
                 }
                 const basketballSignature = JSON.stringify([...basketballStatsByMatch.entries()]);
-                const matchesSignature = JSON.stringify(studentMatchesData) + basketballSignature;
+                const volleyballSignature = JSON.stringify([...volleyballScoresByMatch.entries()]);
+                const matchesSignature = JSON.stringify(studentMatchesData) + basketballSignature + volleyballSignature;
                 if (matchesSignature !== lastMatchesSignature) {
                     renderScheduleTeamFilterOptions();
                     renderMatches();
@@ -3307,6 +3389,9 @@
                     scheduleLiveLeaderboardReload(0, { force: true });
                 })
                 .on("postgres_changes", { event: "*", schema: "public", table: BASKETBALL_STATS_TABLE }, () => {
+                    scheduleLiveMatchReload(0, { force: true });
+                })
+                .on("postgres_changes", { event: "*", schema: "public", table: VOLLEYBALL_SCORE_TABLE }, () => {
                     scheduleLiveMatchReload(0, { force: true });
                 })
                 .on("postgres_changes", { event: "*", schema: "public", table: SPORTS_TABLE }, async () => {

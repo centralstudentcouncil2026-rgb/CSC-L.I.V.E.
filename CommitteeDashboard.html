@@ -2648,7 +2648,23 @@
                 const GAME_HISTORY_TABLE = "game_history";
                 const TEAM_POINT_ADJUSTMENTS_TABLE = "team_point_adjustments";
                 const BASKETBALL_STATS_TABLE = "basketball_match_player_stats";
-                const BASKETBALL_STAT_FIELDS = new Set(["points", "fouls"]);
+                const VOLLEYBALL_SCORE_TABLE = "volleyball_match_period_scores";
+                const BASKETBALL_PLAYER_STAT_DEFINITIONS = [
+                    { field: "points", label: "PTS", color: "blue" },
+                    { field: "fouls", label: "FLS", color: "red" }
+                ];
+                const VOLLEYBALL_PLAYER_STAT_DEFINITIONS = [
+                    { field: "receiving", label: "Receiving", color: "blue" },
+                    { field: "digging", label: "Digging", color: "emerald" },
+                    { field: "setting", label: "Setting", color: "amber" },
+                    { field: "attacks", label: "Attacks", color: "rose" },
+                    { field: "blockings", label: "Blockings", color: "violet" },
+                    { field: "service_ace", label: "Service Ace", color: "cyan" }
+                ];
+                const BASKETBALL_STAT_FIELDS = new Set([
+                    ...BASKETBALL_PLAYER_STAT_DEFINITIONS.map(stat => stat.field),
+                    ...VOLLEYBALL_PLAYER_STAT_DEFINITIONS.map(stat => stat.field)
+                ]);
                 const SPORTS_TABLE = "sports";
                 const ANNOUNCEMENTS_TABLE = "announcements";
                 const CONVERSATIONS_TABLE = "conversations";
@@ -2789,6 +2805,7 @@
                 let registeredSportsData = [];
                 let matchesData = [];
                 let basketballStatsByMatch = new Map();
+                let volleyballScoresByMatch = new Map();
                 let scoreSheetParticipantsData = [];
                 let scoreSheetParticipantsLoaded = false;
                 let pendingBasketballPointTarget = null;
@@ -3634,6 +3651,37 @@
                     return Math.min(getScoreSheetPeriodLimit(match), Math.max(1, Number(match?.game_period) || 1));
                 }
 
+                function getScoreSheetStatDefinitions(match) {
+                    return isVolleyballSport(match)
+                        ? VOLLEYBALL_PLAYER_STAT_DEFINITIONS
+                        : BASKETBALL_PLAYER_STAT_DEFINITIONS;
+                }
+
+                function getScoreButtonColorClasses(color, isEnabled, isPrimary = false) {
+                    if (!isEnabled) return "bg-slate-200 text-slate-400 cursor-not-allowed";
+                    if (isPrimary) {
+                        return {
+                            blue: "bg-blue-600 text-white hover:bg-blue-700",
+                            red: "bg-red-600 text-white hover:bg-red-700",
+                            emerald: "bg-emerald-600 text-white hover:bg-emerald-700",
+                            amber: "bg-amber-500 text-white hover:bg-amber-600",
+                            rose: "bg-rose-600 text-white hover:bg-rose-700",
+                            violet: "bg-violet-600 text-white hover:bg-violet-700",
+                            cyan: "bg-cyan-600 text-white hover:bg-cyan-700"
+                        }[color] || "bg-blue-600 text-white hover:bg-blue-700";
+                    }
+
+                    return {
+                        blue: "bg-blue-100 text-blue-700 hover:bg-blue-200",
+                        red: "bg-red-100 text-red-700 hover:bg-red-200",
+                        emerald: "bg-emerald-100 text-emerald-700 hover:bg-emerald-200",
+                        amber: "bg-amber-100 text-amber-800 hover:bg-amber-200",
+                        rose: "bg-rose-100 text-rose-700 hover:bg-rose-200",
+                        violet: "bg-violet-100 text-violet-700 hover:bg-violet-200",
+                        cyan: "bg-cyan-100 text-cyan-700 hover:bg-cyan-200"
+                    }[color] || "bg-blue-100 text-blue-700 hover:bg-blue-200";
+                }
+
                 function getSafeBasketballStatRows(rows) {
                     const mergedRows = new Map();
 
@@ -3652,11 +3700,14 @@
                         }
 
                         const existing = mergedRows.get(key);
+                        const statValues = {};
+                        BASKETBALL_STAT_FIELDS.forEach(field => {
+                            statValues[field] = Math.max(Number(existing[field]) || 0, Number(row[field]) || 0);
+                        });
                         mergedRows.set(key, {
                             ...existing,
                             ...row,
-                            points: Math.max(Number(existing.points) || 0, Number(row.points) || 0),
-                            fouls: Math.max(Number(existing.fouls) || 0, Number(row.fouls) || 0),
+                            ...statValues,
                             is_active: Boolean(existing.is_active || row.is_active),
                             player_name: row.player_name || existing.player_name,
                             id_number: row.id_number || existing.id_number,
@@ -3742,6 +3793,7 @@
                 function getBasketballDisplayRows(match, teamSide) {
                     const activePeriod = getBasketballActivePeriod(match);
                     const teamId = getTeamId(match, teamSide);
+                    const statDefinitions = getScoreSheetStatDefinitions(match);
                     const allTeamRows = getSafeBasketballStatRows(getBasketballStatsForMatch(match.id))
                         .filter(row => Number(row.team_id) === Number(teamId));
                     const periodRows = allTeamRows
@@ -3761,17 +3813,18 @@
                             const cumulativeRows = allTeamRows.filter(row =>
                                 normalizeTeamValue(row.id_number || row.participant_id) === key
                             );
-                            const cumulativePoints = cumulativeRows.reduce((total, row) => total + (Number(row.points) || 0), 0);
-                            const cumulativeFouls = cumulativeRows.reduce((total, row) => total + (Number(row.fouls) || 0), 0);
+                            const cumulativeStats = {};
+                            statDefinitions.forEach(stat => {
+                                cumulativeStats[stat.field] = cumulativeRows.reduce((total, row) => total + (Number(row[stat.field]) || 0), 0);
+                            });
                             return {
                                 ...sourceRow,
+                                ...cumulativeStats,
                                 id: periodRow?.id || (activePeriod === 1 ? lineupRow.id || "" : ""),
                                 lineup_id: lineupRow.id || "",
                                 id_number: lineupRow.id_number || periodRow?.id_number || "",
                                 player_name: lineupRow.player_name || periodRow?.player_name || "",
                                 participant_id: lineupRow.participant_id || periodRow?.participant_id || null,
-                                points: cumulativePoints,
-                                fouls: cumulativeFouls,
                                 is_active: Boolean(periodRow?.is_active),
                                 created_at: lineupRow.created_at || periodRow?.created_at || null,
                                 lineup_index: lineupIndex
@@ -3787,26 +3840,82 @@
 
                 function getBasketballTotals(match, teamSide, gamePeriod = null) {
                     const teamId = getTeamId(match, teamSide);
+                    const statDefinitions = getScoreSheetStatDefinitions(match);
                     const rows = getSafeBasketballStatRows(getBasketballStatsForMatch(match.id))
                         .filter(row => Number(row.team_id) === Number(teamId))
                         .filter(row => gamePeriod === null || Number(row.game_period || 1) === Number(gamePeriod));
 
                     return rows.reduce((totals, row) => {
-                        totals.points += Number(row.points) || 0;
-                        totals.fouls += Number(row.fouls) || 0;
+                        statDefinitions.forEach(stat => {
+                            totals[stat.field] = (totals[stat.field] || 0) + (Number(row[stat.field]) || 0);
+                        });
                         return totals;
-                    }, { points: 0, fouls: 0 });
+                    }, Object.fromEntries(statDefinitions.map(stat => [stat.field, 0])));
+                }
+
+                function getVolleyballScoresForMatch(matchId) {
+                    return volleyballScoresByMatch.get(Number(matchId)) || [];
+                }
+
+                function getVolleyballTeamScore(match, teamSide, gamePeriod = getBasketballActivePeriod(match)) {
+                    const teamId = getTeamId(match, teamSide);
+                    const rows = getVolleyballScoresForMatch(match.id)
+                        .filter(score =>
+                            Number(score.team_id) === Number(teamId)
+                            && (gamePeriod === null || Number(score.game_period || 1) === Number(gamePeriod))
+                        );
+                    return rows.reduce((total, row) => total + (Number(row.points) || 0), 0);
+                }
+
+                async function adjustVolleyballTeamScore(button, amount) {
+                    const matchId = Number(button.dataset.matchId);
+                    const teamId = Number(button.dataset.teamId);
+                    const gamePeriod = Math.min(5, Math.max(1, Number(button.dataset.gamePeriod) || 1));
+                    const teamName = button.dataset.teamName || "";
+                    const selectedMatch = matchesData.find(match => Number(match.id) === matchId);
+
+                    if (!selectedMatch || !enforceMatchPermission(selectedMatch)) return;
+
+                    const currentScore = getVolleyballScoresForMatch(matchId)
+                        .find(score =>
+                            Number(score.team_id) === Number(teamId)
+                            && Number(score.game_period || 1) === Number(gamePeriod)
+                        );
+                    const nextPoints = Math.max(0, (Number(currentScore?.points) || 0) + Number(amount || 0));
+
+                    const { error } = await supabase
+                        .from(VOLLEYBALL_SCORE_TABLE)
+                        .upsert({
+                            match_id: matchId,
+                            team_id: teamId,
+                            team_name: teamName,
+                            game_period: gamePeriod,
+                            points: nextPoints,
+                            updated_at: new Date().toISOString()
+                        }, {
+                            onConflict: "match_id,team_id,game_period"
+                        });
+
+                    if (error) {
+                        console.error("Volleyball score update error:", error.message || error);
+                        alert("Unable to update volleyball score. Run the volleyball score SQL first.");
+                        return;
+                    }
+
+                    await loadSavedMatches();
                 }
 
                 function renderBasketballRows(match, teamSide, canManageCurrentMatch) {
                     const activePeriod = getBasketballActivePeriod(match);
                     const rows = getBasketballDisplayRows(match, teamSide);
                     const teamId = getTeamId(match, teamSide);
+                    const isVolleyballMatch = isVolleyballSport(match);
+                    const statDefinitions = getScoreSheetStatDefinitions(match);
 
                     if (rows.length === 0) {
                         return `
                             <tr class="border-b border-slate-200 bg-white/80">
-                                <td colspan="4" class="px-3 py-4 text-center text-xs font-semibold text-slate-500">
+                                <td colspan="${statDefinitions.length + 2}" class="px-3 py-4 text-center text-xs font-semibold text-slate-500">
                                     No approved registered players found for this team and game category.
                                 </td>
                             </tr>
@@ -3821,6 +3930,55 @@
                         const playerTitle = row.id_number
                             ? `${displayValue} (${row.id_number})`
                             : displayValue;
+                        const renderStatCell = (stat) => {
+                            const value = Number(row[stat.field]) || 0;
+                            const canAdjust = canManageCurrentMatch && hasPlayer;
+                            const canAdd = canManageCurrentMatch && hasPlayer && isActive;
+                            const shouldOpenPointModal = !isVolleyballMatch && stat.field === "points";
+                            return `
+                                <td class="basketball-stat-column px-2 py-1 text-center">
+                                    <div class="basketball-score-control">
+                                        <button
+                                            type="button"
+                                            data-match-id="${match.id}"
+                                            data-team-id="${teamId}"
+                                            data-game-period="${activePeriod}"
+                                            data-stat-id="${escapeHTML(row.id || "")}"
+                                            data-lineup-stat-id="${escapeHTML(row.lineup_id || row.id || "")}"
+                                            data-id-number="${escapeHTML(row.id_number || "")}"
+                                            data-player-name="${escapeHTML(displayValue)}"
+                                            data-team-name="${escapeHTML(row.team_name || getTeamName(match, teamSide))}"
+                                            data-participant-id="${escapeHTML(row.participant_id || "")}"
+                                            data-stat-field="${escapeHTML(stat.field)}"
+                                            data-stat-amount="-1"
+                                            ${canAdjust ? "" : "disabled"}
+                                            class="basketball-score-button basketball-stat-adjust-btn ${getScoreButtonColorClasses(stat.color, canAdjust)}">
+                                            -
+                                        </button>
+                                        <button
+                                            type="button"
+                                            data-match-id="${match.id}"
+                                            data-team-id="${teamId}"
+                                            data-game-period="${activePeriod}"
+                                            data-team-side="${teamSide}"
+                                            data-stat-id="${escapeHTML(row.id || "")}"
+                                            data-lineup-stat-id="${escapeHTML(row.lineup_id || row.id || "")}"
+                                            data-id-number="${escapeHTML(row.id_number || "")}"
+                                            data-player-name="${escapeHTML(displayValue)}"
+                                            data-team-name="${escapeHTML(row.team_name || getTeamName(match, teamSide))}"
+                                            data-participant-id="${escapeHTML(row.participant_id || "")}"
+                                            data-stat-field="${escapeHTML(stat.field)}"
+                                            data-stat-amount="1"
+                                            data-row-key="${escapeHTML(rowKey)}"
+                                            ${canAdd ? "" : "disabled"}
+                                            title="${isActive ? `Add ${stat.label.toLowerCase()} for the active ${getScoreSheetPeriodLabel(match).toLowerCase()}` : `Select this player as active before adding ${stat.label.toLowerCase()}`}"
+                                            class="basketball-score-button ${shouldOpenPointModal ? "basketball-points-btn" : "basketball-stat-adjust-btn"} ${getScoreButtonColorClasses(stat.color, canAdd, true)}">
+                                            ${value}
+                                        </button>
+                                    </div>
+                                </td>
+                            `;
+                        };
                         return `
                             <tr class="border-b border-slate-200 bg-white/80">
                                 <td class="basketball-active-column px-2 py-1 text-center text-xs font-black">
@@ -3847,84 +4005,7 @@
                                         ${escapeHTML(displayValue || "Unnamed player")}
                                     </div>
                                 </td>
-                                <td class="basketball-stat-column px-2 py-1 text-center">
-                                    <div class="basketball-score-control">
-                                        <button
-                                            type="button"
-                                            data-match-id="${match.id}"
-                                            data-team-id="${teamId}"
-                                            data-game-period="${activePeriod}"
-                                            data-stat-id="${escapeHTML(row.id || "")}"
-                                            data-lineup-stat-id="${escapeHTML(row.lineup_id || row.id || "")}"
-                                            data-id-number="${escapeHTML(row.id_number || "")}"
-                                            data-player-name="${escapeHTML(displayValue)}"
-                                            data-team-name="${escapeHTML(row.team_name || getTeamName(match, teamSide))}"
-                                            data-participant-id="${escapeHTML(row.participant_id || "")}"
-                                            data-stat-field="points"
-                                            data-stat-amount="-1"
-                                            ${canManageCurrentMatch && hasPlayer ? "" : "disabled"}
-                                            class="basketball-score-button basketball-stat-adjust-btn ${hasPlayer ? "bg-blue-100 text-blue-700 hover:bg-blue-200" : "bg-slate-200 text-slate-400 cursor-not-allowed"}">
-                                            -
-                                        </button>
-                                        <button
-                                            type="button"
-                                            data-match-id="${match.id}"
-                                            data-team-id="${teamId}"
-                                            data-game-period="${activePeriod}"
-                                            data-team-side="${teamSide}"
-                                            data-stat-id="${escapeHTML(row.id || "")}"
-                                            data-lineup-stat-id="${escapeHTML(row.lineup_id || row.id || "")}"
-                                            data-id-number="${escapeHTML(row.id_number || "")}"
-                                            data-player-name="${escapeHTML(displayValue)}"
-                                            data-team-name="${escapeHTML(row.team_name || getTeamName(match, teamSide))}"
-                                            data-participant-id="${escapeHTML(row.participant_id || "")}"
-                                            data-row-key="${escapeHTML(rowKey)}"
-                                            ${canManageCurrentMatch && hasPlayer && isActive ? "" : "disabled"}
-                                            title="${isActive ? `Add points for the active ${getScoreSheetPeriodLabel(match).toLowerCase()}` : "Select this player as active before adding points"}"
-                                            class="basketball-score-button basketball-points-btn ${hasPlayer && isActive ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-slate-200 text-slate-400 cursor-not-allowed"}">
-                                            ${Number(row.points) || 0}
-                                        </button>
-                                    </div>
-                                </td>
-                                <td class="basketball-stat-column px-2 py-1 text-center">
-                                    <div class="basketball-score-control">
-                                        <button
-                                            type="button"
-                                            data-match-id="${match.id}"
-                                            data-team-id="${teamId}"
-                                            data-game-period="${activePeriod}"
-                                            data-stat-id="${escapeHTML(row.id || "")}"
-                                            data-lineup-stat-id="${escapeHTML(row.lineup_id || row.id || "")}"
-                                            data-id-number="${escapeHTML(row.id_number || "")}"
-                                            data-player-name="${escapeHTML(displayValue)}"
-                                            data-team-name="${escapeHTML(row.team_name || getTeamName(match, teamSide))}"
-                                            data-participant-id="${escapeHTML(row.participant_id || "")}"
-                                            data-stat-field="fouls"
-                                            data-stat-amount="-1"
-                                            ${canManageCurrentMatch && hasPlayer ? "" : "disabled"}
-                                            class="basketball-score-button basketball-stat-adjust-btn ${hasPlayer ? "bg-red-100 text-red-700 hover:bg-red-200" : "bg-slate-200 text-slate-400 cursor-not-allowed"}">
-                                            -
-                                        </button>
-                                        <button
-                                            type="button"
-                                            data-match-id="${match.id}"
-                                            data-team-id="${teamId}"
-                                            data-game-period="${activePeriod}"
-                                            data-stat-id="${escapeHTML(row.id || "")}"
-                                            data-lineup-stat-id="${escapeHTML(row.lineup_id || row.id || "")}"
-                                            data-id-number="${escapeHTML(row.id_number || "")}"
-                                            data-player-name="${escapeHTML(displayValue)}"
-                                            data-team-name="${escapeHTML(row.team_name || getTeamName(match, teamSide))}"
-                                            data-participant-id="${escapeHTML(row.participant_id || "")}"
-                                            data-stat-field="fouls"
-                                            data-stat-amount="1"
-                                            ${canManageCurrentMatch && hasPlayer && isActive ? "" : "disabled"}
-                                            title="${isActive ? `Add ${getScoreSheetFaultLabel(match).toLowerCase()} for the active ${getScoreSheetPeriodLabel(match).toLowerCase()}` : `Select this player as active before adding ${getScoreSheetFaultLabel(match).toLowerCase()}`}"
-                                            class="basketball-score-button basketball-stat-adjust-btn ${hasPlayer && isActive ? "bg-red-100 text-red-700 hover:bg-red-200" : "bg-slate-200 text-slate-400 cursor-not-allowed"}">
-                                            ${Number(row.fouls) || 0}
-                                        </button>
-                                    </div>
-                                </td>
+                                ${statDefinitions.map(renderStatCell).join("")}
                             </tr>
                         `;
                     }).join("");
@@ -3940,39 +4021,77 @@
                     const scoreSheetTitle = isVolleyballMatch ? "Volleyball Score Sheet" : "Basketball Score Sheet";
                     const periodLabel = getScoreSheetPeriodLabel(match);
                     const faultLabel = getScoreSheetFaultLabel(match);
+                    const statDefinitions = getScoreSheetStatDefinitions(match);
                     const teamOneGameTotals = getBasketballTotals(match, "one");
                     const teamTwoGameTotals = getBasketballTotals(match, "two");
                     const teamOneQuarterTotals = getBasketballTotals(match, "one", activePeriod);
                     const teamTwoQuarterTotals = getBasketballTotals(match, "two", activePeriod);
+                    const teamOneSetScore = getVolleyballTeamScore(match, "one", activePeriod);
+                    const teamTwoSetScore = getVolleyballTeamScore(match, "two", activePeriod);
 
                     const renderTeamSheet = (teamSide, theme) => {
                         const teamName = getTeamName(match, teamSide);
                         const quarterTotals = teamSide === "one" ? teamOneQuarterTotals : teamTwoQuarterTotals;
                         const gameTotals = teamSide === "one" ? teamOneGameTotals : teamTwoGameTotals;
+                        const setScore = teamSide === "one" ? teamOneSetScore : teamTwoSetScore;
+                        const statMinWidth = isVolleyballMatch ? "min-w-[54rem]" : "min-w-[26rem]";
                         return `
                             <div class="basketball-score-team" style="--score-border:${theme.border};--score-bg:${theme.bg};">
                                 <div class="flex items-center justify-between gap-2 px-3 py-2">
                                     <h4 class="text-sm font-black uppercase ${theme.text}">${escapeHTML(teamName)}</h4>
-                                    <div class="text-right">
-                                        <p class="basketball-team-total text-3xl font-black leading-none ${theme.text}">${gameTotals.points}</p>
-                                    </div>
+                                    ${isVolleyballMatch ? `
+                                        <div class="flex items-center gap-1">
+                                            <button
+                                                type="button"
+                                                data-match-id="${match.id}"
+                                                data-team-id="${getTeamId(match, teamSide)}"
+                                                data-team-name="${escapeHTML(teamName)}"
+                                                data-game-period="${activePeriod}"
+                                                data-score-amount="-1"
+                                                ${canManageCurrentMatch ? "" : "disabled"}
+                                                class="volleyball-team-score-adjust-btn basketball-score-button ${canManageCurrentMatch ? "bg-slate-100 text-slate-700 hover:bg-slate-200" : "bg-slate-200 text-slate-400 cursor-not-allowed"}">
+                                                -
+                                            </button>
+                                            <div class="min-w-12 rounded border border-slate-200 bg-white px-2 py-1 text-center">
+                                                <p class="text-[10px] font-black uppercase text-slate-500">Set PTS</p>
+                                                <p class="basketball-team-total text-2xl font-black leading-none ${theme.text}">${setScore}</p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                data-match-id="${match.id}"
+                                                data-team-id="${getTeamId(match, teamSide)}"
+                                                data-team-name="${escapeHTML(teamName)}"
+                                                data-game-period="${activePeriod}"
+                                                data-score-amount="1"
+                                                ${canManageCurrentMatch ? "" : "disabled"}
+                                                class="volleyball-team-score-adjust-btn basketball-score-button ${canManageCurrentMatch ? "bg-slate-100 text-slate-700 hover:bg-slate-200" : "bg-slate-200 text-slate-400 cursor-not-allowed"}">
+                                                +
+                                            </button>
+                                        </div>
+                                    ` : `
+                                        <div class="text-right">
+                                            <p class="basketball-team-total text-3xl font-black leading-none ${theme.text}">${gameTotals.points}</p>
+                                        </div>
+                                    `}
                                 </div>
                                 <div class="basketball-score-scroll overflow-x-auto xl:overflow-x-visible">
-                                    <table class="basketball-score-table w-full min-w-[26rem] table-fixed text-xs xl:min-w-0">
+                                    <table class="basketball-score-table w-full ${statMinWidth} table-fixed text-xs xl:min-w-0">
                                         <thead>
                                             <tr class="${theme.header}">
                                                 <th class="basketball-active-column px-1 py-2 text-center">#</th>
                                                 <th class="basketball-player-column px-1.5 py-2 text-left">Player</th>
-                                                <th class="basketball-stat-column px-1 py-2 text-center">PTS</th>
-                                                <th class="basketball-stat-column px-1 py-2 text-center">${faultLabel}</th>
+                                                ${statDefinitions.map(stat => `
+                                                    <th class="basketball-stat-column px-1 py-2 text-center">${escapeHTML(stat.label)}</th>
+                                                `).join("")}
                                             </tr>
                                         </thead>
                                         <tbody class="basketball-score-body">${renderBasketballRows(match, teamSide, canManageCurrentMatch)}</tbody>
                                         <tfoot>
                                             <tr class="${theme.footer}">
                                                 <td colspan="2" class="px-2 py-2 text-sm font-black uppercase">${periodLabel} ${activePeriod} Total</td>
-                                                <td class="px-2 py-2 text-center text-sm font-black">${quarterTotals.points}</td>
-                                                <td class="px-2 py-2 text-center text-sm font-black">${quarterTotals.fouls}</td>
+                                                ${statDefinitions.map(stat => `
+                                                    <td class="px-2 py-2 text-center text-sm font-black">${Number(quarterTotals[stat.field]) || 0}</td>
+                                                `).join("")}
                                             </tr>
                                         </tfoot>
                                     </table>
@@ -3986,9 +4105,9 @@
                             <div class="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <p class="text-xs font-black uppercase tracking-wide text-slate-600">${scoreSheetTitle}</p>
-                                    <p class="text-[11px] font-semibold text-slate-500">Add the 15-player lineup once. In each ${periodLabel.toLowerCase()}, click the number button to mark active players; active players move to the top.</p>
+                                    <p class="text-[11px] font-semibold text-slate-500">${isVolleyballMatch ? "Player columns are pure stats. Use Set PTS controls for the actual volleyball score." : `In each ${periodLabel.toLowerCase()}, click the number button to mark active players; active players move to the top.`}</p>
                                 </div>
-                                <p class="text-xs font-bold text-slate-700">Game Scores: ${teamOneGameTotals.points} - ${teamTwoGameTotals.points}</p>
+                                <p class="text-xs font-bold text-slate-700">${isVolleyballMatch ? `${periodLabel} ${activePeriod} Score: ${teamOneSetScore} - ${teamTwoSetScore}` : `Game Scores: ${teamOneGameTotals.points} - ${teamTwoGameTotals.points}`}</p>
                             </div>
                             <div class="basketball-score-teams-grid grid gap-3">
                                 ${renderTeamSheet("one", {
@@ -4218,14 +4337,15 @@
                         const primary = sortedRows[0];
                         const duplicateIds = sortedRows.slice(1).map(row => row.id).filter(Boolean);
                         const latestNamedRow = [...sortedRows].reverse().find(row => row.player_name || row.id_number) || primary;
-                        const mergedPoints = Math.max(...sortedRows.map(row => Number(row.points) || 0));
-                        const mergedFouls = Math.max(...sortedRows.map(row => Number(row.fouls) || 0));
+                        const mergedStatValues = {};
+                        BASKETBALL_STAT_FIELDS.forEach(field => {
+                            mergedStatValues[field] = Math.max(...sortedRows.map(row => Number(row[field]) || 0));
+                        });
 
                         const { error: updateError } = await supabase
                             .from(BASKETBALL_STATS_TABLE)
                             .update({
-                                points: mergedPoints,
-                                fouls: mergedFouls,
+                                ...mergedStatValues,
                                 participant_id: latestNamedRow.participant_id || primary.participant_id || null,
                                 id_number: latestNamedRow.id_number || primary.id_number,
                                 player_name: latestNamedRow.player_name || primary.player_name || primary.id_number,
@@ -7213,6 +7333,7 @@
 
                     const matchIds = matchesData.map(match => match.id);
                     basketballStatsByMatch = new Map();
+                    volleyballScoresByMatch = new Map();
 
                     if (matchIds.length > 0) {
                         const { data: historyRows, error: historyError } = await supabase
@@ -7247,6 +7368,23 @@
                                     basketballStatsByMatch.set(key, []);
                                 }
                                 basketballStatsByMatch.get(key).push(row);
+                            });
+                        }
+
+                        const { data: volleyballScoreRows, error: volleyballScoreError } = await supabase
+                            .from(VOLLEYBALL_SCORE_TABLE)
+                            .select("*")
+                            .in("match_id", matchIds);
+
+                        if (volleyballScoreError) {
+                            console.warn("Volleyball score load warning:", volleyballScoreError.message || volleyballScoreError);
+                        } else if (Array.isArray(volleyballScoreRows)) {
+                            volleyballScoreRows.forEach(row => {
+                                const key = Number(row.match_id);
+                                if (!volleyballScoresByMatch.has(key)) {
+                                    volleyballScoresByMatch.set(key, []);
+                                }
+                                volleyballScoresByMatch.get(key).push(row);
                             });
                         }
                     }
@@ -7855,6 +7993,15 @@
                 }
 
                 function addBasketballScoreListeners() {
+                    document.querySelectorAll(".volleyball-team-score-adjust-btn").forEach(button => {
+                        button.addEventListener("click", async function () {
+                            await adjustVolleyballTeamScore(
+                                this,
+                                Number(this.dataset.scoreAmount) || 0
+                            );
+                        });
+                    });
+
                     document.querySelectorAll(".basketball-points-btn").forEach(button => {
                         button.addEventListener("click", function () {
                             if (!this.dataset.statId && !this.dataset.lineupStatId && !this.dataset.idNumber) {
@@ -8215,10 +8362,13 @@
                     const firstTeamName = getTeamName(match, "one");
                     const secondTeamName = getTeamName(match, "two");
                     const isBasketballMatch = isBasketballSport(match);
+                    const isVolleyballMatch = isVolleyballSport(match);
                     const usesScoreSheet = hasPlayerScoreSheet(match);
                     const faultLabel = getScoreSheetFaultLabel(match);
                     const teamOneTotals = getBasketballTotals(match, "one");
                     const teamTwoTotals = getBasketballTotals(match, "two");
+                    const teamOneScoreSheetPoints = isVolleyballMatch ? getVolleyballTeamScore(match, "one", null) : teamOneTotals.points;
+                    const teamTwoScoreSheetPoints = isVolleyballMatch ? getVolleyballTeamScore(match, "two", null) : teamTwoTotals.points;
                     teamOneAdjustmentTitle.textContent = firstTeamName || "Team 1";
                     teamTwoAdjustmentTitle.textContent = secondTeamName || "Team 2";
 
@@ -8245,13 +8395,13 @@
                             <div class="mt-3 grid grid-cols-2 gap-2 text-center">
                                 <div class="rounded-lg border border-blue-200 bg-blue-50 p-3">
                                     <p class="text-xs font-black uppercase text-blue-700">${escapeHTML(firstTeamName)}</p>
-                                    <p class="text-3xl font-black text-blue-700">${teamOneTotals.points}</p>
-                                    <p class="text-xs font-bold text-blue-600">${faultLabel} ${teamOneTotals.fouls}</p>
+                                    <p class="text-3xl font-black text-blue-700">${teamOneScoreSheetPoints}</p>
+                                    <p class="text-xs font-bold text-blue-600">${isVolleyballMatch ? "Match points" : `${faultLabel} ${teamOneTotals.fouls}`}</p>
                                 </div>
                                 <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
                                     <p class="text-xs font-black uppercase text-emerald-700">${escapeHTML(secondTeamName)}</p>
-                                    <p class="text-3xl font-black text-emerald-700">${teamTwoTotals.points}</p>
-                                    <p class="text-xs font-bold text-emerald-600">${faultLabel} ${teamTwoTotals.fouls}</p>
+                                    <p class="text-3xl font-black text-emerald-700">${teamTwoScoreSheetPoints}</p>
+                                    <p class="text-xs font-bold text-emerald-600">${isVolleyballMatch ? "Match points" : `${faultLabel} ${teamTwoTotals.fouls}`}</p>
                                 </div>
                             </div>
                             <p class="mt-3">${isBasketballMatch ? "Basketball" : "Volleyball"} winner will be declared automatically from the highest score.</p>
@@ -8305,9 +8455,12 @@
 
                     const submitButton = resultForm.querySelector('button[type="submit"]');
                     const isBasketballMatch = isBasketballSport(pendingResultMatch);
+                    const isVolleyballMatch = isVolleyballSport(pendingResultMatch);
                     const usesScoreSheet = hasPlayerScoreSheet(pendingResultMatch);
                     const teamOneTotals = getBasketballTotals(pendingResultMatch, "one");
                     const teamTwoTotals = getBasketballTotals(pendingResultMatch, "two");
+                    const teamOneScoreSheetPoints = isVolleyballMatch ? getVolleyballTeamScore(pendingResultMatch, "one", null) : teamOneTotals.points;
+                    const teamTwoScoreSheetPoints = isVolleyballMatch ? getVolleyballTeamScore(pendingResultMatch, "two", null) : teamTwoTotals.points;
                     const selectedWinnerValue = String(winnerTeamSelect.value || "");
                     const resultType = selectedWinnerValue === "no_winner"
                         ? "no_winner"
@@ -8341,12 +8494,12 @@
                     if (teamTwoDemeritPoints === null) return;
 
                     if (usesScoreSheet && resultType !== "default") {
-                        if (teamOneTotals.points === teamTwoTotals.points) {
+                        if (teamOneScoreSheetPoints === teamTwoScoreSheetPoints) {
                             alert(`${isBasketballMatch ? "Basketball" : "Volleyball"} scores are tied. Update the score sheet before marking Done.`);
                             return;
                         }
 
-                        winnerId = teamOneTotals.points > teamTwoTotals.points
+                        winnerId = teamOneScoreSheetPoints > teamTwoScoreSheetPoints
                             ? getTeamId(pendingResultMatch, "one")
                             : getTeamId(pendingResultMatch, "two");
                         const pointRule = readSportPointRule(getMatchSportRecord(pendingResultMatch), "regular");
@@ -9139,6 +9292,17 @@
                         () => scheduleCommitteeRealtimeReload({
                             overview: true,
                             leaderboard: true
+                        }, 0, { force: true })
+                    )
+                    .on(
+                        "postgres_changes",
+                        {
+                            event: "*",
+                            schema: "public",
+                            table: VOLLEYBALL_SCORE_TABLE
+                        },
+                        () => scheduleCommitteeRealtimeReload({
+                            matches: true
                         }, 0, { force: true })
                     )
                     .on(
