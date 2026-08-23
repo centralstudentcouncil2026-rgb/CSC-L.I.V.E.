@@ -1,4 +1,5 @@
--- Ensure accounts assigned to "Overall Committee" can view and manage every game.
+-- Ensure accounts assigned to "Overall Committee" or "Overall Coordinator"
+-- can view and manage every game.
 -- Run this in the Supabase SQL Editor for the active CSC L.I.V.E. project.
 
 create or replace function public.app_is_overall_committee(user_id uuid default auth.uid())
@@ -16,7 +17,7 @@ as $$
               and lower(trim(profile.role)) = 'committee'
               and lower(trim(profile.approval_status)) = 'approved'
               and regexp_replace(lower(coalesce(profile.assigned_sport_name, '')), '[^a-z0-9]+', '', 'g')
-                    in ('overallcommittee', 'overall')
+                    in ('overallcommittee', 'overallcoordinator', 'overall')
         ),
         false
     )
@@ -93,7 +94,7 @@ begin
        and assigned_sport_id <> 'null'::jsonb
        and raw_sport_id <> ''
        and raw_sport_id <> '__overall_committee__'
-       and regexp_replace(lower(coalesce(resolved_sport_name, '')), '[^a-z0-9]+', '', 'g') not in ('overallcommittee', 'overall') then
+       and regexp_replace(lower(coalesce(resolved_sport_name, '')), '[^a-z0-9]+', '', 'g') not in ('overallcommittee', 'overallcoordinator', 'overall') then
         resolved_sport_id := raw_sport_id::bigint;
     end if;
 
@@ -292,5 +293,5 @@ select
     public.app_is_overall_committee(id) as has_overall_committee_access
 from public.user_profiles
 where regexp_replace(lower(coalesce(assigned_sport_name, '')), '[^a-z0-9]+', '', 'g')
-      in ('overallcommittee', 'overall')
+      in ('overallcommittee', 'overallcoordinator', 'overall')
 order by email;

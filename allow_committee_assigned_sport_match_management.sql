@@ -17,8 +17,7 @@ as $$
               and lower(trim(profile.role)) = 'committee'
               and lower(trim(profile.approval_status)) = 'approved'
               and (
-                  regexp_replace(lower(coalesce(profile.assigned_sport_name, '')), '[^a-z0-9]+', '', 'g') = 'overallcommittee'
-                  or regexp_replace(lower(coalesce(profile.assigned_sport_name, '')), '[^a-z0-9]+', '', 'g') = 'overall'
+                  regexp_replace(lower(coalesce(profile.assigned_sport_name, '')), '[^a-z0-9]+', '', 'g') in ('overallcommittee', 'overallcoordinator', 'overall')
                   or profile.assigned_sport_id = match_sport_id
                   or lower(trim(coalesce(profile.assigned_sport_name, ''))) = 'overall committee'
                   or exists (

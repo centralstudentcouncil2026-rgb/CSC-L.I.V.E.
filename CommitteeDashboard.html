@@ -2818,6 +2818,7 @@
                 let cameraPhotoFile = null;
                 const OVERALL_COMMITTEE_SPORT_ID = "__overall_committee__";
                 const OVERALL_COMMITTEE_SPORT_NAME = "Overall Committee";
+                const OVERALL_COORDINATOR_SPORT_NAME = "Overall Coordinator";
 
                 function placeMatchControlsForTab(tabName) {
                     if (!matchHeaderControls || !matchControlsHome || !matchPrimaryControls) {
@@ -6919,9 +6920,12 @@
                 function isOverallCommitteeUser(user = currentUser) {
                     const assignedSportCompact = normalizeSportCompact(user?.assignedSportName);
                     const overallCompact = normalizeSportCompact(OVERALL_COMMITTEE_SPORT_NAME);
+                    const coordinatorCompact = normalizeSportCompact(OVERALL_COORDINATOR_SPORT_NAME);
                     return user?.assignedSportId === OVERALL_COMMITTEE_SPORT_ID
                         || normalizeSportText(user?.assignedSportName) === normalizeSportText(OVERALL_COMMITTEE_SPORT_NAME)
+                        || normalizeSportText(user?.assignedSportName) === normalizeSportText(OVERALL_COORDINATOR_SPORT_NAME)
                         || assignedSportCompact === overallCompact
+                        || assignedSportCompact === coordinatorCompact
                         || assignedSportCompact === "overall";
                 }
 
