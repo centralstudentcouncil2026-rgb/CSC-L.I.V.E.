@@ -3288,6 +3288,7 @@
             const GAME_HISTORY_TABLE = "game_history";
             const TEAM_POINT_ADJUSTMENTS_TABLE = "team_point_adjustments";
             const BASKETBALL_STATS_TABLE = "basketball_match_player_stats";
+            const MATCH_EDIT_REQUESTS_TABLE = "match_edit_requests";
             const STUDENT_FEEDBACK_TABLE = "student_feedback";
             const APP_SETTINGS_TABLE = "app_settings";
             const EVALUATION_FORM_SETTING_KEY = "evaluation_form_url";
@@ -3522,6 +3523,7 @@
             let adminAllConversationsData = [];
             let adminConversationsData = [];
             let adminPendingDeleteRequests = [];
+            let adminPendingEditRequests = [];
             const adminLatestUnreadMessages = new Map();
             let adminConversationListMarkup = "";
             let activeAdminContactGroup = "";
@@ -4869,6 +4871,34 @@
                         </span>
                     </div>
                 `);
+                const editItems = adminPendingEditRequests.map(request => {
+                    const payload = request.requested_payload || {};
+                    return `
+                        <div class="w-full rounded-xl px-3 py-3 text-left hover:bg-blue-50">
+                            <span class="block text-xs font-bold uppercase tracking-wide text-blue-700">Result edit request</span>
+                            <span class="mt-1 block font-bold text-gray-900">${escapeHTML(payload.sport_name || `Match #${request.match_id}`)}</span>
+                            <span class="mt-1 block text-sm text-gray-600">${escapeHTML(payload.team_one_name || "Team 1")} vs ${escapeHTML(payload.team_two_name || "Team 2")}</span>
+                            <span class="mt-1 block text-xs text-gray-400">${escapeHTML(request.requested_by_name || "Committee")}</span>
+                            <span class="mt-2 block text-xs text-gray-600">Requested winner: <strong>${escapeHTML(payload.winner_team_name || "-")}</strong></span>
+                            <span class="mt-3 flex flex-wrap gap-2">
+                                <span
+                                    role="button"
+                                    tabindex="0"
+                                    data-request-id="${escapeHTML(request.id || "")}"
+                                    class="admin-edit-request-approve-btn inline-flex rounded-lg bg-green-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-green-700">
+                                    Approve
+                                </span>
+                                <span
+                                    role="button"
+                                    tabindex="0"
+                                    data-request-id="${escapeHTML(request.id || "")}"
+                                    class="admin-edit-request-reject-btn inline-flex rounded-lg bg-gray-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-gray-800">
+                                    Reject
+                                </span>
+                            </span>
+                        </div>
+                    `;
+                });
                 const feedbackItems = studentFeedbackData
                     .filter(item => normalizeComparableValue(item.status || "New") === "new")
                     .map(item => `
@@ -4899,7 +4929,7 @@
                             <span class="mt-1 block text-xs text-gray-400">${participant.created_at ? escapeHTML(formatDateTime(participant.created_at)) : ""}</span>
                         </button>
                     `);
-                adminNotificationList.innerHTML = [...messageItems, ...participantItems, ...deleteItems, ...feedbackItems, ...approvalItems].join("") || `
+                adminNotificationList.innerHTML = [...messageItems, ...participantItems, ...deleteItems, ...editItems, ...feedbackItems, ...approvalItems].join("") || `
                     <div class="px-3 py-6 text-center text-sm font-semibold text-gray-500">No new notifications.</div>
                 `;
 
@@ -4961,6 +4991,36 @@
                         await rejectMatchDelete(Number(this.dataset.matchId));
                     });
                 });
+                document.querySelectorAll(".admin-edit-request-approve-btn").forEach(button => {
+                    button.addEventListener("click", async function (event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setAdminNotificationPanelVisible(false);
+                        await approveMatchEditRequest(this.dataset.requestId);
+                    });
+                    button.addEventListener("keydown", async function (event) {
+                        if (event.key !== "Enter" && event.key !== " ") return;
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setAdminNotificationPanelVisible(false);
+                        await approveMatchEditRequest(this.dataset.requestId);
+                    });
+                });
+                document.querySelectorAll(".admin-edit-request-reject-btn").forEach(button => {
+                    button.addEventListener("click", async function (event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setAdminNotificationPanelVisible(false);
+                        await rejectMatchEditRequest(this.dataset.requestId);
+                    });
+                    button.addEventListener("keydown", async function (event) {
+                        if (event.key !== "Enter" && event.key !== " ") return;
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setAdminNotificationPanelVisible(false);
+                        await rejectMatchEditRequest(this.dataset.requestId);
+                    });
+                });
                 document.querySelectorAll(".admin-feedback-notification").forEach(button => {
                     button.addEventListener("click", function () {
                         setAdminNotificationPanelVisible(false);
@@ -5011,6 +5071,7 @@
                 const unreadCount = unreadMessageCount
                     + pendingParticipantCount
                     + adminPendingDeleteRequests.length
+                    + adminPendingEditRequests.length
                     + newFeedbackCount
                     + pendingAccountCount;
                 if (adminMessageNotificationBadge) {
@@ -7335,6 +7396,96 @@
                 }
             }
 
+            async function approveMatchEditRequest(requestId) {
+                const request = adminPendingEditRequests.find(item => String(item.id) === String(requestId));
+                const payload = request?.requested_payload || null;
+
+                if (!request || !payload) {
+                    alert("Edit request was not found. Refreshing requests.");
+                    await loadAdminOverviewCounts();
+                    return;
+                }
+
+                const shouldApprove = await showDashboardConfirm("Approve this edit request and update the saved match result?", {
+                    title: "Approve Result Edit",
+                    confirmText: "Approve Edit"
+                });
+
+                if (!shouldApprove) return;
+
+                try {
+                    const { data: existingHistory, error: findHistoryError } = await supabase
+                        .from(GAME_HISTORY_TABLE)
+                        .select("id")
+                        .eq("match_id", request.match_id)
+                        .maybeSingle();
+
+                    if (findHistoryError) throw findHistoryError;
+
+                    const historyResult = existingHistory
+                        ? await supabase
+                            .from(GAME_HISTORY_TABLE)
+                            .update(payload)
+                            .eq("match_id", request.match_id)
+                        : await supabase
+                            .from(GAME_HISTORY_TABLE)
+                            .insert([payload]);
+
+                    if (historyResult.error) throw historyResult.error;
+
+                    const { error: requestUpdateError } = await supabase
+                        .from(MATCH_EDIT_REQUESTS_TABLE)
+                        .update({
+                            status: "approved",
+                            reviewed_at: new Date().toISOString(),
+                            reviewed_by: "admin"
+                        })
+                        .eq("id", request.id)
+                        .eq("status", "pending");
+
+                    if (requestUpdateError) throw requestUpdateError;
+
+                    adminPendingEditRequests = adminPendingEditRequests.filter(item => String(item.id) !== String(request.id));
+                    updateAdminMessageNotification();
+                    showDashboardToast("Edit request approved. Match result updated.");
+                    await loadAdminOverviewCounts();
+                } catch (error) {
+                    console.error("Approve match edit request error:", error.message || error);
+                    alert(error.message || "Failed to approve edit request.");
+                }
+            }
+
+            async function rejectMatchEditRequest(requestId) {
+                const shouldReject = await showDashboardConfirm("Reject this edit request and keep the current result?", {
+                    title: "Reject Result Edit",
+                    confirmText: "Reject Request"
+                });
+
+                if (!shouldReject) return;
+
+                try {
+                    const { error } = await supabase
+                        .from(MATCH_EDIT_REQUESTS_TABLE)
+                        .update({
+                            status: "rejected",
+                            reviewed_at: new Date().toISOString(),
+                            reviewed_by: "admin"
+                        })
+                        .eq("id", requestId)
+                        .eq("status", "pending");
+
+                    if (error) throw error;
+
+                    adminPendingEditRequests = adminPendingEditRequests.filter(item => String(item.id) !== String(requestId));
+                    updateAdminMessageNotification();
+                    showDashboardToast("Edit request rejected. Current result kept.", "warning");
+                    await loadAdminOverviewCounts();
+                } catch (error) {
+                    console.error("Reject match edit request error:", error.message || error);
+                    alert(error.message || "Failed to reject edit request.");
+                }
+            }
+
             function bindMatchDeleteApprovalButtons() {
                 document.querySelectorAll(".approve-match-delete-btn").forEach(button => {
                     button.addEventListener("click", () => approveMatchDelete(Number(button.dataset.matchId)));
@@ -7343,6 +7494,21 @@
                 document.querySelectorAll(".reject-match-delete-btn").forEach(button => {
                     button.addEventListener("click", () => rejectMatchDelete(Number(button.dataset.matchId)));
                 });
+            }
+
+            async function loadPendingMatchEditRequests() {
+                const { data, error } = await supabase
+                    .from(MATCH_EDIT_REQUESTS_TABLE)
+                    .select("*")
+                    .eq("status", "pending")
+                    .order("requested_at", { ascending: false });
+
+                if (error) {
+                    console.warn("Pending match edit requests load warning:", error.message || error);
+                    return [];
+                }
+
+                return Array.isArray(data) ? data : [];
             }
 
             function renderOverviewTeamSummary(teams, participants) {
@@ -7431,7 +7597,8 @@
                     sportsResult,
                     participantsResult,
                     matches,
-                    attendanceStats
+                    attendanceStats,
+                    pendingEditRequests
                 ] = await Promise.all([
                     supabase
                         .from(TEAMS_TABLE)
@@ -7449,7 +7616,8 @@
                         .order("created_at", { ascending: false }),
 
                     loadOverviewMatches(),
-                    loadOverviewAttendanceStats()
+                    loadOverviewAttendanceStats(),
+                    loadPendingMatchEditRequests()
                 ]);
 
                 if (teamsResult.error) {
@@ -7478,6 +7646,7 @@
                 const activeGames = matches.filter(match => match.status === "Ongoing").length;
                 const completedMatches = matches.filter(match => match.status === "Done").length;
                 adminPendingDeleteRequests = matches.filter(match => isMatchDeleteRequested(match));
+                adminPendingEditRequests = pendingEditRequests;
                 updateAdminMessageNotification();
 
                 const approvedParticipants = participants.filter(participant => normalizeParticipantStatus(participant.status) === "approved").length;
@@ -12105,6 +12274,15 @@
                         event: "*",
                         schema: "public",
                         table: MATCHES_TABLE
+                    },
+                    () => scheduleAdminRealtimeReload({ overview: true }, 0, { force: true })
+                )
+                .on(
+                    "postgres_changes",
+                    {
+                        event: "*",
+                        schema: "public",
+                        table: MATCH_EDIT_REQUESTS_TABLE
                     },
                     () => scheduleAdminRealtimeReload({ overview: true }, 0, { force: true })
                 )
