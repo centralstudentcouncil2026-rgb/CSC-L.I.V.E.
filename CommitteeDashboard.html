@@ -752,11 +752,27 @@
             }
 
             .basketball-score-table .basketball-player-column {
-                width: auto;
+                width: 10rem;
             }
 
             .basketball-score-table .basketball-stat-column {
                 width: 4.25rem;
+            }
+
+            @media (min-width: 768px) {
+                #ongoingMatchesGrid > div {
+                    max-width: min(98vw, 94rem) !important;
+                }
+
+                .basketball-score-table .basketball-player-column {
+                    width: clamp(8rem, 11vw, 13rem);
+                }
+            }
+
+            @media (min-width: 1024px) {
+                .basketball-score-table .basketball-player-column {
+                    width: clamp(9rem, 12vw, 15rem);
+                }
             }
 
             .basketball-score-control {
@@ -7735,7 +7751,7 @@
 
                         const matchCard = document.createElement("div");
                         matchCard.className = isOngoing
-                            ? "w-full max-w-6xl p-3 bg-white border-0 shadow-md rounded-lg"
+                            ? "w-full max-w-[94rem] p-3 bg-white border-0 shadow-md rounded-lg"
                             : "p-3 bg-white border-0 shadow-md rounded-lg";
 
                         matchCard.innerHTML = `
