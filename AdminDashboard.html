@@ -7465,40 +7465,101 @@
                     .filter(row => row.team_id);
             }
 
+            function getApprovedPlayerStatKey(row) {
+                return [
+                    Number(row.match_id),
+                    Number(row.team_id),
+                    Number(row.game_period || 1),
+                    String(row.id_number || row.participant_id || row.player_name || "").trim().toLowerCase()
+                ].join(":");
+            }
+
+            function getApprovedVolleyballScoreKey(row) {
+                return [
+                    Number(row.match_id),
+                    Number(row.team_id),
+                    Number(row.game_period || 1)
+                ].join(":");
+            }
+
+            async function deleteStaleApprovedRows(tableName, matchId, keepRows, keyGetter, selectColumns) {
+                const keepKeys = new Set(keepRows.map(keyGetter));
+                const { data, error } = await supabase
+                    .from(tableName)
+                    .select(selectColumns)
+                    .eq("match_id", matchId);
+
+                if (error) throw error;
+
+                const staleIds = (data || [])
+                    .filter(row => !keepKeys.has(keyGetter(row)))
+                    .map(row => row.id)
+                    .filter(Boolean);
+
+                if (staleIds.length > 0) {
+                    const { error: deleteError } = await supabase
+                        .from(tableName)
+                        .delete()
+                        .in("id", staleIds);
+
+                    if (deleteError) throw deleteError;
+                }
+            }
+
             async function replaceApprovedScoreSheetRows(matchId, requestPayload) {
                 if (Array.isArray(requestPayload?.player_stats)) {
                     const cleanPlayerRows = sanitizeApprovedPlayerStatRows(requestPayload.player_stats, matchId);
-                    const { error: deletePlayerError } = await supabase
-                        .from(BASKETBALL_STATS_TABLE)
-                        .delete()
-                        .eq("match_id", matchId);
-
-                    if (deletePlayerError) throw deletePlayerError;
 
                     if (cleanPlayerRows.length > 0) {
-                        const { error: insertPlayerError } = await supabase
+                        const { error: upsertPlayerError } = await supabase
                             .from(BASKETBALL_STATS_TABLE)
-                            .insert(cleanPlayerRows);
+                            .upsert(cleanPlayerRows, {
+                                onConflict: "match_id,team_id,game_period,id_number"
+                            });
 
-                        if (insertPlayerError) throw insertPlayerError;
+                        if (upsertPlayerError) throw upsertPlayerError;
+                        await deleteStaleApprovedRows(
+                            BASKETBALL_STATS_TABLE,
+                            matchId,
+                            cleanPlayerRows,
+                            getApprovedPlayerStatKey,
+                            "id, match_id, team_id, game_period, id_number, participant_id, player_name"
+                        );
+                    } else {
+                        const { error: deletePlayerError } = await supabase
+                            .from(BASKETBALL_STATS_TABLE)
+                            .delete()
+                            .eq("match_id", matchId);
+
+                        if (deletePlayerError) throw deletePlayerError;
                     }
                 }
 
                 if (Array.isArray(requestPayload?.volleyball_scores)) {
                     const cleanScoreRows = sanitizeApprovedVolleyballScoreRows(requestPayload.volleyball_scores, matchId);
-                    const { error: deleteScoreError } = await supabase
-                        .from(VOLLEYBALL_SCORE_TABLE)
-                        .delete()
-                        .eq("match_id", matchId);
-
-                    if (deleteScoreError) throw deleteScoreError;
 
                     if (cleanScoreRows.length > 0) {
-                        const { error: insertScoreError } = await supabase
+                        const { error: upsertScoreError } = await supabase
                             .from(VOLLEYBALL_SCORE_TABLE)
-                            .insert(cleanScoreRows);
+                            .upsert(cleanScoreRows, {
+                                onConflict: "match_id,team_id,game_period"
+                            });
 
-                        if (insertScoreError) throw insertScoreError;
+                        if (upsertScoreError) throw upsertScoreError;
+                        await deleteStaleApprovedRows(
+                            VOLLEYBALL_SCORE_TABLE,
+                            matchId,
+                            cleanScoreRows,
+                            getApprovedVolleyballScoreKey,
+                            "id, match_id, team_id, game_period"
+                        );
+                    } else {
+                        const { error: deleteScoreError } = await supabase
+                            .from(VOLLEYBALL_SCORE_TABLE)
+                            .delete()
+                            .eq("match_id", matchId);
+
+                        if (deleteScoreError) throw deleteScoreError;
                     }
                 }
             }
