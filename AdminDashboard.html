@@ -3580,7 +3580,7 @@
                     : {
                         winner_points: 200,
                         loser_points: 100,
-                        forfeit_winner_points: 100,
+                        forfeit_winner_points: 50,
                         forfeit_loser_points: 0
                     };
             }
@@ -7427,9 +7427,11 @@
             }
 
             function sanitizeApprovedPlayerStatRows(rows, matchId) {
-                return (Array.isArray(rows) ? rows : [])
+                const rowsByKey = new Map();
+
+                (Array.isArray(rows) ? rows : [])
                     .filter(row => Number(row.match_id) === Number(matchId))
-                    .map(row => {
+                    .forEach(row => {
                         const cleanRow = {
                             match_id: Number(row.match_id),
                             team_id: row.team_id ? Number(row.team_id) : null,
@@ -7446,23 +7448,33 @@
                             cleanRow[field] = Math.max(0, Number(row[field]) || 0);
                         });
 
-                        return cleanRow;
-                    })
-                    .filter(row => row.team_id && (row.id_number || row.participant_id || row.player_name));
+                        if (!cleanRow.team_id || !(cleanRow.id_number || cleanRow.participant_id || cleanRow.player_name)) return;
+                        rowsByKey.set(getApprovedPlayerStatKey(cleanRow), cleanRow);
+                    });
+
+                return Array.from(rowsByKey.values());
             }
 
             function sanitizeApprovedVolleyballScoreRows(rows, matchId) {
-                return (Array.isArray(rows) ? rows : [])
+                const rowsByKey = new Map();
+
+                (Array.isArray(rows) ? rows : [])
                     .filter(row => Number(row.match_id) === Number(matchId))
-                    .map(row => ({
-                        match_id: Number(row.match_id),
-                        team_id: row.team_id ? Number(row.team_id) : null,
-                        team_name: row.team_name || "",
-                        game_period: Math.max(1, Number(row.game_period) || 1),
-                        points: Math.max(0, Number(row.points) || 0),
-                        updated_at: new Date().toISOString()
-                    }))
-                    .filter(row => row.team_id);
+                    .forEach(row => {
+                        const cleanRow = {
+                            match_id: Number(row.match_id),
+                            team_id: row.team_id ? Number(row.team_id) : null,
+                            team_name: row.team_name || "",
+                            game_period: Math.max(1, Number(row.game_period) || 1),
+                            points: Math.max(0, Number(row.points) || 0),
+                            updated_at: new Date().toISOString()
+                        };
+
+                        if (!cleanRow.team_id) return;
+                        rowsByKey.set(getApprovedVolleyballScoreKey(cleanRow), cleanRow);
+                    });
+
+                return Array.from(rowsByKey.values());
             }
 
             function getApprovedPlayerStatKey(row) {

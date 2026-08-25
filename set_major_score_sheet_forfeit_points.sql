@@ -1,10 +1,10 @@
 -- Basketball and volleyball are major games.
--- If one team defaults, the present team receives 100 points and the defaulting team receives 0.
+-- If one team defaults, the present team receives 50 points and the defaulting team receives 0.
 
 update public.sports
 set
     game_type = 'major',
-    forfeit_winner_points = 100,
+    forfeit_winner_points = 50,
     forfeit_loser_points = 0
 where lower(coalesce(sport_name, '')) like '%basketball%'
    or lower(coalesce(sport_name, '')) like '%volleyball%';
