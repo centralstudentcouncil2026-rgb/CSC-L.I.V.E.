@@ -3945,7 +3945,7 @@
                     return volleyballScoresByMatch.get(Number(matchId)) || [];
                 }
 
-                function getVolleyballTeamScore(match, teamSide, gamePeriod = getBasketballActivePeriod(match)) {
+                function getVolleyballTeamScore(match, teamSide, gamePeriod = null) {
                     const teamId = getTeamId(match, teamSide);
                     const rows = getVolleyballScoresForMatch(match.id)
                         .filter(score =>
@@ -3959,14 +3959,14 @@
                     return [
                         Number(matchId),
                         Number(teamId),
-                        Number(gamePeriod || 1)
+                        1
                     ].join(":");
                 }
 
                 function findOrCreateVolleyballScoreRow(matchId, teamId, teamName, gamePeriod, scoreRows) {
                     let currentScore = scoreRows.find(score =>
                         Number(score.team_id) === Number(teamId)
-                        && Number(score.game_period || 1) === Number(gamePeriod)
+                        && Number(score.game_period || 1) === 1
                     );
 
                     if (!currentScore) {
@@ -3974,7 +3974,7 @@
                             match_id: Number(matchId),
                             team_id: Number(teamId),
                             team_name: teamName || "",
-                            game_period: Number(gamePeriod) || 1,
+                            game_period: 1,
                             points: 0
                         };
                         scoreRows.push(currentScore);
@@ -3989,7 +3989,7 @@
                         match_id: Number(scoreRow.match_id),
                         team_id: Number(scoreRow.team_id),
                         team_name: scoreRow.team_name || "",
-                        game_period: Number(scoreRow.game_period || 1),
+                        game_period: 1,
                         points: Math.max(0, Number(scoreRow.points) || 0),
                         updated_at: new Date().toISOString()
                     };
@@ -4004,6 +4004,15 @@
                                 });
 
                             if (error) throw error;
+
+                            const { error: deleteDuplicateError } = await supabase
+                                .from(VOLLEYBALL_SCORE_TABLE)
+                                .delete()
+                                .eq("match_id", payload.match_id)
+                                .eq("team_id", payload.team_id)
+                                .neq("game_period", 1);
+
+                            if (deleteDuplicateError) throw deleteDuplicateError;
                         })
                         .catch(error => {
                             console.error("Volleyball score update error:", error.message || error);
@@ -4022,7 +4031,7 @@
                 async function adjustVolleyballTeamScore(button, amount) {
                     const matchId = Number(button.dataset.matchId);
                     const teamId = Number(button.dataset.teamId);
-                    const gamePeriod = Math.min(5, Math.max(1, Number(button.dataset.gamePeriod) || 1));
+                    const gamePeriod = 1;
                     const teamName = button.dataset.teamName || "";
                     const selectedMatch = matchesData.find(match => Number(match.id) === matchId);
 
@@ -4172,8 +4181,8 @@
                     const statDefinitions = getScoreSheetStatDefinitions(match);
                     const teamOneGameTotals = getBasketballTotals(match, "one");
                     const teamTwoGameTotals = getBasketballTotals(match, "two");
-                    const teamOneSetScore = getVolleyballTeamScore(match, "one", activePeriod);
-                    const teamTwoSetScore = getVolleyballTeamScore(match, "two", activePeriod);
+                    const teamOneSetScore = getVolleyballTeamScore(match, "one", null);
+                    const teamTwoSetScore = getVolleyballTeamScore(match, "two", null);
 
                     const renderTeamSheet = (teamSide, theme) => {
                         const teamName = getTeamName(match, teamSide);
@@ -4199,7 +4208,7 @@
                                                 -
                                             </button>
                                             <div class="min-w-12 rounded border border-slate-200 bg-white px-2 py-1 text-center">
-                                                <p class="text-[10px] font-black uppercase text-slate-500">Set PTS</p>
+                                                <p class="text-[10px] font-black uppercase text-slate-500">Match PTS</p>
                                                 <p class="basketball-team-total text-2xl font-black leading-none ${theme.text}">${setScore}</p>
                                             </div>
                                             <button
@@ -4251,9 +4260,9 @@
                             <div class="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <p class="text-xs font-black uppercase tracking-wide text-slate-600">${scoreSheetTitle}</p>
-                                    <p class="text-[11px] font-semibold text-slate-500">${isScoreSheetEditMode(match) ? "Editing a pending request draft. Changes apply only after admin approval." : match.status === "Done" ? "Final player stats are shown for review." : isVolleyballMatch ? "Player stats are match-wide. Active players and Set PTS stay live for the selected set." : `Player stats and active players are match-wide. The ${periodLabel.toLowerCase()} selector stays live for game flow.`}</p>
+                                    <p class="text-[11px] font-semibold text-slate-500">${isScoreSheetEditMode(match) ? "Editing a pending request draft. Changes apply only after admin approval." : match.status === "Done" ? "Final player stats are shown for review." : isVolleyballMatch ? "Player stats, active players, and match points are match-wide across all sets." : `Player stats and active players are match-wide. The ${periodLabel.toLowerCase()} selector stays live for game flow.`}</p>
                                 </div>
-                                <p class="text-xs font-bold text-slate-700">${isVolleyballMatch ? `${periodLabel} ${activePeriod} Score: ${teamOneSetScore} - ${teamTwoSetScore}` : `Game Scores: ${teamOneGameTotals.points} - ${teamTwoGameTotals.points}`}</p>
+                                <p class="text-xs font-bold text-slate-700">${isVolleyballMatch ? `Match Score: ${teamOneSetScore} - ${teamTwoSetScore}` : `Game Scores: ${teamOneGameTotals.points} - ${teamTwoGameTotals.points}`}</p>
                             </div>
                             <div class="basketball-score-teams-grid grid gap-3">
                                 ${renderTeamSheet("one", {

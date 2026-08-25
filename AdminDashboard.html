@@ -7465,13 +7465,18 @@
                             match_id: Number(row.match_id),
                             team_id: row.team_id ? Number(row.team_id) : null,
                             team_name: row.team_name || "",
-                            game_period: Math.max(1, Number(row.game_period) || 1),
+                            game_period: 1,
                             points: Math.max(0, Number(row.points) || 0),
                             updated_at: new Date().toISOString()
                         };
 
                         if (!cleanRow.team_id) return;
-                        rowsByKey.set(getApprovedVolleyballScoreKey(cleanRow), cleanRow);
+                        const key = getApprovedVolleyballScoreKey(cleanRow);
+                        const existingRow = rowsByKey.get(key);
+                        rowsByKey.set(key, {
+                            ...cleanRow,
+                            points: (Number(existingRow?.points) || 0) + cleanRow.points
+                        });
                     });
 
                 return Array.from(rowsByKey.values());
