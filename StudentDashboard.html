@@ -194,6 +194,33 @@
             table-layout: auto;
         }
 
+        .student-score-stat-label {
+            display: inline-flex;
+            width: 100%;
+            justify-content: center;
+            white-space: nowrap;
+            font-size: clamp(0.52rem, 2.15vw, 0.66rem);
+            line-height: 1;
+        }
+
+        .student-score-stat-label-full {
+            display: none;
+        }
+
+        @media (min-width: 640px) {
+            .student-score-stat-label {
+                font-size: 0.72rem;
+            }
+
+            .student-score-stat-label-short {
+                display: none;
+            }
+
+            .student-score-stat-label-full {
+                display: inline;
+            }
+        }
+
         .student-history-summary-grid,
         .student-history-adjustment-grid,
         .student-history-card-grid {
@@ -818,23 +845,23 @@
             const PARTICIPANTS_TABLE = "participants";
             const ATTENDANCE_TABLE = "attendance";
             const ATTENDANCE_SETTINGS_TABLE = "attendance_settings";
-            const ATTENDANCE_POINTS_VIEW = "attendance_point_logs";
+            const ATTENDANCE_POINTS_TABLE = "attendance_point_logs";
             const MATCHES_TABLE = "scheduled_matches";
             const GAME_HISTORY_TABLE = "game_history";
             const TEAM_POINT_ADJUSTMENTS_TABLE = "team_point_adjustments";
             const BASKETBALL_STATS_TABLE = "basketball_match_player_stats";
             const VOLLEYBALL_SCORE_TABLE = "volleyball_match_period_scores";
             const BASKETBALL_PLAYER_STAT_DEFINITIONS = [
-                { field: "points", label: "PTS" },
-                { field: "fouls", label: "FLS" }
+                { field: "points", label: "PTS", shortLabel: "PTS" },
+                { field: "fouls", label: "FLS", shortLabel: "FLS" }
             ];
             const VOLLEYBALL_PLAYER_STAT_DEFINITIONS = [
-                { field: "receiving", label: "Receiving" },
-                { field: "digging", label: "Digging" },
-                { field: "setting", label: "Setting" },
-                { field: "attacks", label: "Attacks" },
-                { field: "blockings", label: "Blockings" },
-                { field: "service_ace", label: "Service Ace" }
+                { field: "receiving", label: "Receiving", shortLabel: "REC" },
+                { field: "digging", label: "Digging", shortLabel: "DIG" },
+                { field: "setting", label: "Setting", shortLabel: "SET" },
+                { field: "attacks", label: "Attacks", shortLabel: "ATK" },
+                { field: "blockings", label: "Blockings", shortLabel: "BLK" },
+                { field: "service_ace", label: "Service Ace", shortLabel: "ACE" }
             ];
             const PLAYER_SCORE_SHEET_FIELDS = new Set([
                 ...BASKETBALL_PLAYER_STAT_DEFINITIONS.map(stat => stat.field),
@@ -1848,7 +1875,12 @@
                                             <th class="w-6 py-1.5 text-left sm:w-8 sm:py-2">#</th>
                                             <th class="py-1.5 text-left sm:py-2">Player</th>
                                             ${statDefinitions.map(stat => `
-                                                <th class="w-16 whitespace-nowrap py-1.5 text-center sm:py-2">${escapeHTML(stat.label)}</th>
+                                                <th class="w-12 whitespace-nowrap py-1.5 text-center sm:w-16 sm:py-2" title="${escapeHTML(stat.label)}">
+                                                    <span class="student-score-stat-label">
+                                                        <span class="student-score-stat-label-short">${escapeHTML(stat.shortLabel || stat.label)}</span>
+                                                        <span class="student-score-stat-label-full">${escapeHTML(stat.label)}</span>
+                                                    </span>
+                                                </th>
                                             `).join("")}
                                         </tr>
                                     </thead>
@@ -2212,7 +2244,7 @@
                             .select("*"),
 
                         supabase
-                            .from(ATTENDANCE_POINTS_VIEW)
+                            .from(ATTENDANCE_POINTS_TABLE)
                             .select("*"),
 
                         supabase
@@ -2618,22 +2650,6 @@
                         easing: "linear"
                     });
                 });
-            }
-
-            function isPresentAttendanceStatus(status) {
-                return normalizeText(status || "Present") === "present";
-            }
-
-            function getAttendanceBonusDate(row) {
-                if (row.attendance_date) {
-                    return String(row.attendance_date).slice(0, 10);
-                }
-
-                if (row.checked_at) {
-                    return String(row.checked_at).slice(0, 10);
-                }
-
-                return "";
             }
 
             function buildAttendancePointRows(attendanceRows) {
@@ -3184,23 +3200,9 @@
                     const showTimer = isUpcoming && (match.timer_enabled || duration > 0);
                     const matchStageLabel = getMatchStageLabel(match.match_stage);
                     const livePeriodLabel = getLivePeriodLabel(match);
-                    const canOpenGameStats = hasPlayerScoreSheet(match) && ["Ongoing", "Done"].includes(match.status);
-                    const statsCardAction = canOpenGameStats ? `
-                        <button
-                            type="button"
-                            data-match-id="${match.id}"
-                            class="view-match-btn mt-4 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-black uppercase tracking-wide text-white hover:bg-slate-800">
-                            ${isDone ? "View Game Stats" : "View Live Stats"}
-                        </button>
-                    ` : "";
 
                     const card = document.createElement("div");
-                    card.className = `card-hover bg-white rounded-2xl border border-slate-300 overflow-hidden flex flex-col ${canOpenGameStats ? "cursor-pointer" : ""}`;
-                    if (canOpenGameStats) {
-                        card.setAttribute("role", "button");
-                        card.setAttribute("tabindex", "0");
-                        card.dataset.matchId = match.id;
-                    }
+                    card.className = "card-hover bg-white rounded-2xl border border-slate-300 overflow-hidden flex flex-col";
                     card.innerHTML = `
                         <div class="p-6 flex-1">
                             <div class="flex justify-between items-start gap-4 mb-6">
@@ -3258,33 +3260,15 @@
                                     <p class="text-[10px] font-bold text-emerald-600 uppercase mb-2">Final Result</p>
                                     <p class="text-sm font-bold text-emerald-900">Victory: ${escapeHTML(history.winner_team_name)}</p>
                                     <p class="text-sm font-bold text-emerald-900 mt-1">Player of the Game: ${escapeHTML(getBestPlayerDisplay(history.best_player))}</p>
-                                    ${statsCardAction}
                                 </div>
-                            ` : statsCardAction}
+                            ` : ""}
+
+                            ${renderStudentBasketballScoreSheet(match, { compact: true })}
                         </div>
                     `;
                     studentMatchesGrid.appendChild(card);
                 });
 
-                document.querySelectorAll(".view-match-btn").forEach(btn => {
-                    btn.onclick = function(event) {
-                        event.stopPropagation();
-                        const m = studentMatchesData.find(x => Number(x.id) === Number(this.dataset.matchId));
-                        if (m) openMatchDetails(m);
-                    };
-                });
-                document.querySelectorAll("[data-match-id].cursor-pointer").forEach(card => {
-                    card.onclick = function() {
-                        const m = studentMatchesData.find(x => Number(x.id) === Number(this.dataset.matchId));
-                        if (m) openMatchDetails(m);
-                    };
-                    card.onkeydown = function(event) {
-                        if (event.key !== "Enter" && event.key !== " ") return;
-                        event.preventDefault();
-                        const m = studentMatchesData.find(x => Number(x.id) === Number(this.dataset.matchId));
-                        if (m) openMatchDetails(m);
-                    };
-                });
                 updateCountdownDisplays();
             }
 
@@ -3333,8 +3317,6 @@
                                 ${renderDeclaredTeamPoints(match, "two", "mt-2 text-[10px] font-black uppercase tracking-wide text-emerald-600")}
                             </div>
                         </div>
-
-                        ${renderStudentBasketballScoreSheet(match)}
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div class="p-5 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center">
@@ -3387,6 +3369,8 @@
                                 </div>
                             </div>
                         ` : ""}
+
+                        ${renderStudentBasketballScoreSheet(match)}
                     </div>
                 `;
                 updateCountdownDisplays();
@@ -3491,6 +3475,9 @@
                     scheduleLiveLeaderboardReload(0, { force: true });
                 })
                 .on("postgres_changes", { event: "*", schema: "public", table: ATTENDANCE_SETTINGS_TABLE }, () => {
+                    scheduleLiveLeaderboardReload(0, { force: true });
+                })
+                .on("postgres_changes", { event: "*", schema: "public", table: ATTENDANCE_POINTS_TABLE }, () => {
                     scheduleLiveLeaderboardReload(0, { force: true });
                 })
                 .on("postgres_changes", { event: "*", schema: "public", table: MATCHES_TABLE }, () => {
