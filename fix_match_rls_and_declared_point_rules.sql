@@ -53,6 +53,31 @@ $$;
 revoke all on function public.app_is_match_creator(text) from public;
 grant execute on function public.app_is_match_creator(text) to authenticated;
 
+create or replace function public.app_can_manage_match_record(target_match_id bigint)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+    select coalesce(
+        public.app_is_admin()
+        or exists (
+            select 1
+            from public.scheduled_matches match_record
+            where match_record.id = target_match_id
+              and (
+                  public.app_can_manage_match_sport(match_record.sport_id)
+                  or public.app_is_match_creator(match_record.created_by)
+              )
+        ),
+        false
+    )
+$$;
+
+revoke all on function public.app_can_manage_match_record(bigint) from public;
+grant execute on function public.app_can_manage_match_record(bigint) to authenticated;
+
 alter table public.scheduled_matches enable row level security;
 
 drop policy if exists "Public can read scheduled matches" on public.scheduled_matches;
@@ -102,6 +127,92 @@ with check (
     public.app_can_manage_match_sport(sport_id)
     or public.app_is_match_creator(created_by)
 );
+
+-- game_history -------------------------------------------------------------
+
+drop policy if exists "Committee can read assigned sport game history" on public.game_history;
+create policy "Committee can read assigned sport game history"
+on public.game_history
+for select
+to authenticated
+using (public.app_can_manage_match_record(match_id));
+
+drop policy if exists "Committee can create assigned sport game history" on public.game_history;
+create policy "Committee can create assigned sport game history"
+on public.game_history
+for insert
+to authenticated
+with check (public.app_can_manage_match_record(match_id));
+
+drop policy if exists "Committee can update assigned sport game history" on public.game_history;
+create policy "Committee can update assigned sport game history"
+on public.game_history
+for update
+to authenticated
+using (public.app_can_manage_match_record(match_id))
+with check (public.app_can_manage_match_record(match_id));
+
+-- basketball_match_player_stats ------------------------------------------
+
+drop policy if exists "Committee can read assigned sport score rows" on public.basketball_match_player_stats;
+create policy "Committee can read assigned sport score rows"
+on public.basketball_match_player_stats
+for select
+to authenticated
+using (public.app_can_manage_match_record(match_id));
+
+drop policy if exists "Committee can create assigned sport score rows" on public.basketball_match_player_stats;
+create policy "Committee can create assigned sport score rows"
+on public.basketball_match_player_stats
+for insert
+to authenticated
+with check (public.app_can_manage_match_record(match_id));
+
+drop policy if exists "Committee can update assigned sport score rows" on public.basketball_match_player_stats;
+create policy "Committee can update assigned sport score rows"
+on public.basketball_match_player_stats
+for update
+to authenticated
+using (public.app_can_manage_match_record(match_id))
+with check (public.app_can_manage_match_record(match_id));
+
+drop policy if exists "Committee can delete assigned sport score rows" on public.basketball_match_player_stats;
+create policy "Committee can delete assigned sport score rows"
+on public.basketball_match_player_stats
+for delete
+to authenticated
+using (public.app_can_manage_match_record(match_id));
+
+-- volleyball_match_period_scores ------------------------------------------
+
+drop policy if exists "Volleyball scores are readable by dashboard users" on public.volleyball_match_period_scores;
+create policy "Volleyball scores are readable by dashboard users"
+on public.volleyball_match_period_scores
+for select
+to authenticated, anon
+using (true);
+
+drop policy if exists "Committee and admin can insert volleyball scores" on public.volleyball_match_period_scores;
+create policy "Committee and admin can insert volleyball scores"
+on public.volleyball_match_period_scores
+for insert
+to authenticated
+with check (public.app_can_manage_match_record(match_id));
+
+drop policy if exists "Committee and admin can update volleyball scores" on public.volleyball_match_period_scores;
+create policy "Committee and admin can update volleyball scores"
+on public.volleyball_match_period_scores
+for update
+to authenticated
+using (public.app_can_manage_match_record(match_id))
+with check (public.app_can_manage_match_record(match_id));
+
+drop policy if exists "Committee and admin can delete volleyball scores" on public.volleyball_match_period_scores;
+create policy "Committee and admin can delete volleyball scores"
+on public.volleyball_match_period_scores
+for delete
+to authenticated
+using (public.app_can_manage_match_record(match_id));
 
 update public.sports
 set

@@ -3335,31 +3335,11 @@
                 }
 
                 function applyAssignedSportWorkspaceFilter(query) {
-                    const assignedSportIds = getCommitteeAssignedSportFilterIds();
-
-                    if (assignedSportIds.length > 0) {
-                        return query.in("sport_id", assignedSportIds);
-                    }
-
-                    if (!isCurrentUserAdmin() && !canCurrentUserScheduleAllSports()) {
-                        return query.eq("sport_id", -1);
-                    }
-
                     return query;
                 }
 
                 function applyMatchManagementFilter(query) {
-                    if (isCurrentUserAdmin()) {
-                        return query;
-                    }
-
-                    const manageableSportIds = getCurrentUserManageableSportIds();
-
-                    if (manageableSportIds.length > 0) {
-                        return query.in("sport_id", manageableSportIds);
-                    }
-
-                    return query.eq("sport_id", -1);
+                    return query;
                 }
 
                 async function updateMatchRecord(matchId, updatePayload, options = {}) {
@@ -4872,7 +4852,7 @@
                     const canUseFilters = canCurrentUserUseMatchViewFilters();
 
                     if (!canUseFilters) {
-                        filteredMatches = filteredMatches.filter(match => isMatchAssignedToCurrentUser(match));
+                        filteredMatches = filteredMatches.filter(match => isMatchAssignedToCurrentUser(match) || isMatchOwner(match));
                     }
 
                     if (canUseFilters && activeSportFilterId) {
