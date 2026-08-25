@@ -1470,16 +1470,31 @@
             }
 
             function getVolleyballScoresForMatch(matchId) {
-                return volleyballScoresByMatch.get(Number(matchId)) || [];
+                const groupedRows = new Map();
+
+                (volleyballScoresByMatch.get(Number(matchId)) || []).forEach(row => {
+                    const key = `${Number(row.match_id)}:${Number(row.team_id)}`;
+                    if (!groupedRows.has(key)) groupedRows.set(key, []);
+                    groupedRows.get(key).push(row);
+                });
+
+                return Array.from(groupedRows.values()).map(groupRows => {
+                    const periodOneRow = groupRows.find(row => Number(row.game_period || 1) === 1);
+                    const sourceRow = periodOneRow || groupRows[0] || {};
+                    return {
+                        ...sourceRow,
+                        game_period: 1,
+                        points: periodOneRow
+                            ? Math.max(0, Number(periodOneRow.points) || 0)
+                            : groupRows.reduce((total, row) => total + (Number(row.points) || 0), 0)
+                    };
+                });
             }
 
-            function getStudentVolleyballTeamScore(match, teamSide, gamePeriod = null) {
+            function getStudentVolleyballTeamScore(match, teamSide) {
                 const teamId = getTeamId(match, teamSide);
                 return getVolleyballScoresForMatch(match.id)
-                    .filter(score =>
-                        Number(score.team_id) === Number(teamId)
-                        && (gamePeriod === null || Number(score.game_period || 1) === Number(gamePeriod))
-                    )
+                    .filter(score => Number(score.team_id) === Number(teamId))
                     .reduce((total, row) => total + (Number(row.points) || 0), 0);
             }
 
@@ -1566,7 +1581,7 @@
 
                 if (hasPlayerScoreSheet(match)) {
                     if (isVolleyballSport(match)) {
-                        return getStudentVolleyballTeamScore(match, teamSide, null);
+                        return getStudentVolleyballTeamScore(match, teamSide);
                     }
                     return getStudentBasketballTotals(match, teamSide).points;
                 }
@@ -1716,8 +1731,8 @@
                     : (isVolleyballMatch ? "Volleyball Score Sheet Preview" : "Basketball Score Sheet Preview");
                 const teamOneGameTotals = getStudentBasketballTotals(match, "one");
                 const teamTwoGameTotals = getStudentBasketballTotals(match, "two");
-                const teamOneVolleyballPoints = getStudentVolleyballTeamScore(match, "one", null);
-                const teamTwoVolleyballPoints = getStudentVolleyballTeamScore(match, "two", null);
+                const teamOneVolleyballPoints = getStudentVolleyballTeamScore(match, "one");
+                const teamTwoVolleyballPoints = getStudentVolleyballTeamScore(match, "two");
 
                 const renderTeamPreview = (teamSide, theme) => {
                     const teamName = getTeamName(match, teamSide);

@@ -7457,20 +7457,32 @@
 
             function sanitizeApprovedVolleyballScoreRows(rows, matchId) {
                 const rowsByKey = new Map();
+                const hasCanonicalScoreByTeam = new Map();
 
                 (Array.isArray(rows) ? rows : [])
                     .filter(row => Number(row.match_id) === Number(matchId))
                     .forEach(row => {
+                        if (Number(row.game_period || 1) === 1 && row.team_id) {
+                            hasCanonicalScoreByTeam.set(Number(row.team_id), true);
+                        }
+                    });
+
+                (Array.isArray(rows) ? rows : [])
+                    .filter(row => Number(row.match_id) === Number(matchId))
+                    .forEach(row => {
+                        const teamId = row.team_id ? Number(row.team_id) : null;
+                        if (!teamId) return;
+                        if (hasCanonicalScoreByTeam.get(teamId) && Number(row.game_period || 1) !== 1) return;
+
                         const cleanRow = {
                             match_id: Number(row.match_id),
-                            team_id: row.team_id ? Number(row.team_id) : null,
+                            team_id: teamId,
                             team_name: row.team_name || "",
                             game_period: 1,
                             points: Math.max(0, Number(row.points) || 0),
                             updated_at: new Date().toISOString()
                         };
 
-                        if (!cleanRow.team_id) return;
                         const key = getApprovedVolleyballScoreKey(cleanRow);
                         const existingRow = rowsByKey.get(key);
                         rowsByKey.set(key, {
