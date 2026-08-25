@@ -900,6 +900,7 @@
             let registeredSports = [];
             let matchReloadTimer = null;
             let leaderboardReloadTimer = null;
+            let latestStudentMatchesLoadId = 0;
             let isLoadingMatches = false;
             let shouldReloadMatchesAgain = false;
             let isLoadingLeaderboard = false;
@@ -912,6 +913,12 @@
             let lastMatchesSignature = "";
             let lastShownAnnouncementKey = null;
             let studentAnnouncementsData = [];
+            const SCORE_SYNC_DEBUG = false;
+
+            function logScoreSyncDiagnostic(details) {
+                if (!SCORE_SYNC_DEBUG) return;
+                console.debug("[score-sync]", details);
+            }
             let isRefreshingStudentAnnouncements = false;
             let shouldRefreshStudentAnnouncementsAgain = false;
             let shouldShowQueuedStudentAnnouncementPopup = false;
@@ -1470,9 +1477,40 @@
             }
 
             function getVolleyballScoresForMatch(matchId) {
+                return getCanonicalStudentVolleyballRows(volleyballScoresByMatch.get(Number(matchId)) || []);
+            }
+
+            function getStudentScoreRowTimestamp(row) {
+                const timestamp = Date.parse(row?.updated_at || row?.created_at || "");
+                return Number.isFinite(timestamp) ? timestamp : 0;
+            }
+
+            function getStudentVolleyballScoreKey(row) {
+                return [
+                    Number(row.match_id),
+                    Number(row.team_id),
+                    1
+                ].join(":");
+            }
+
+            function buildStudentVolleyballScoreMap(rows) {
+                const nextMap = new Map();
+
+                getCanonicalStudentVolleyballRows(rows).forEach(row => {
+                    const matchKey = Number(row.match_id);
+                    if (!nextMap.has(matchKey)) {
+                        nextMap.set(matchKey, []);
+                    }
+                    nextMap.get(matchKey).push(row);
+                });
+
+                return nextMap;
+            }
+
+            function getCanonicalStudentVolleyballRows(rows) {
                 const groupedRows = new Map();
 
-                (volleyballScoresByMatch.get(Number(matchId)) || []).forEach(row => {
+                (Array.isArray(rows) ? rows : []).forEach(row => {
                     const key = `${Number(row.match_id)}:${Number(row.team_id)}`;
                     if (!groupedRows.has(key)) groupedRows.set(key, []);
                     groupedRows.get(key).push(row);
@@ -1489,6 +1527,50 @@
                             : groupRows.reduce((total, row) => total + (Number(row.points) || 0), 0)
                     };
                 });
+            }
+
+            function mergeStudentVolleyballScoreMaps(currentMap, incomingMap, source = "refresh", version = latestStudentMatchesLoadId) {
+                const mergedMap = new Map(currentMap);
+
+                incomingMap.forEach((incomingRows, matchId) => {
+                    const currentRows = mergedMap.get(Number(matchId)) || [];
+                    const rowsByKey = new Map();
+
+                    currentRows.forEach(row => {
+                        rowsByKey.set(getStudentVolleyballScoreKey(row), row);
+                    });
+
+                    incomingRows.forEach(row => {
+                        const key = getStudentVolleyballScoreKey(row);
+                        const existingRow = rowsByKey.get(key);
+                        if (!existingRow || getStudentScoreRowTimestamp(row) >= getStudentScoreRowTimestamp(existingRow)) {
+                            rowsByKey.set(key, row);
+                            logScoreSyncDiagnostic({
+                                matchId: Number(row.match_id),
+                                scoreKey: key,
+                                scoreValue: Number(row.points) || 0,
+                                source,
+                                version,
+                                eventTimestamp: row.updated_at || row.created_at || null,
+                                accepted: true
+                            });
+                        } else {
+                            logScoreSyncDiagnostic({
+                                matchId: Number(row.match_id),
+                                scoreKey: key,
+                                scoreValue: Number(row.points) || 0,
+                                source,
+                                version,
+                                eventTimestamp: row.updated_at || row.created_at || null,
+                                accepted: false
+                            });
+                        }
+                    });
+
+                    mergedMap.set(Number(matchId), Array.from(rowsByKey.values()));
+                });
+
+                return mergedMap;
             }
 
             function getStudentVolleyballTeamScore(match, teamSide) {
@@ -2922,6 +3004,7 @@
                     return;
                 }
 
+                const loadId = ++latestStudentMatchesLoadId;
                 const { showLoading = false } = options;
                 isLoadingMatches = true;
                 shouldReloadMatchesAgain = false;
@@ -2960,16 +3043,16 @@
                     return;
                 }
 
-                studentMatchesData = data || [];
-                const matchIds = studentMatchesData.map(m => m.id);
-                basketballStatsByMatch = new Map();
-                volleyballScoresByMatch = new Map();
+                let nextStudentMatchesData = data || [];
+                const matchIds = nextStudentMatchesData.map(m => m.id);
+                const nextBasketballStatsByMatch = new Map();
+                const nextVolleyballScoreRows = [];
                 if (matchIds.length > 0) {
                     const { data: historyRows, error: historyError } = await supabase.from(GAME_HISTORY_TABLE).select("*").in("match_id", matchIds);
                     if (!historyError && Array.isArray(historyRows)) {
                         const historyMap = new Map();
                         historyRows.forEach(h => historyMap.set(Number(h.match_id), h));
-                        studentMatchesData = studentMatchesData.map(m => ({ ...m, game_history: historyMap.get(Number(m.id)) || null }));
+                        nextStudentMatchesData = nextStudentMatchesData.map(m => ({ ...m, game_history: historyMap.get(Number(m.id)) || null }));
                     }
 
                     const { data: basketballRows, error: basketballError } = await supabase
@@ -2982,10 +3065,10 @@
                     } else if (Array.isArray(basketballRows)) {
                         basketballRows.forEach(row => {
                             const key = Number(row.match_id);
-                            if (!basketballStatsByMatch.has(key)) {
-                                basketballStatsByMatch.set(key, []);
+                            if (!nextBasketballStatsByMatch.has(key)) {
+                                nextBasketballStatsByMatch.set(key, []);
                             }
-                            basketballStatsByMatch.get(key).push(row);
+                            nextBasketballStatsByMatch.get(key).push(row);
                         });
                     }
 
@@ -2997,15 +3080,32 @@
                     if (volleyballScoreError) {
                         console.warn("Student volleyball score load warning:", volleyballScoreError.message || volleyballScoreError);
                     } else if (Array.isArray(volleyballScoreRows)) {
-                        volleyballScoreRows.forEach(row => {
-                            const key = Number(row.match_id);
-                            if (!volleyballScoresByMatch.has(key)) {
-                                volleyballScoresByMatch.set(key, []);
-                            }
-                            volleyballScoresByMatch.get(key).push(row);
-                        });
+                        nextVolleyballScoreRows.push(...volleyballScoreRows);
                     }
                 }
+                if (loadId !== latestStudentMatchesLoadId) {
+                    logScoreSyncDiagnostic({
+                        source: "student-match-refresh",
+                        version: loadId,
+                        latestVersion: latestStudentMatchesLoadId,
+                        accepted: false
+                    });
+                    isLoadingMatches = false;
+                    if (shouldReloadMatchesAgain) {
+                        shouldReloadMatchesAgain = false;
+                        await loadMatches({ showLoading: false });
+                    }
+                    return;
+                }
+
+                studentMatchesData = nextStudentMatchesData;
+                basketballStatsByMatch = nextBasketballStatsByMatch;
+                volleyballScoresByMatch = mergeStudentVolleyballScoreMaps(
+                    volleyballScoresByMatch,
+                    buildStudentVolleyballScoreMap(nextVolleyballScoreRows),
+                    "student-match-refresh",
+                    loadId
+                );
                 const basketballSignature = JSON.stringify([...basketballStatsByMatch.entries()]);
                 const volleyballSignature = JSON.stringify([...volleyballScoresByMatch.entries()]);
                 const matchesSignature = JSON.stringify(studentMatchesData) + basketballSignature + volleyballSignature;

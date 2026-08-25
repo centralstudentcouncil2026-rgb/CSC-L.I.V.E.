@@ -7480,18 +7480,33 @@
                             team_name: row.team_name || "",
                             game_period: 1,
                             points: Math.max(0, Number(row.points) || 0),
-                            updated_at: new Date().toISOString()
+                            updated_at: new Date().toISOString(),
+                            source_updated_at: row.updated_at || row.created_at || null
                         };
 
                         const key = getApprovedVolleyballScoreKey(cleanRow);
                         const existingRow = rowsByKey.get(key);
+                        const latestSourceUpdatedAt = getAdminScoreRowTimestamp(cleanRow) >= getAdminScoreRowTimestamp(existingRow)
+                            ? cleanRow.source_updated_at
+                            : existingRow?.source_updated_at || null;
                         rowsByKey.set(key, {
                             ...cleanRow,
-                            points: (Number(existingRow?.points) || 0) + cleanRow.points
+                            points: (Number(existingRow?.points) || 0) + cleanRow.points,
+                            source_updated_at: latestSourceUpdatedAt
                         });
                     });
 
                 return Array.from(rowsByKey.values());
+            }
+
+            function getAdminScoreRowTimestamp(row) {
+                const timestamp = Date.parse(row?.source_updated_at || row?.updated_at || row?.created_at || "");
+                return Number.isFinite(timestamp) ? timestamp : 0;
+            }
+
+            function stripApprovedVolleyballInternalFields(row) {
+                const { source_updated_at, ...databaseRow } = row;
+                return databaseRow;
             }
 
             function getApprovedPlayerStatKey(row) {
@@ -7535,7 +7550,7 @@
                 }
             }
 
-            async function replaceApprovedScoreSheetRows(matchId, requestPayload) {
+            async function replaceApprovedScoreSheetRows(matchId, requestPayload, requestTimestamp = null) {
                 if (Array.isArray(requestPayload?.player_stats)) {
                     const cleanPlayerRows = sanitizeApprovedPlayerStatRows(requestPayload.player_stats, matchId);
 
@@ -7566,11 +7581,37 @@
 
                 if (Array.isArray(requestPayload?.volleyball_scores)) {
                     const cleanScoreRows = sanitizeApprovedVolleyballScoreRows(requestPayload.volleyball_scores, matchId);
+                    cleanScoreRows.forEach(row => {
+                        row.source_updated_at = row.source_updated_at || requestTimestamp || null;
+                    });
 
                     if (cleanScoreRows.length > 0) {
+                        const { data: existingScoreRows, error: existingScoreError } = await supabase
+                            .from(VOLLEYBALL_SCORE_TABLE)
+                            .select("*")
+                            .eq("match_id", matchId);
+
+                        if (existingScoreError) throw existingScoreError;
+
+                        const existingScoreRowsByKey = new Map();
+                        (existingScoreRows || []).forEach(row => {
+                            existingScoreRowsByKey.set(getApprovedVolleyballScoreKey(row), row);
+                        });
+
+                        const rowsSafeToWrite = cleanScoreRows
+                            .filter(row => {
+                                const existingRow = existingScoreRowsByKey.get(getApprovedVolleyballScoreKey(row));
+                                return !existingRow || getAdminScoreRowTimestamp(row) >= getAdminScoreRowTimestamp(existingRow);
+                            })
+                            .map(stripApprovedVolleyballInternalFields);
+
+                        if (rowsSafeToWrite.length === 0) {
+                            return;
+                        }
+
                         const { error: upsertScoreError } = await supabase
                             .from(VOLLEYBALL_SCORE_TABLE)
-                            .upsert(cleanScoreRows, {
+                            .upsert(rowsSafeToWrite, {
                                 onConflict: "match_id,team_id,game_period"
                             });
 
@@ -7578,7 +7619,7 @@
                         await deleteStaleApprovedRows(
                             VOLLEYBALL_SCORE_TABLE,
                             matchId,
-                            cleanScoreRows,
+                            cleanScoreRows.map(stripApprovedVolleyballInternalFields),
                             getApprovedVolleyballScoreKey,
                             "id, match_id, team_id, game_period"
                         );
@@ -7631,7 +7672,7 @@
 
                     if (historyResult.error) throw historyResult.error;
 
-                    await replaceApprovedScoreSheetRows(request.match_id, requestPayload);
+                    await replaceApprovedScoreSheetRows(request.match_id, requestPayload, request.requested_at || request.created_at || null);
 
                     const { error: requestUpdateError } = await supabase
                         .from(MATCH_EDIT_REQUESTS_TABLE)

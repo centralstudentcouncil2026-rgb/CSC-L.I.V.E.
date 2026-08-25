@@ -2825,7 +2825,23 @@
                 let basketballStatSaveQueues = new Map();
                 let volleyballScoresByMatch = new Map();
                 let volleyballScoreSaveQueues = new Map();
+                let latestSavedMatchesLoadId = 0;
                 let matchEditRequestsByMatch = new Map();
+                const SCORE_SYNC_DEBUG = false;
+
+                function logScoreSyncDiagnostic(details) {
+                    if (!SCORE_SYNC_DEBUG) return;
+                    console.debug("[score-sync]", details);
+                }
+
+                function invalidateSavedMatchRefreshes(source) {
+                    latestSavedMatchesLoadId += 1;
+                    logScoreSyncDiagnostic({
+                        source,
+                        version: latestSavedMatchesLoadId,
+                        accepted: true
+                    });
+                }
                 let scoreSheetEditDraftMatchId = null;
                 let scoreSheetEditStatsByMatch = new Map();
                 let scoreSheetEditVolleyballScoresByMatch = new Map();
@@ -3969,6 +3985,69 @@
                     });
                 }
 
+                function getScoreRowTimestamp(row) {
+                    const timestamp = Date.parse(row?.updated_at || row?.created_at || "");
+                    return Number.isFinite(timestamp) ? timestamp : 0;
+                }
+
+                function buildVolleyballScoreMap(rows) {
+                    const nextMap = new Map();
+
+                    getCanonicalVolleyballScoreRows(rows).forEach(row => {
+                        const matchKey = Number(row.match_id);
+                        if (!nextMap.has(matchKey)) {
+                            nextMap.set(matchKey, []);
+                        }
+                        nextMap.get(matchKey).push(row);
+                    });
+
+                    return nextMap;
+                }
+
+                function mergeVolleyballScoreMaps(currentMap, incomingMap, source = "refresh", version = latestSavedMatchesLoadId) {
+                    const mergedMap = new Map(currentMap);
+
+                    incomingMap.forEach((incomingRows, matchId) => {
+                        const currentRows = mergedMap.get(Number(matchId)) || [];
+                        const rowsByKey = new Map();
+
+                        currentRows.forEach(row => {
+                            rowsByKey.set(getVolleyballScoreKey(row.match_id, row.team_id, row.game_period), row);
+                        });
+
+                        incomingRows.forEach(row => {
+                            const key = getVolleyballScoreKey(row.match_id, row.team_id, row.game_period);
+                            const existingRow = rowsByKey.get(key);
+                            if (!existingRow || getScoreRowTimestamp(row) >= getScoreRowTimestamp(existingRow)) {
+                                rowsByKey.set(key, row);
+                                logScoreSyncDiagnostic({
+                                    matchId: Number(row.match_id),
+                                    scoreKey: key,
+                                    scoreValue: Number(row.points) || 0,
+                                    source,
+                                    version,
+                                    eventTimestamp: row.updated_at || row.created_at || null,
+                                    accepted: true
+                                });
+                            } else {
+                                logScoreSyncDiagnostic({
+                                    matchId: Number(row.match_id),
+                                    scoreKey: key,
+                                    scoreValue: Number(row.points) || 0,
+                                    source,
+                                    version,
+                                    eventTimestamp: row.updated_at || row.created_at || null,
+                                    accepted: false
+                                });
+                            }
+                        });
+
+                        mergedMap.set(Number(matchId), Array.from(rowsByKey.values()));
+                    });
+
+                    return mergedMap;
+                }
+
                 function getVolleyballTeamScore(match, teamSide) {
                     const teamId = getTeamId(match, teamSide);
                     const rows = getVolleyballScoresForMatch(match.id)
@@ -4030,13 +4109,25 @@
                     const nextSave = previousSave
                         .catch(() => null)
                         .then(async () => {
-                            const { error } = await supabase
+                            const { data: savedRow, error } = await supabase
                                 .from(VOLLEYBALL_SCORE_TABLE)
                                 .upsert(payload, {
                                     onConflict: "match_id,team_id,game_period"
-                                });
+                                })
+                                .select("*")
+                                .single();
 
                             if (error) throw error;
+
+                            if (savedRow) {
+                                volleyballScoresByMatch = mergeVolleyballScoreMaps(
+                                    volleyballScoresByMatch,
+                                    buildVolleyballScoreMap([savedRow]),
+                                    "committee-save-confirmed",
+                                    Date.now()
+                                );
+                                renderMatches(matchesData);
+                            }
 
                             const { error: deleteDuplicateError } = await supabase
                                 .from(VOLLEYBALL_SCORE_TABLE)
@@ -4078,6 +4169,8 @@
                         renderMatches(matchesData);
                         return;
                     }
+
+                    invalidateSavedMatchRefreshes("committee-volleyball-local-change");
 
                     const matchKey = Number(matchId);
                     if (!volleyballScoresByMatch.has(matchKey)) {
@@ -4935,6 +5028,8 @@
                         renderMatches(matchesData);
                         return;
                     }
+
+                    invalidateSavedMatchRefreshes("committee-basketball-local-change");
 
                     const localStatRow = upsertLocalBasketballStatRow(statRow);
                     const playerKey = normalizeTeamValue(localStatRow.id_number || localStatRow.participant_id || options.idNumber || options.participantId);
@@ -7704,6 +7799,8 @@
                 }
 
                 async function loadSavedMatches() {
+                    const loadId = ++latestSavedMatchesLoadId;
+
                     if (!isCurrentUserAdmin() && !canCurrentUserScheduleAllSports() && registeredSportsData.length === 0) {
                         await loadSportsForMatches();
                     }
@@ -7748,13 +7845,13 @@
                         return;
                     }
 
-                    matchesData = data || [];
-                    await loadScoreSheetParticipantsForMatches(matchesData);
+                    let nextMatchesData = data || [];
+                    await loadScoreSheetParticipantsForMatches(nextMatchesData);
 
-                    const matchIds = matchesData.map(match => match.id);
-                    basketballStatsByMatch = new Map();
-                    volleyballScoresByMatch = new Map();
-                    matchEditRequestsByMatch = new Map();
+                    const matchIds = nextMatchesData.map(match => match.id);
+                    const nextBasketballStatsByMatch = new Map();
+                    const nextVolleyballScoreRows = [];
+                    const nextMatchEditRequestsByMatch = new Map();
 
                     if (matchIds.length > 0) {
                         const { data: historyRows, error: historyError } = await supabase
@@ -7769,7 +7866,7 @@
                                 historyMap.set(Number(history.match_id), history);
                             });
 
-                            matchesData = matchesData.map(match => ({
+                            nextMatchesData = nextMatchesData.map(match => ({
                                 ...match,
                                 game_history: historyMap.get(Number(match.id)) || null
                             }));
@@ -7785,10 +7882,10 @@
                         } else if (Array.isArray(basketballRows)) {
                             basketballRows.forEach(row => {
                                 const key = Number(row.match_id);
-                                if (!basketballStatsByMatch.has(key)) {
-                                    basketballStatsByMatch.set(key, []);
+                                if (!nextBasketballStatsByMatch.has(key)) {
+                                    nextBasketballStatsByMatch.set(key, []);
                                 }
-                                basketballStatsByMatch.get(key).push(row);
+                                nextBasketballStatsByMatch.get(key).push(row);
                             });
                         }
 
@@ -7802,7 +7899,7 @@
                             console.warn("Match edit request load warning:", editRequestError.message || editRequestError);
                         } else if (Array.isArray(editRequestRows)) {
                             editRequestRows.forEach(row => {
-                                matchEditRequestsByMatch.set(Number(row.match_id), row);
+                                nextMatchEditRequestsByMatch.set(Number(row.match_id), row);
                             });
                         }
 
@@ -7814,16 +7911,29 @@
                         if (volleyballScoreError) {
                             console.warn("Volleyball score load warning:", volleyballScoreError.message || volleyballScoreError);
                         } else if (Array.isArray(volleyballScoreRows)) {
-                            volleyballScoreRows.forEach(row => {
-                                const key = Number(row.match_id);
-                                if (!volleyballScoresByMatch.has(key)) {
-                                    volleyballScoresByMatch.set(key, []);
-                                }
-                                volleyballScoresByMatch.get(key).push(row);
-                            });
+                            nextVolleyballScoreRows.push(...volleyballScoreRows);
                         }
                     }
 
+                    if (loadId !== latestSavedMatchesLoadId) {
+                        logScoreSyncDiagnostic({
+                            source: "committee-match-refresh",
+                            version: loadId,
+                            latestVersion: latestSavedMatchesLoadId,
+                            accepted: false
+                        });
+                        return;
+                    }
+
+                    matchesData = nextMatchesData;
+                    basketballStatsByMatch = nextBasketballStatsByMatch;
+                    volleyballScoresByMatch = mergeVolleyballScoreMaps(
+                        volleyballScoresByMatch,
+                        buildVolleyballScoreMap(nextVolleyballScoreRows),
+                        "committee-match-refresh",
+                        loadId
+                    );
+                    matchEditRequestsByMatch = nextMatchEditRequestsByMatch;
                     renderMatches(matchesData);
                 }
 
