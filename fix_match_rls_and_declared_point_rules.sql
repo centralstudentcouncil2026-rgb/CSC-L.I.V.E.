@@ -36,6 +36,23 @@ $$;
 revoke all on function public.app_can_manage_match_sport(bigint) from public;
 grant execute on function public.app_can_manage_match_sport(bigint) to authenticated;
 
+create or replace function public.app_is_match_creator(match_created_by text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+    select coalesce(
+        nullif(trim(coalesce(match_created_by, '')), '') = auth.uid()::text
+        or lower(nullif(trim(coalesce(match_created_by, '')), '')) = lower(coalesce(auth.email(), '')),
+        false
+    )
+$$;
+
+revoke all on function public.app_is_match_creator(text) from public;
+grant execute on function public.app_is_match_creator(text) to authenticated;
+
 alter table public.scheduled_matches enable row level security;
 
 drop policy if exists "Public can read scheduled matches" on public.scheduled_matches;
@@ -57,7 +74,10 @@ create policy "Committee can read assigned sport matches"
 on public.scheduled_matches
 for select
 to authenticated
-using (public.app_can_manage_match_sport(sport_id));
+using (
+    public.app_can_manage_match_sport(sport_id)
+    or public.app_is_match_creator(created_by)
+);
 
 drop policy if exists "Dashboard users can create matches" on public.scheduled_matches;
 drop policy if exists "Committee can create own matches" on public.scheduled_matches;
@@ -74,8 +94,14 @@ create policy "Committee can update assigned sport matches"
 on public.scheduled_matches
 for update
 to authenticated
-using (public.app_can_manage_match_sport(sport_id))
-with check (public.app_can_manage_match_sport(sport_id));
+using (
+    public.app_can_manage_match_sport(sport_id)
+    or public.app_is_match_creator(created_by)
+)
+with check (
+    public.app_can_manage_match_sport(sport_id)
+    or public.app_is_match_creator(created_by)
+);
 
 update public.sports
 set
