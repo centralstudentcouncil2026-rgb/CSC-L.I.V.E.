@@ -4180,8 +4180,10 @@
 
                     const renderTeamSheet = (teamSide, theme) => {
                         const teamName = getTeamName(match, teamSide);
-                        const quarterTotals = teamSide === "one" ? teamOneQuarterTotals : teamTwoQuarterTotals;
                         const gameTotals = teamSide === "one" ? teamOneGameTotals : teamTwoGameTotals;
+                        const quarterTotals = isVolleyballMatch
+                            ? gameTotals
+                            : teamSide === "one" ? teamOneQuarterTotals : teamTwoQuarterTotals;
                         const setScore = teamSide === "one" ? teamOneSetScore : teamTwoSetScore;
                         const statMinWidth = isVolleyballMatch ? "min-w-[54rem]" : "min-w-[26rem]";
                         return `
@@ -4237,7 +4239,7 @@
                                         <tbody class="basketball-score-body">${renderBasketballRows(match, teamSide, canEditScoreSheet)}</tbody>
                                         <tfoot>
                                             <tr class="${theme.footer}">
-                                                <td colspan="2" class="px-2 py-2 text-sm font-black uppercase">${periodLabel} ${activePeriod} Total</td>
+                                                <td colspan="2" class="px-2 py-2 text-sm font-black uppercase">${isVolleyballMatch ? "Match Stats Total" : `${periodLabel} ${activePeriod} Total`}</td>
                                                 ${statDefinitions.map(stat => `
                                                     <td class="px-2 py-2 text-center text-sm font-black">${Number(quarterTotals[stat.field]) || 0}</td>
                                                 `).join("")}
@@ -4254,7 +4256,7 @@
                             <div class="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <p class="text-xs font-black uppercase tracking-wide text-slate-600">${scoreSheetTitle}</p>
-                                    <p class="text-[11px] font-semibold text-slate-500">${isScoreSheetEditMode(match) ? "Editing a pending request draft. Changes apply only after admin approval." : match.status === "Done" ? "Final player stats are shown for review." : isVolleyballMatch ? "Player columns are pure stats. Use Set PTS controls for the actual volleyball score." : `In each ${periodLabel.toLowerCase()}, click the number button to mark active players; active players move to the top.`}</p>
+                                    <p class="text-[11px] font-semibold text-slate-500">${isScoreSheetEditMode(match) ? "Editing a pending request draft. Changes apply only after admin approval." : match.status === "Done" ? "Final player stats are shown for review." : isVolleyballMatch ? "Player stats are match-wide. Active players and Set PTS stay live for the selected set." : `In each ${periodLabel.toLowerCase()}, click the number button to mark active players; active players move to the top.`}</p>
                                 </div>
                                 <p class="text-xs font-bold text-slate-700">${isVolleyballMatch ? `${periodLabel} ${activePeriod} Score: ${teamOneSetScore} - ${teamTwoSetScore}` : `Game Scores: ${teamOneGameTotals.points} - ${teamTwoGameTotals.points}`}</p>
                             </div>
