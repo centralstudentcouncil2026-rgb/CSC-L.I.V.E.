@@ -2823,6 +2823,7 @@
                 let matchesData = [];
                 let basketballStatsByMatch = new Map();
                 let volleyballScoresByMatch = new Map();
+                let volleyballScoreSaveQueues = new Map();
                 let matchEditRequestsByMatch = new Map();
                 let scoreSheetEditDraftMatchId = null;
                 let scoreSheetEditStatsByMatch = new Map();
@@ -3954,6 +3955,70 @@
                     return rows.reduce((total, row) => total + (Number(row.points) || 0), 0);
                 }
 
+                function getVolleyballScoreKey(matchId, teamId, gamePeriod) {
+                    return [
+                        Number(matchId),
+                        Number(teamId),
+                        Number(gamePeriod || 1)
+                    ].join(":");
+                }
+
+                function findOrCreateVolleyballScoreRow(matchId, teamId, teamName, gamePeriod, scoreRows) {
+                    let currentScore = scoreRows.find(score =>
+                        Number(score.team_id) === Number(teamId)
+                        && Number(score.game_period || 1) === Number(gamePeriod)
+                    );
+
+                    if (!currentScore) {
+                        currentScore = {
+                            match_id: Number(matchId),
+                            team_id: Number(teamId),
+                            team_name: teamName || "",
+                            game_period: Number(gamePeriod) || 1,
+                            points: 0
+                        };
+                        scoreRows.push(currentScore);
+                    }
+
+                    return currentScore;
+                }
+
+                function queueVolleyballScoreSave(scoreRow) {
+                    const saveKey = getVolleyballScoreKey(scoreRow.match_id, scoreRow.team_id, scoreRow.game_period);
+                    const payload = {
+                        match_id: Number(scoreRow.match_id),
+                        team_id: Number(scoreRow.team_id),
+                        team_name: scoreRow.team_name || "",
+                        game_period: Number(scoreRow.game_period || 1),
+                        points: Math.max(0, Number(scoreRow.points) || 0),
+                        updated_at: new Date().toISOString()
+                    };
+                    const previousSave = volleyballScoreSaveQueues.get(saveKey) || Promise.resolve();
+                    const nextSave = previousSave
+                        .catch(() => null)
+                        .then(async () => {
+                            const { error } = await supabase
+                                .from(VOLLEYBALL_SCORE_TABLE)
+                                .upsert(payload, {
+                                    onConflict: "match_id,team_id,game_period"
+                                });
+
+                            if (error) throw error;
+                        })
+                        .catch(error => {
+                            console.error("Volleyball score update error:", error.message || error);
+                            alert("Unable to update volleyball score. Run the volleyball score SQL first.");
+                        })
+                        .finally(() => {
+                            if (volleyballScoreSaveQueues.get(saveKey) === nextSave) {
+                                volleyballScoreSaveQueues.delete(saveKey);
+                            }
+                        });
+
+                    volleyballScoreSaveQueues.set(saveKey, nextSave);
+                    return nextSave;
+                }
+
                 async function adjustVolleyballTeamScore(button, amount) {
                     const matchId = Number(button.dataset.matchId);
                     const teamId = Number(button.dataset.teamId);
@@ -3965,21 +4030,7 @@
 
                     if (isScoreSheetEditMode(selectedMatch)) {
                         const draftRows = getDraftVolleyballScoreRows(matchId);
-                        let currentScore = draftRows.find(score =>
-                            Number(score.team_id) === Number(teamId)
-                            && Number(score.game_period || 1) === Number(gamePeriod)
-                        );
-
-                        if (!currentScore) {
-                            currentScore = {
-                                match_id: matchId,
-                                team_id: teamId,
-                                team_name: teamName,
-                                game_period: gamePeriod,
-                                points: 0
-                            };
-                            draftRows.push(currentScore);
-                        }
+                        const currentScore = findOrCreateVolleyballScoreRow(matchId, teamId, teamName, gamePeriod, draftRows);
 
                         currentScore.points = Math.max(0, (Number(currentScore.points) || 0) + Number(amount || 0));
                         currentScore.updated_at = new Date().toISOString();
@@ -3987,33 +4038,18 @@
                         return;
                     }
 
-                    const currentScore = getVolleyballScoresForMatch(matchId)
-                        .find(score =>
-                            Number(score.team_id) === Number(teamId)
-                            && Number(score.game_period || 1) === Number(gamePeriod)
-                        );
-                    const nextPoints = Math.max(0, (Number(currentScore?.points) || 0) + Number(amount || 0));
-
-                    const { error } = await supabase
-                        .from(VOLLEYBALL_SCORE_TABLE)
-                        .upsert({
-                            match_id: matchId,
-                            team_id: teamId,
-                            team_name: teamName,
-                            game_period: gamePeriod,
-                            points: nextPoints,
-                            updated_at: new Date().toISOString()
-                        }, {
-                            onConflict: "match_id,team_id,game_period"
-                        });
-
-                    if (error) {
-                        console.error("Volleyball score update error:", error.message || error);
-                        alert("Unable to update volleyball score. Run the volleyball score SQL first.");
-                        return;
+                    const matchKey = Number(matchId);
+                    if (!volleyballScoresByMatch.has(matchKey)) {
+                        volleyballScoresByMatch.set(matchKey, []);
                     }
 
-                    await loadSavedMatches();
+                    const scoreRows = volleyballScoresByMatch.get(matchKey);
+                    const currentScore = findOrCreateVolleyballScoreRow(matchId, teamId, teamName, gamePeriod, scoreRows);
+                    currentScore.points = Math.max(0, (Number(currentScore.points) || 0) + Number(amount || 0));
+                    currentScore.updated_at = new Date().toISOString();
+
+                    renderMatches(matchesData);
+                    queueVolleyballScoreSave(currentScore);
                 }
 
                 function renderBasketballRows(match, teamSide, canManageCurrentMatch) {
