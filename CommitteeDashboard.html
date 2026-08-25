@@ -7801,6 +7801,7 @@
                                 ? `Set ${match.game_period || 1}`
                                 : "";
                         const periodLimit = isBasketballSport(match) ? 4 : isVolleyballSport(match) ? 5 : 0;
+                        const usesScoreSheet = hasPlayerScoreSheet(match);
 
                         if (isDone) {
                             const teamOneDeclaredScore = getDeclaredScoreForTeam(history, getTeamId(match, "one"), firstTeamName);
@@ -7833,7 +7834,7 @@
                                 </div>
                             ` : "";
                             const doneCard = document.createElement("div");
-                            doneCard.className = hasPlayerScoreSheet(match)
+                            doneCard.className = usesScoreSheet
                                 ? "w-full max-w-[94rem] p-4 bg-white border-0 shadow-md rounded-lg"
                                 : "p-4 bg-white border-0 shadow-md rounded-lg";
 
@@ -7925,7 +7926,7 @@
                                             type="button"
                                             data-match-id="${match.id}"
                                             ${canManageCurrentMatch && !pendingEditRequest ? "" : "disabled"}
-                                            class="edit-done-match-btn px-4 py-2 ${canManageCurrentMatch && !pendingEditRequest ? "bg-blue-600 hover:bg-blue-700 text-white" : lockedControlClasses} rounded-lg text-sm font-medium">
+                                            class="${usesScoreSheet ? "edit-done-match-btn" : "submit-done-match-edit-btn"} px-4 py-2 ${canManageCurrentMatch && !pendingEditRequest ? "bg-blue-600 hover:bg-blue-700 text-white" : lockedControlClasses} rounded-lg text-sm font-medium">
                                             Request Edit
                                         </button>
                                     `}
