@@ -3775,23 +3775,27 @@
                         const key = [
                             row.match_id,
                             row.team_id,
-                            Number(row.game_period || 1),
                             playerKey
                         ].join(":");
 
                         if (!mergedRows.has(key)) {
-                            mergedRows.set(key, { ...row });
+                            mergedRows.set(key, { ...row, game_period: 1, source_game_period: Number(row.game_period || 1) });
                             return;
                         }
 
                         const existing = mergedRows.get(key);
                         const statValues = {};
                         BASKETBALL_STAT_FIELDS.forEach(field => {
-                            statValues[field] = Math.max(Number(existing[field]) || 0, Number(row[field]) || 0);
+                            statValues[field] = (Number(existing[field]) || 0) + (Number(row[field]) || 0);
                         });
+                        const preferredIdentity = Number(existing.source_game_period || 1) === 1
+                            ? existing
+                            : Number(row.game_period || 1) === 1 ? row : existing;
                         mergedRows.set(key, {
                             ...existing,
-                            ...row,
+                            id: preferredIdentity.id || existing.id || row.id,
+                            game_period: 1,
+                            source_game_period: Math.min(Number(existing.source_game_period || 1), Number(row.game_period || 1)),
                             ...statValues,
                             is_active: Boolean(existing.is_active || row.is_active),
                             player_name: row.player_name || existing.player_name,
@@ -3807,7 +3811,6 @@
                     const teamId = getTeamId(match, teamSide);
                     return getSafeBasketballStatRows(getBasketballStatsForMatch(match.id))
                         .filter(row => Number(row.team_id) === Number(teamId))
-                        .filter(row => Number(row.game_period || 1) === Number(gamePeriod))
                         .sort((first, second) => {
                             const firstActive = first.is_active ? 1 : 0;
                             const secondActive = second.is_active ? 1 : 0;
@@ -3876,25 +3879,21 @@
                 }
 
                 function getBasketballDisplayRows(match, teamSide) {
-                    const activePeriod = getBasketballActivePeriod(match);
                     const teamId = getTeamId(match, teamSide);
                     const statDefinitions = getScoreSheetStatDefinitions(match);
                     const allTeamRows = getSafeBasketballStatRows(getBasketballStatsForMatch(match.id))
                         .filter(row => Number(row.team_id) === Number(teamId));
-                    const periodRows = allTeamRows
-                        .filter(row => Number(row.game_period || 1) === Number(activePeriod));
-                    const periodRowsByIdNumber = new Map();
+                    const rowsByIdNumber = new Map();
 
-                    periodRows.forEach(row => {
+                    allTeamRows.forEach(row => {
                         const key = normalizeTeamValue(row.id_number || row.participant_id);
-                        if (key) periodRowsByIdNumber.set(key, row);
+                        if (key) rowsByIdNumber.set(key, row);
                     });
 
                     return getBasketballLineupRows(match, teamSide)
                         .map((lineupRow, lineupIndex) => {
                             const key = normalizeTeamValue(lineupRow.id_number || lineupRow.participant_id);
-                            const periodRow = periodRowsByIdNumber.get(key) || (activePeriod === 1 ? lineupRow : null);
-                            const sourceRow = periodRow || lineupRow;
+                            const statRow = rowsByIdNumber.get(key) || lineupRow;
                             const cumulativeRows = allTeamRows.filter(row =>
                                 normalizeTeamValue(row.id_number || row.participant_id) === key
                             );
@@ -3903,15 +3902,16 @@
                                 cumulativeStats[stat.field] = cumulativeRows.reduce((total, row) => total + (Number(row[stat.field]) || 0), 0);
                             });
                             return {
-                                ...sourceRow,
+                                ...statRow,
                                 ...cumulativeStats,
-                                id: periodRow?.id || (activePeriod === 1 ? lineupRow.id || "" : ""),
+                                id: statRow?.id || lineupRow.id || "",
                                 lineup_id: lineupRow.id || "",
-                                id_number: lineupRow.id_number || periodRow?.id_number || "",
-                                player_name: lineupRow.player_name || periodRow?.player_name || "",
-                                participant_id: lineupRow.participant_id || periodRow?.participant_id || null,
-                                is_active: Boolean(periodRow?.is_active),
-                                created_at: lineupRow.created_at || periodRow?.created_at || null,
+                                id_number: lineupRow.id_number || statRow?.id_number || "",
+                                player_name: lineupRow.player_name || statRow?.player_name || "",
+                                participant_id: lineupRow.participant_id || statRow?.participant_id || null,
+                                game_period: 1,
+                                is_active: Boolean(statRow?.is_active),
+                                created_at: lineupRow.created_at || statRow?.created_at || null,
                                 lineup_index: lineupIndex
                             };
                         })
@@ -3927,8 +3927,7 @@
                     const teamId = getTeamId(match, teamSide);
                     const statDefinitions = getScoreSheetStatDefinitions(match);
                     const rows = getSafeBasketballStatRows(getBasketballStatsForMatch(match.id))
-                        .filter(row => Number(row.team_id) === Number(teamId))
-                        .filter(row => gamePeriod === null || Number(row.game_period || 1) === Number(gamePeriod));
+                        .filter(row => Number(row.team_id) === Number(teamId));
 
                     return rows.reduce((totals, row) => {
                         statDefinitions.forEach(stat => {
@@ -4173,17 +4172,13 @@
                     const statDefinitions = getScoreSheetStatDefinitions(match);
                     const teamOneGameTotals = getBasketballTotals(match, "one");
                     const teamTwoGameTotals = getBasketballTotals(match, "two");
-                    const teamOneQuarterTotals = getBasketballTotals(match, "one", activePeriod);
-                    const teamTwoQuarterTotals = getBasketballTotals(match, "two", activePeriod);
                     const teamOneSetScore = getVolleyballTeamScore(match, "one", activePeriod);
                     const teamTwoSetScore = getVolleyballTeamScore(match, "two", activePeriod);
 
                     const renderTeamSheet = (teamSide, theme) => {
                         const teamName = getTeamName(match, teamSide);
                         const gameTotals = teamSide === "one" ? teamOneGameTotals : teamTwoGameTotals;
-                        const quarterTotals = isVolleyballMatch
-                            ? gameTotals
-                            : teamSide === "one" ? teamOneQuarterTotals : teamTwoQuarterTotals;
+                        const quarterTotals = gameTotals;
                         const setScore = teamSide === "one" ? teamOneSetScore : teamTwoSetScore;
                         const statMinWidth = isVolleyballMatch ? "min-w-[54rem]" : "min-w-[26rem]";
                         return `
@@ -4239,7 +4234,7 @@
                                         <tbody class="basketball-score-body">${renderBasketballRows(match, teamSide, canEditScoreSheet)}</tbody>
                                         <tfoot>
                                             <tr class="${theme.footer}">
-                                                <td colspan="2" class="px-2 py-2 text-sm font-black uppercase">${isVolleyballMatch ? "Match Stats Total" : `${periodLabel} ${activePeriod} Total`}</td>
+                                                <td colspan="2" class="px-2 py-2 text-sm font-black uppercase">Match Stats Total</td>
                                                 ${statDefinitions.map(stat => `
                                                     <td class="px-2 py-2 text-center text-sm font-black">${Number(quarterTotals[stat.field]) || 0}</td>
                                                 `).join("")}
@@ -4256,7 +4251,7 @@
                             <div class="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <p class="text-xs font-black uppercase tracking-wide text-slate-600">${scoreSheetTitle}</p>
-                                    <p class="text-[11px] font-semibold text-slate-500">${isScoreSheetEditMode(match) ? "Editing a pending request draft. Changes apply only after admin approval." : match.status === "Done" ? "Final player stats are shown for review." : isVolleyballMatch ? "Player stats are match-wide. Active players and Set PTS stay live for the selected set." : `In each ${periodLabel.toLowerCase()}, click the number button to mark active players; active players move to the top.`}</p>
+                                    <p class="text-[11px] font-semibold text-slate-500">${isScoreSheetEditMode(match) ? "Editing a pending request draft. Changes apply only after admin approval." : match.status === "Done" ? "Final player stats are shown for review." : isVolleyballMatch ? "Player stats are match-wide. Active players and Set PTS stay live for the selected set." : `Player stats and active players are match-wide. The ${periodLabel.toLowerCase()} selector stays live for game flow.`}</p>
                                 </div>
                                 <p class="text-xs font-bold text-slate-700">${isVolleyballMatch ? `${periodLabel} ${activePeriod} Score: ${teamOneSetScore} - ${teamTwoSetScore}` : `Game Scores: ${teamOneGameTotals.points} - ${teamTwoGameTotals.points}`}</p>
                             </div>
@@ -4583,7 +4578,15 @@
 
                     let statRow = Array.from(basketballStatsByMatch.values())
                         .flat()
-                        .find(row => String(row.id) === String(statId));
+                        .find(row =>
+                            Number(row.match_id) === Number(options.matchId)
+                            && Number(row.team_id) === Number(options.teamId)
+                            && normalizeTeamValue(row.id_number || row.participant_id) === normalizeTeamValue(options.idNumber || options.participantId)
+                            && Number(row.game_period || 1) === 1
+                        )
+                        || Array.from(basketballStatsByMatch.values())
+                            .flat()
+                            .find(row => String(row.id) === String(statId));
 
                     if (statRow) return statRow;
 
@@ -4614,17 +4617,16 @@
 
                     const targetMatchId = Number(options.matchId) || sourceLineupRow.match_id;
                     const targetTeamId = Number(options.teamId) || sourceLineupRow.team_id;
-                    const selectedMatch = matchesData.find(match => Number(match.id) === Number(targetMatchId));
-                    const targetPeriod = Math.min(getScoreSheetPeriodLimit(selectedMatch || ""), Math.max(1, Number(options.gamePeriod) || 1));
+                    const targetPeriod = 1;
                     const lineupKey = normalizeTeamValue(sourceLineupRow.id_number || sourceLineupRow.participant_id);
-                    const periodRow = Array.from(basketballStatsByMatch.values())
+                    const playerRows = Array.from(basketballStatsByMatch.values())
                         .flat()
-                        .find(row =>
+                        .filter(row =>
                             Number(row.match_id) === Number(targetMatchId)
                             && Number(row.team_id) === Number(targetTeamId)
-                            && Number(row.game_period || 1) === Number(targetPeriod)
                             && normalizeTeamValue(row.id_number || row.participant_id) === lineupKey
                         );
+                    const periodRow = playerRows.find(row => Number(row.game_period || 1) === 1) || playerRows[0];
 
                     if (periodRow) return periodRow;
 
@@ -4656,8 +4658,7 @@
                 function ensureDraftBasketballPeriodStatRow(statId, options = {}) {
                     const targetMatchId = Number(options.matchId);
                     const targetTeamId = Number(options.teamId);
-                    const selectedMatch = matchesData.find(match => Number(match.id) === Number(targetMatchId));
-                    const targetPeriod = Math.min(getScoreSheetPeriodLimit(selectedMatch || ""), Math.max(1, Number(options.gamePeriod) || 1));
+                    const targetPeriod = 1;
                     const draftRows = getDraftBasketballRows(targetMatchId);
                     const lineupKey = normalizeTeamValue(options.idNumber || options.participantId);
 
@@ -4669,7 +4670,6 @@
                         || (
                             Number(row.match_id) === targetMatchId
                             && Number(row.team_id) === targetTeamId
-                            && Number(row.game_period || 1) === targetPeriod
                             && normalizeTeamValue(row.id_number || row.participant_id) === lineupKey
                         )
                     );
@@ -4710,9 +4710,7 @@
                     };
 
                     BASKETBALL_STAT_FIELDS.forEach(field => {
-                        createdRow[field] = Number(sourceRow[field]) && Number(sourceRow.game_period || 1) === targetPeriod
-                            ? Number(sourceRow[field])
-                            : 0;
+                        createdRow[field] = Number(sourceRow[field]) || 0;
                     });
 
                     createdRow.id = draftId;
@@ -4739,7 +4737,6 @@
                     return [
                         Number(row.match_id),
                         Number(row.team_id),
-                        Number(row.game_period || 1),
                         normalizeTeamValue(row.id_number || row.participant_id || row.player_name)
                     ].join(":");
                 }
@@ -4768,12 +4765,27 @@
                     return row;
                 }
 
+                function collapseLocalBasketballStatRows(statRow) {
+                    if (!statRow || !statRow.match_id) return;
+
+                    const matchKey = Number(statRow.match_id);
+                    const rows = basketballStatsByMatch.get(matchKey) || [];
+                    const playerKey = normalizeTeamValue(statRow.id_number || statRow.participant_id || statRow.player_name);
+
+                    basketballStatsByMatch.set(matchKey, rows.filter(row =>
+                        String(row.id) === String(statRow.id)
+                        || Number(row.team_id) !== Number(statRow.team_id)
+                        || normalizeTeamValue(row.id_number || row.participant_id || row.player_name) !== playerKey
+                    ));
+                }
+
                 function queueBasketballStatSave(statRow, field) {
                     const statId = String(statRow?.id || "");
                     if (!statId || !BASKETBALL_STAT_FIELDS.has(field)) return Promise.resolve();
 
                     const saveKey = `${statId}:${field}`;
                     const payload = {
+                        game_period: 1,
                         [field]: Math.max(0, Number(statRow[field]) || 0),
                         updated_at: new Date().toISOString()
                     };
@@ -4787,6 +4799,19 @@
                                 .eq("id", statId);
 
                             if (error) throw error;
+
+                            const idNumber = String(statRow.id_number || "").trim();
+                            if (idNumber) {
+                                const { error: deleteDuplicateError } = await supabase
+                                    .from(BASKETBALL_STATS_TABLE)
+                                    .delete()
+                                    .eq("match_id", statRow.match_id)
+                                    .eq("team_id", statRow.team_id)
+                                    .eq("id_number", idNumber)
+                                    .neq("id", statId);
+
+                                if (deleteDuplicateError) throw deleteDuplicateError;
+                            }
                         })
                         .catch(error => {
                             console.error("Basketball stat update error:", error.message || error);
@@ -4871,8 +4896,15 @@
                     }
 
                     const localStatRow = upsertLocalBasketballStatRow(statRow);
-                    localStatRow[field] = Math.max(0, (Number(localStatRow[field]) || 0) + Number(amount || 0));
+                    const playerKey = normalizeTeamValue(localStatRow.id_number || localStatRow.participant_id || options.idNumber || options.participantId);
+                    const displayedStatRow = getSafeBasketballStatRows(getBasketballStatsForMatch(localStatRow.match_id || options.matchId))
+                        .find(row =>
+                            Number(row.team_id) === Number(localStatRow.team_id || options.teamId)
+                            && normalizeTeamValue(row.id_number || row.participant_id || row.player_name) === playerKey
+                        );
+                    localStatRow[field] = Math.max(0, (Number(displayedStatRow?.[field] ?? localStatRow[field]) || 0) + Number(amount || 0));
                     localStatRow.updated_at = new Date().toISOString();
+                    collapseLocalBasketballStatRows(localStatRow);
                     renderMatches(matchesData);
                     queueBasketballStatSave(localStatRow, field);
                 }
@@ -4906,21 +4938,44 @@
                         }
                     }
 
-                    const { error } = await supabase
+                    const matchKey = Number(statRow.match_id || options.matchId);
+                    const playerKey = normalizeTeamValue(statRow.id_number || statRow.participant_id || options.idNumber || options.participantId);
+                    const localRows = basketballStatsByMatch.get(matchKey) || [];
+                    localRows
+                        .filter(row =>
+                            Number(row.team_id) === Number(statRow.team_id || options.teamId)
+                            && normalizeTeamValue(row.id_number || row.participant_id) === playerKey
+                        )
+                        .forEach(row => {
+                            row.is_active = Boolean(nextActive);
+                            row.updated_at = new Date().toISOString();
+                        });
+                    statRow.is_active = Boolean(nextActive);
+                    statRow.updated_at = new Date().toISOString();
+                    renderMatches(matchesData);
+
+                    let updateQuery = supabase
                         .from(BASKETBALL_STATS_TABLE)
                         .update({
                             is_active: Boolean(nextActive),
                             updated_at: new Date().toISOString()
                         })
-                        .eq("id", statRow.id);
+                        .eq("match_id", statRow.match_id || options.matchId)
+                        .eq("team_id", statRow.team_id || options.teamId);
+
+                    if (statRow.id_number || options.idNumber) {
+                        updateQuery = updateQuery.eq("id_number", statRow.id_number || options.idNumber);
+                    } else {
+                        updateQuery = updateQuery.eq("id", statRow.id);
+                    }
+
+                    const { error } = await updateQuery;
 
                     if (error) {
                         console.error("Basketball active player update error:", error.message || error);
                         alert("Unable to update active player. Run the basketball score SQL first.");
                         return;
                     }
-
-                    await loadSavedMatches();
                 }
 
                 function updateMatchStageOptions() {
