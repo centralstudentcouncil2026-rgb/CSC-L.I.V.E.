@@ -1712,23 +1712,27 @@
                     const key = [
                         row.match_id,
                         row.team_id,
-                        Number(row.game_period || 1),
                         playerKey
                     ].join(":");
 
                     if (!mergedRows.has(key)) {
-                        mergedRows.set(key, { ...row });
+                        mergedRows.set(key, { ...row, game_period: 1, source_game_period: Number(row.game_period || 1) });
                         return;
                     }
 
                     const existing = mergedRows.get(key);
                     const statValues = {};
                     PLAYER_SCORE_SHEET_FIELDS.forEach(field => {
-                        statValues[field] = Math.max(Number(existing[field]) || 0, Number(row[field]) || 0);
+                        statValues[field] = (Number(existing[field]) || 0) + (Number(row[field]) || 0);
                     });
+                    const preferredIdentity = Number(existing.source_game_period || 1) === 1
+                        ? existing
+                        : Number(row.game_period || 1) === 1 ? row : existing;
                     mergedRows.set(key, {
                         ...existing,
-                        ...row,
+                        id: preferredIdentity.id || existing.id || row.id,
+                        game_period: 1,
+                        source_game_period: Math.min(Number(existing.source_game_period || 1), Number(row.game_period || 1)),
                         ...statValues,
                         is_active: Boolean(existing.is_active || row.is_active),
                         player_name: row.player_name || existing.player_name,
@@ -1742,7 +1746,6 @@
 
             function getStudentBasketballTeamRows(match, teamSide, activeOnly = false, finalMode = false) {
                 const teamId = getTeamId(match, teamSide);
-                const activePeriod = getBasketballActivePeriod(match);
                 const statDefinitions = getScoreSheetStatDefinitions(match);
                 const allTeamRows = getSafeBasketballStatRows(getBasketballStatsForMatch(match.id))
                     .filter(row => Number(row.team_id) === Number(teamId));
@@ -1784,7 +1787,6 @@
                 }
 
                 return allTeamRows
-                    .filter(row => Number(row.game_period || 1) === activePeriod)
                     .filter(row => !activeOnly || row.is_active)
                     .map(row => {
                         const key = normalizeTeamValue(row.id_number || row.participant_id);
