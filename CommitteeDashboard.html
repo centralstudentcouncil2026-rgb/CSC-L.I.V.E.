@@ -2822,6 +2822,7 @@
                 let registeredSportsData = [];
                 let matchesData = [];
                 let basketballStatsByMatch = new Map();
+                let basketballStatSaveQueues = new Map();
                 let volleyballScoresByMatch = new Map();
                 let volleyballScoreSaveQueues = new Map();
                 let matchEditRequestsByMatch = new Map();
@@ -4647,7 +4648,7 @@
                         return null;
                     }
 
-                    return insertedRow;
+                    return upsertLocalBasketballStatRow(insertedRow);
                 }
 
                 function ensureDraftBasketballPeriodStatRow(statId, options = {}) {
@@ -4732,6 +4733,73 @@
                     return data || null;
                 }
 
+                function getBasketballStatConflictKey(row) {
+                    return [
+                        Number(row.match_id),
+                        Number(row.team_id),
+                        Number(row.game_period || 1),
+                        normalizeTeamValue(row.id_number || row.participant_id || row.player_name)
+                    ].join(":");
+                }
+
+                function upsertLocalBasketballStatRow(row) {
+                    if (!row || !row.match_id) return row;
+
+                    const matchKey = Number(row.match_id);
+                    if (!basketballStatsByMatch.has(matchKey)) {
+                        basketballStatsByMatch.set(matchKey, []);
+                    }
+
+                    const rows = basketballStatsByMatch.get(matchKey);
+                    const rowConflictKey = getBasketballStatConflictKey(row);
+                    const existingRow = rows.find(existing =>
+                        (row.id && String(existing.id) === String(row.id))
+                        || getBasketballStatConflictKey(existing) === rowConflictKey
+                    );
+
+                    if (existingRow) {
+                        Object.assign(existingRow, row);
+                        return existingRow;
+                    }
+
+                    rows.push(row);
+                    return row;
+                }
+
+                function queueBasketballStatSave(statRow, field) {
+                    const statId = String(statRow?.id || "");
+                    if (!statId || !BASKETBALL_STAT_FIELDS.has(field)) return Promise.resolve();
+
+                    const saveKey = `${statId}:${field}`;
+                    const payload = {
+                        [field]: Math.max(0, Number(statRow[field]) || 0),
+                        updated_at: new Date().toISOString()
+                    };
+                    const previousSave = basketballStatSaveQueues.get(saveKey) || Promise.resolve();
+                    const nextSave = previousSave
+                        .catch(() => null)
+                        .then(async () => {
+                            const { error } = await supabase
+                                .from(BASKETBALL_STATS_TABLE)
+                                .update(payload)
+                                .eq("id", statId);
+
+                            if (error) throw error;
+                        })
+                        .catch(error => {
+                            console.error("Basketball stat update error:", error.message || error);
+                            alert(error.message || "Unable to update basketball stat. Run the basketball score SQL first.");
+                        })
+                        .finally(() => {
+                            if (basketballStatSaveQueues.get(saveKey) === nextSave) {
+                                basketballStatSaveQueues.delete(saveKey);
+                            }
+                        });
+
+                    basketballStatSaveQueues.set(saveKey, nextSave);
+                    return nextSave;
+                }
+
                 async function updateBasketballStatValueWithRetry(statRow, field, amount) {
                     let currentRow = statRow;
 
@@ -4800,16 +4868,11 @@
                         return;
                     }
 
-                    const { error } = await updateBasketballStatValueWithRetry(statRow, field, amount);
-
-                    if (error) {
-                        console.error("Basketball stat update error:", error.message || error);
-                        alert(error.message || "Unable to update basketball stat. Run the basketball score SQL first.");
-                        return;
-                    }
-
-                    await consolidateBasketballDuplicateRows(statRow.match_id);
-                    await loadSavedMatches();
+                    const localStatRow = upsertLocalBasketballStatRow(statRow);
+                    localStatRow[field] = Math.max(0, (Number(localStatRow[field]) || 0) + Number(amount || 0));
+                    localStatRow.updated_at = new Date().toISOString();
+                    renderMatches(matchesData);
+                    queueBasketballStatSave(localStatRow, field);
                 }
 
                 async function toggleBasketballActivePlayer(statId, nextActive, options = {}) {
@@ -9450,10 +9513,12 @@
                     const hasDirtyForm = Boolean(document.querySelector("form[data-auto-refresh-dirty='true']"));
                     const hasOpenModal = [...document.querySelectorAll("[id$='Modal']")]
                         .some(modal => !modal.classList.contains("hidden"));
+                    const hasPendingScoreSaves = basketballStatSaveQueues.size > 0 || volleyballScoreSaveQueues.size > 0;
 
                     return Boolean(isEditingField)
                         || hasDirtyForm
                         || hasOpenModal
+                        || hasPendingScoreSaves
                         || Date.now() - committeeLastInteractionAt < COMMITTEE_REFRESH_IDLE_DELAY;
                 }
 
