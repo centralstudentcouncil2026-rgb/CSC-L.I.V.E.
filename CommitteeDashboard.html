@@ -9525,6 +9525,24 @@
                         return;
                     }
 
+                    try {
+                        const { data: canManageSelectedSport, error: permissionCheckError } = await supabase
+                            .rpc("app_can_manage_match_sport", {
+                                match_sport_id: Number(matchSport.value)
+                            });
+
+                        if (!permissionCheckError && canManageSelectedSport === false) {
+                            alert("Your account assignment is not allowed to schedule this game category. Ask an admin to run the latest match RLS SQL or update your assigned game.");
+                            return;
+                        }
+
+                        if (permissionCheckError) {
+                            console.warn("Match permission preflight warning:", permissionCheckError.message || permissionCheckError);
+                        }
+                    } catch (permissionCheckError) {
+                        console.warn("Match permission preflight warning:", permissionCheckError.message || permissionCheckError);
+                    }
+
                     const insertPayload = {
                         ...matchData,
                         status: "Next",
