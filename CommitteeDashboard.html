@@ -6474,238 +6474,12 @@
                     return;
                 }
 
-                const teamStats = new Map();
-                const registeredTeamAliases = new Map();
-
-                    function makeTeamKey(teamId, teamName) {
-                        if (teamId !== null && teamId !== undefined && teamId !== "") {
-                            return `id:${teamId}`;
-                        }
-
-                        return `name:${String(teamName || "Unknown Team").trim().toLowerCase()}`;
-                    }
-
-                function findPointValue(...values) {
-                    for (const value of values) {
-                        if (value === null || value === undefined || value === "") {
-                            continue;
-                        }
-
-                        const numericValue = Number(value);
-                        if (Number.isFinite(numericValue)) {
-                            return {
-                                found: true,
-                                value: numericValue
-                            };
-                        }
-                    }
-
-                    return {
-                        found: false,
-                        value: 0
-                    };
-                }
-
-                function getHistoryPoints(history, side) {
-                    if (side === "loser" && isDefaultForfeitHistory(history)) {
-                        return 0;
-                    }
-
-                    const explicitPoints = side === "winner"
-                        ? findPointValue(history.winner_points_awarded, history.winner_award, history.winner_points, history.points_winner, history.winning_points)
-                        : findPointValue(history.loser_points_awarded, history.loser_award, history.loser_points, history.points_loser, history.losing_points);
-
-                    if (explicitPoints.found) {
-                        return explicitPoints.value;
-                    }
-
-                    return 0;
-                }
-
-                function getHistoryTeamAdjustment(history, teamId, teamName) {
-                    const normalizedTeamName = String(teamName || "").trim().toLowerCase();
-                    const isTeamOne = (history.team_one_id && Number(history.team_one_id) === Number(teamId))
-                        || (normalizedTeamName && String(history.team_one_name || "").trim().toLowerCase() === normalizedTeamName);
-                    const isTeamTwo = (history.team_two_id && Number(history.team_two_id) === Number(teamId))
-                        || (normalizedTeamName && String(history.team_two_name || "").trim().toLowerCase() === normalizedTeamName);
-
-                    if (isTeamOne) {
-                        return (Number(history.team_one_merit_points) || 0) - (Number(history.team_one_demerit_points) || 0);
-                    }
-
-                    if (isTeamTwo) {
-                        return (Number(history.team_two_merit_points) || 0) - (Number(history.team_two_demerit_points) || 0);
-                    }
-
-                    return 0;
-                }
-
-                function isNoWinnerHistory(history) {
-                    const resultText = String(history?.result || "").trim().toLowerCase();
-                    const bestPlayerText = String(history?.best_player || "").trim().toLowerCase();
-                    return resultText.includes("no winner") || bestPlayerText.includes("no team arrived");
-                }
-
-                function isDefaultForfeitHistory(history) {
-                    const bestPlayerText = String(history?.best_player || "").trim().toLowerCase();
-                    return bestPlayerText.includes("win by default")
-                        || bestPlayerText.includes("won by default")
-                        || bestPlayerText.includes("winner by default");
-                }
-
-                function buildAttendancePointRows(attendanceRows) {
-                    return (attendanceRows || [])
-                        .map(row => ({
-                            ...row,
-                            team: getCollegeTeamAlias(row.team || row.home_college || ""),
-                            date: row.attendance_date || row.date || "",
-                            points: Number(row.total_points || row.points || 0)
-                        }))
-                        .filter(row => row.team && row.date && Number.isFinite(row.points));
-                }
-
-                function buildTeamAdjustmentRows(adjustmentRows) {
-                    return (adjustmentRows || [])
-                        .map(row => ({
-                            ...row,
-                            team: getCollegeTeamAlias(row.team || ""),
-                            team_id: row.team_id || null,
-                            points: Number(row.points || 0),
-                            adjustment_type: row.adjustment_type === "demerit" ? "demerit" : "merit"
-                        }))
-                        .filter(row => (row.team || row.team_id) && Number.isFinite(row.points) && row.points > 0);
-                }
-
-                function getCollegeTeamAlias(value) {
-                    const rawValue = String(value || "").trim();
-                    const normalizedValue = rawValue.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-                    const aliases = {
-                        "college of science engineering and technology": "CSET",
-                        "college of nursing": "CON",
-                        "college of business": "COB",
-                        "college of arts and humanities": "CAH",
-                        "college of theology": "COT",
-                        "college of health": "COH",
-                        "college of medicine": "COM",
-                        "college of teacher education": "CTE",
-                        "college of teachers education": "CTE",
-                        "college of dentistry": "COD"
-                    };
-
-                    return aliases[normalizedValue] || rawValue;
-                }
-
-                function registerTeamAliases(teamId, teamName, teamStat) {
-                    if (teamId !== null && teamId !== undefined && teamId !== "") {
-                        registeredTeamAliases.set(`id:${teamId}`, teamStat);
-                    }
-
-                    [teamName, getCollegeTeamAlias(teamName)].forEach(alias => {
-                        const normalizedTeamName = String(alias || "").trim().toLowerCase();
-                        if (normalizedTeamName) {
-                            registeredTeamAliases.set(`name:${normalizedTeamName}`, teamStat);
-                        }
-                    });
-                }
-
-                function getRegisteredTeamStat(teamId, teamName) {
-                    if (teamId !== null && teamId !== undefined && teamId !== "") {
-                        const byId = registeredTeamAliases.get(`id:${teamId}`);
-                        if (byId) {
-                            return byId;
-                        }
-                    }
-
-                    for (const alias of [teamName, getCollegeTeamAlias(teamName)]) {
-                        const normalizedTeamName = String(alias || "").trim().toLowerCase();
-                        if (normalizedTeamName) {
-                            const team = registeredTeamAliases.get(`name:${normalizedTeamName}`);
-                            if (team) return team;
-                        }
-                    }
-
-                    return null;
-                }
-
-                function addRegisteredTeam(team) {
-                    const teamName = team.team || team.team_name || team.name;
-                    const key = makeTeamKey(team.id, teamName);
-
-                    if (!teamStats.has(key)) {
-                        teamStats.set(key, {
-                            id: team.id,
-                            team: teamName || "Unknown Team",
-                            points: 0,
-                            wins: 0,
-                            losses: 0
-                        });
-                    }
-
-                    registerTeamAliases(team.id, teamName, teamStats.get(key));
-                }
-
-                    (teams || []).forEach(addRegisteredTeam);
-
-                    (historyRows || []).forEach(history => {
-                    if (isNoWinnerHistory(history)) {
-                        [
-                            { id: history.team_one_id, name: history.team_one_name },
-                            { id: history.team_two_id, name: history.team_two_name }
-                        ].forEach(teamRef => {
-                            const team = getRegisteredTeamStat(teamRef.id, teamRef.name);
-                            if (team) {
-                                team.points += getHistoryTeamAdjustment(history, teamRef.id, teamRef.name);
-                            }
-                        });
-                        return;
-                    }
-
-                    const winnerPoints = getHistoryPoints(history, "winner");
-                    const loserPoints = getHistoryPoints(history, "loser");
-                    const winnerId = history.winner_team_id ?? history.winning_team_id ?? history.winner_id ?? history.team_winner_id;
-                    const winnerName = history.winner_team_name || history.winning_team_name || history.winner_name || history.winner;
-                    const loserId = history.loser_team_id ?? history.losing_team_id ?? history.loser_id ?? history.team_loser_id;
-                    const loserName = history.loser_team_name || history.losing_team_name || history.loser_name || history.loser;
-
-                        if (winnerId || winnerName) {
-                            const winner = getRegisteredTeamStat(winnerId, winnerName);
-                            if (winner) {
-                                winner.points += (Number(winnerPoints) || 0) + getHistoryTeamAdjustment(history, winnerId, winnerName);
-                                winner.wins += 1;
-                            }
-                        }
-
-                        if (loserId || loserName) {
-                            const loser = getRegisteredTeamStat(loserId, loserName);
-                            if (loser) {
-                                loser.points += (Number(loserPoints) || 0) + getHistoryTeamAdjustment(history, loserId, loserName);
-                                loser.losses += 1;
-                            }
-                        }
-                    });
-
-                    buildAttendancePointRows(attendancePointError ? [] : (attendancePointRows || [])).forEach(attendancePoints => {
-                        const team = getRegisteredTeamStat(null, attendancePoints.team);
-                        if (team) {
-                            team.points += attendancePoints.points;
-                        }
-                    });
-
-                    buildTeamAdjustmentRows(teamAdjustmentError ? [] : (teamAdjustmentRows || [])).forEach(adjustment => {
-                        const team = getRegisteredTeamStat(adjustment.team_id, adjustment.team);
-                        if (team) {
-                            team.points += adjustment.adjustment_type === "demerit" ? -adjustment.points : adjustment.points;
-                        }
-                    });
-
-                    const leaderboard = Array.from(teamStats.values())
-                        .sort((a, b) => {
-                            if (b.points !== a.points) return b.points - a.points;
-                            if (b.wins !== a.wins) return b.wins - a.wins;
-                            if (a.losses !== b.losses) return a.losses - b.losses;
-
-                            return String(a.team).localeCompare(String(b.team));
-                        });
+                    const leaderboard = buildCommitteeLeaderboardRows(
+                        teams || [],
+                        historyRows || [],
+                        attendancePointError ? [] : (attendancePointRows || []),
+                        teamAdjustmentError ? [] : (teamAdjustmentRows || [])
+                    );
 
                     if (leaderboard.length === 0) {
                         leaderboardBody.innerHTML = `
@@ -6791,6 +6565,251 @@
                     animateCommitteeLeaderboardRows(previousPositions, previousRanks);
                     hasRenderedCommitteeLeaderboard = true;
                     lastCommitteeLeaderboardSignature = leaderboardSignature;
+                }
+
+                function buildCommitteeLeaderboardRows(teams, historyRows, attendanceRows = [], teamAdjustmentRows = []) {
+                    const teamStats = new Map();
+                    const registeredTeamAliases = new Map();
+
+                    function normalizeText(value) {
+                        return String(value ?? "").trim().toLowerCase();
+                    }
+
+                    function makeTeamKey(teamId, teamName) {
+                        if (teamId !== null && teamId !== undefined && teamId !== "") {
+                            return `id:${teamId}`;
+                        }
+
+                        return `name:${normalizeText(teamName || "Unknown Team")}`;
+                    }
+
+                    function addTeam(teamId, teamName, baseValues = {}) {
+                        const safeTeamName = teamName || baseValues.team || baseValues.name || "Unknown Team";
+                        const key = makeTeamKey(teamId, safeTeamName);
+
+                        if (!teamStats.has(key)) {
+                            teamStats.set(key, {
+                                id: teamId || baseValues.id || null,
+                                team: safeTeamName,
+                                points: 0,
+                                wins: 0,
+                                losses: 0
+                            });
+                        }
+
+                        return teamStats.get(key);
+                    }
+
+                    function registerTeamAliases(teamId, teamName, teamStat) {
+                        if (teamId !== null && teamId !== undefined && teamId !== "") {
+                            registeredTeamAliases.set(`id:${teamId}`, teamStat);
+                        }
+
+                        [teamName, getCollegeTeamAlias(teamName)].forEach(alias => {
+                            const normalizedTeamName = normalizeText(alias);
+                            if (normalizedTeamName) {
+                                registeredTeamAliases.set(`name:${normalizedTeamName}`, teamStat);
+                            }
+                        });
+                    }
+
+                    function getRegisteredTeamStat(teamId, teamName) {
+                        if (teamId !== null && teamId !== undefined && teamId !== "") {
+                            const byId = registeredTeamAliases.get(`id:${teamId}`);
+                            if (byId) {
+                                return byId;
+                            }
+                        }
+
+                        for (const alias of [teamName, getCollegeTeamAlias(teamName)]) {
+                            const normalizedTeamName = normalizeText(alias);
+                            if (normalizedTeamName) {
+                                const team = registeredTeamAliases.get(`name:${normalizedTeamName}`);
+                                if (team) return team;
+                            }
+                        }
+
+                        return null;
+                    }
+
+                    function getFirstValue(...values) {
+                        for (const value of values) {
+                            if (value !== null && value !== undefined && value !== "") {
+                                return value;
+                            }
+                        }
+
+                        return null;
+                    }
+
+                    function resolveHistoryPoints(history, side) {
+                        if (side === "loser" && isDefaultForfeitHistory(history)) {
+                            return 0;
+                        }
+
+                        const explicitWinnerPoints = findPointValue(
+                            history.winner_points_awarded,
+                            history.winner_award,
+                            history.winner_points,
+                            history.points_winner,
+                            history.winning_points
+                        );
+
+                        const explicitLoserPoints = findPointValue(
+                            history.loser_points_awarded,
+                            history.loser_award,
+                            history.loser_points,
+                            history.points_loser,
+                            history.losing_points
+                        );
+
+                        if (side === "winner" && explicitWinnerPoints.found) {
+                            return explicitWinnerPoints.value;
+                        }
+
+                        if (side === "loser" && explicitLoserPoints.found) {
+                            return explicitLoserPoints.value;
+                        }
+
+                        return 0;
+                    }
+
+                    function isNoWinnerHistory(history) {
+                        const resultText = normalizeText(history?.result);
+                        const bestPlayerText = normalizeText(history?.best_player);
+                        return resultText.includes("no winner") || bestPlayerText.includes("no team arrived");
+                    }
+
+                    function isDefaultForfeitHistory(history) {
+                        const bestPlayerText = normalizeText(history?.best_player);
+                        return bestPlayerText.includes("win by default")
+                            || bestPlayerText.includes("won by default")
+                            || bestPlayerText.includes("winner by default");
+                    }
+
+                    function getHistoryTeamAdjustment(history, teamId, teamName) {
+                        const normalizedTeamName = normalizeText(teamName);
+                        const isTeamOne = (history.team_one_id && Number(history.team_one_id) === Number(teamId))
+                            || (normalizedTeamName && normalizeText(history.team_one_name) === normalizedTeamName);
+                        const isTeamTwo = (history.team_two_id && Number(history.team_two_id) === Number(teamId))
+                            || (normalizedTeamName && normalizeText(history.team_two_name) === normalizedTeamName);
+
+                        if (isTeamOne) {
+                            return (Number(history.team_one_merit_points) || 0) - (Number(history.team_one_demerit_points) || 0);
+                        }
+
+                        if (isTeamTwo) {
+                            return (Number(history.team_two_merit_points) || 0) - (Number(history.team_two_demerit_points) || 0);
+                        }
+
+                        return 0;
+                    }
+
+                    function buildAttendancePointRows(attendancePointRows) {
+                        return (attendancePointRows || [])
+                            .map(row => ({
+                                ...row,
+                                team: getCollegeTeamAlias(row.team || row.home_college || ""),
+                                date: row.attendance_date || row.date || "",
+                                points: Number(row.total_points || row.points || 0)
+                            }))
+                            .filter(row => row.team && row.date && Number.isFinite(row.points));
+                    }
+
+                    function buildTeamAdjustmentRows(adjustmentRows) {
+                        return (adjustmentRows || [])
+                            .map(row => ({
+                                ...row,
+                                team: getCollegeTeamAlias(row.team || ""),
+                                team_id: row.team_id || null,
+                                points: Number(row.points || 0),
+                                adjustment_type: row.adjustment_type === "demerit" ? "demerit" : "merit"
+                            }))
+                            .filter(row => (row.team || row.team_id) && Number.isFinite(row.points) && row.points > 0);
+                    }
+
+                    (teams || []).forEach(team => {
+                        const teamName = team.team || team.team_name || team.name;
+                        const teamStat = addTeam(team.id, teamName, team);
+                        registerTeamAliases(team.id, teamName, teamStat);
+                    });
+
+                    (historyRows || []).forEach(history => {
+                        if (isNoWinnerHistory(history)) {
+                            [
+                                { id: history.team_one_id, name: history.team_one_name },
+                                { id: history.team_two_id, name: history.team_two_name }
+                            ].forEach(teamRef => {
+                                const team = getRegisteredTeamStat(teamRef.id, teamRef.name);
+                                if (team) {
+                                    team.points += getHistoryTeamAdjustment(history, teamRef.id, teamRef.name);
+                                }
+                            });
+                            return;
+                        }
+
+                        const winnerId = getFirstValue(
+                            history.winner_team_id,
+                            history.winning_team_id,
+                            history.winner_id,
+                            history.team_winner_id
+                        );
+                        const winnerName = getFirstValue(
+                            history.winner_team_name,
+                            history.winning_team_name,
+                            history.winner_name,
+                            history.winner
+                        );
+                        const loserId = getFirstValue(
+                            history.loser_team_id,
+                            history.losing_team_id,
+                            history.loser_id,
+                            history.team_loser_id
+                        );
+                        const loserName = getFirstValue(
+                            history.loser_team_name,
+                            history.losing_team_name,
+                            history.loser_name,
+                            history.loser
+                        );
+
+                        if (winnerId || winnerName) {
+                            const winner = getRegisteredTeamStat(winnerId, winnerName);
+                            if (winner) {
+                                winner.points += resolveHistoryPoints(history, "winner") + getHistoryTeamAdjustment(history, winnerId, winnerName);
+                                winner.wins += 1;
+                            }
+                        }
+
+                        if (loserId || loserName) {
+                            const loser = getRegisteredTeamStat(loserId, loserName);
+                            if (loser) {
+                                loser.points += resolveHistoryPoints(history, "loser") + getHistoryTeamAdjustment(history, loserId, loserName);
+                                loser.losses += 1;
+                            }
+                        }
+                    });
+
+                    buildAttendancePointRows(attendanceRows).forEach(attendancePoints => {
+                        const team = getRegisteredTeamStat(null, attendancePoints.team);
+                        if (team) {
+                            team.points += attendancePoints.points;
+                        }
+                    });
+
+                    buildTeamAdjustmentRows(teamAdjustmentRows).forEach(adjustment => {
+                        const team = getRegisteredTeamStat(adjustment.team_id, adjustment.team);
+                        if (team) {
+                            team.points += adjustment.adjustment_type === "demerit" ? -adjustment.points : adjustment.points;
+                        }
+                    });
+
+                    return Array.from(teamStats.values()).sort((a, b) => {
+                        if (b.points !== a.points) return b.points - a.points;
+                        if (b.wins !== a.wins) return b.wins - a.wins;
+                        if (a.losses !== b.losses) return a.losses - b.losses;
+                        return String(a.team).localeCompare(String(b.team));
+                    });
                 }
 
                 function animateCommitteeLeaderboardRows(previousPositions, previousRanks) {
