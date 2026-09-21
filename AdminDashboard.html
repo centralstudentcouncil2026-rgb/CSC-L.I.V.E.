@@ -6177,6 +6177,11 @@
                     .filter(token => token.length >= 2);
             }
 
+            function getAttendanceSignificantNameTokens(value) {
+                const ignoredTokens = new Set(["de", "del", "dela", "da", "di", "la", "las", "los", "y"]);
+                return getAttendanceNameTokens(value).filter(token => !ignoredTokens.has(token));
+            }
+
             function namesLookLikeSamePerson(sourceName, participantName) {
                 const sourceKey = normalizeAttendanceNameKey(sourceName);
                 const participantKey = normalizeAttendanceNameKey(participantName);
@@ -6189,8 +6194,8 @@
                     return true;
                 }
 
-                const sourceTokens = getAttendanceNameTokens(sourceName);
-                const participantTokens = getAttendanceNameTokens(participantName);
+                const sourceTokens = getAttendanceSignificantNameTokens(sourceName);
+                const participantTokens = getAttendanceSignificantNameTokens(participantName);
 
                 if (!sourceTokens.length || !participantTokens.length) {
                     return false;
