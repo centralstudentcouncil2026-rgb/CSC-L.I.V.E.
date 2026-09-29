@@ -2842,6 +2842,64 @@
                         accepted: true
                     });
                 }
+
+                function isMatchModalOpen() {
+                    return matchModal && !matchModal.classList.contains("hidden");
+                }
+
+                function restoreSelectValue(selectElement, previousValue) {
+                    if (!selectElement || previousValue === undefined || previousValue === null) return;
+                    const normalizedValue = String(previousValue);
+                    const valueStillExists = Array.from(selectElement.options || [])
+                        .some(option => String(option.value) === normalizedValue);
+
+                    if (valueStillExists) {
+                        selectElement.value = normalizedValue;
+                    }
+                }
+
+                function getTeamOptionName(teamId) {
+                    const option = Array.from(teamOne.options || [])
+                        .find(item => String(item.value) === String(teamId));
+                    return option?.textContent || "";
+                }
+
+                function applyLocalMatchUpdate(matchId, updatePayload) {
+                    const index = matchesData.findIndex(match => Number(match.id) === Number(matchId));
+                    if (index === -1) return;
+
+                    matchesData[index] = {
+                        ...matchesData[index],
+                        ...updatePayload
+                    };
+
+                    renderMatches(matchesData);
+                }
+
+                function addLocalMatch(matchRecord, selectedSport) {
+                    if (!matchRecord?.id) return;
+
+                    const teamOneName = getTeamOptionName(matchRecord.team_one_id);
+                    const teamTwoName = getTeamOptionName(matchRecord.team_two_id);
+                    const localMatch = {
+                        ...matchRecord,
+                        sport: selectedSport || registeredSportsData.find(sport => String(sport.id) === String(matchRecord.sport_id)) || null,
+                        team_one: { team: teamOneName },
+                        team_two: { team: teamTwoName },
+                        game_history: null
+                    };
+
+                    matchesData = [
+                        ...matchesData.filter(match => Number(match.id) !== Number(localMatch.id)),
+                        localMatch
+                    ].sort((firstMatch, secondMatch) => {
+                        const firstTime = new Date(firstMatch.match_time || 0).getTime() || 0;
+                        const secondTime = new Date(secondMatch.match_time || 0).getTime() || 0;
+                        return firstTime - secondTime;
+                    });
+
+                    renderMatches(matchesData);
+                }
                 let scoreSheetEditDraftMatchId = null;
                 let scoreSheetEditStatsByMatch = new Map();
                 let scoreSheetEditVolleyballScoresByMatch = new Map();
@@ -7750,6 +7808,8 @@
                 }
 
                 async function loadSportsForMatches() {
+                    const previousSportValue = matchSport.value;
+                    const previousStageValue = matchStage.value;
                     const { data, error } = await supabase
                         .from(SPORTS_TABLE)
                         .select("id, sport_name, game_type, winner_points, loser_points, forfeit_winner_points, forfeit_loser_points")
@@ -7786,9 +7846,17 @@
                         option.textContent = sport.sport_name;
                         matchSport.appendChild(option);
                     });
+
+                    restoreSelectValue(matchSport, previousSportValue);
+                    restoreSelectValue(matchStage, previousStageValue);
+                    if (isMatchModalOpen()) {
+                        updateMatchStageOptions();
+                    }
                 }
 
                 async function loadRegisteredTeams() {
+                    const previousTeamOneValue = teamOne.value;
+                    const previousTeamTwoValue = teamTwo.value;
                     const { data, error } = await supabase
                         .from(TEAMS_TABLE)
                         .select("id, team")
@@ -7815,6 +7883,9 @@
                         teamOne.appendChild(optionOne);
                         teamTwo.appendChild(optionTwo);
                     });
+
+                    restoreSelectValue(teamOne, previousTeamOneValue);
+                    restoreSelectValue(teamTwo, previousTeamTwoValue);
                 }
 
                 async function loadSavedMatches() {
@@ -8545,6 +8616,12 @@
                                 }
 
                                 setActiveStatusTab("Ongoing");
+                                applyLocalMatchUpdate(matchId, {
+                                    status: "Ongoing",
+                                    timer_enabled: false,
+                                    timer_started_at: null,
+                                    game_period: isBasketballSport(selectedMatch) || isVolleyballSport(selectedMatch) ? 1 : null
+                                });
 
                                 await Promise.all([
                                     loadSavedMatches(),
@@ -8574,6 +8651,12 @@
                                 }
 
                                 setActiveStatusTab("Next");
+                                applyLocalMatchUpdate(matchId, {
+                                    status: "Next",
+                                    timer_enabled: false,
+                                    timer_started_at: null,
+                                    game_period: null
+                                });
 
                                 await Promise.all([
                                     loadSavedMatches(),
@@ -9438,6 +9521,12 @@
                         alert("Result saved. Match marked as Done.");
 
                         setActiveStatusTab("Done");
+                        applyLocalMatchUpdate(pendingResultMatch.id, {
+                            status: "Done",
+                            timer_enabled: false,
+                            timer_started_at: null,
+                            game_history: historyPayload
+                        });
                         closeResultModalFunction();
 
                         await Promise.all([
@@ -9528,6 +9617,7 @@
                         }
 
                         alert("On Going match updated successfully.");
+                        applyLocalMatchUpdate(currentEditingMatchId, updatePayload);
                         closeMatchModalFunction();
 
                         await Promise.all([
@@ -9573,9 +9663,34 @@
                         created_by_name: getCurrentUserDisplayName()
                     };
 
-                    const { error } = await supabase
+                    const { data: insertedMatches, error } = await supabase
                         .from(MATCHES_TABLE)
-                        .insert([insertPayload]);
+                        .insert([insertPayload])
+                        .select(`
+                            id,
+                            sport_id,
+                            team_one_id,
+                            team_two_id,
+                            match_time,
+                            location,
+                            status,
+                            delete_requested,
+                            delete_requested_at,
+                            delete_requested_by,
+                            delete_requested_by_name,
+                            delete_approved,
+                            delete_approved_at,
+                            delete_rejected,
+                            delete_rejected_at,
+                            timer_enabled,
+                            timer_duration_seconds,
+                            timer_started_at,
+                            match_stage,
+                            game_period,
+                            created_by,
+                            created_by_role,
+                            created_by_name
+                        `);
 
                     if (error) {
                         console.error("Error saving match:", error.message || error);
@@ -9585,6 +9700,7 @@
 
                     setActiveStatusTab("Next");
                     clearMatchDateFilter(false);
+                    addLocalMatch((insertedMatches || [])[0] || insertPayload, selectedSport);
                     closeMatchModalFunction();
 
                     await Promise.all([
