@@ -3865,6 +3865,9 @@
                         const preferredIdentity = Number(existing.source_game_period || 1) === 1
                             ? existing
                             : Number(row.game_period || 1) === 1 ? row : existing;
+                        const latestTimestampRow = getScoreRowTimestamp(row) >= getScoreRowTimestamp(existing)
+                            ? row
+                            : existing;
                         mergedRows.set(key, {
                             ...existing,
                             id: preferredIdentity.id || existing.id || row.id,
@@ -3874,7 +3877,9 @@
                             is_active: Boolean(existing.is_active || row.is_active),
                             player_name: row.player_name || existing.player_name,
                             id_number: row.id_number || existing.id_number,
-                            participant_id: row.participant_id || existing.participant_id
+                            participant_id: row.participant_id || existing.participant_id,
+                            created_at: existing.created_at || row.created_at || null,
+                            updated_at: latestTimestampRow.updated_at || latestTimestampRow.created_at || existing.updated_at || row.updated_at || null
                         });
                     });
 
@@ -4046,6 +4051,65 @@
                 function getScoreRowTimestamp(row) {
                     const timestamp = Date.parse(row?.updated_at || row?.created_at || "");
                     return Number.isFinite(timestamp) ? timestamp : 0;
+                }
+
+                function buildBasketballStatMap(rows) {
+                    const nextMap = new Map();
+
+                    getSafeBasketballStatRows(rows).forEach(row => {
+                        const matchKey = Number(row.match_id);
+                        if (!nextMap.has(matchKey)) {
+                            nextMap.set(matchKey, []);
+                        }
+                        nextMap.get(matchKey).push(row);
+                    });
+
+                    return nextMap;
+                }
+
+                function mergeBasketballStatMaps(currentMap, incomingMap, source = "refresh", version = latestSavedMatchesLoadId) {
+                    const mergedMap = new Map(currentMap);
+
+                    incomingMap.forEach((incomingRows, matchId) => {
+                        const currentRows = mergedMap.get(Number(matchId)) || [];
+                        const rowsByKey = new Map();
+
+                        currentRows.forEach(row => {
+                            rowsByKey.set(getBasketballStatConflictKey(row), row);
+                        });
+
+                        incomingRows.forEach(row => {
+                            const key = getBasketballStatConflictKey(row);
+                            const existingRow = rowsByKey.get(key);
+
+                            if (!existingRow || getScoreRowTimestamp(row) >= getScoreRowTimestamp(existingRow)) {
+                                rowsByKey.set(key, row);
+                                logScoreSyncDiagnostic({
+                                    matchId: Number(row.match_id),
+                                    scoreKey: key,
+                                    scoreValue: Number(row.points) || 0,
+                                    source,
+                                    version,
+                                    eventTimestamp: row.updated_at || row.created_at || null,
+                                    accepted: true
+                                });
+                            } else {
+                                logScoreSyncDiagnostic({
+                                    matchId: Number(row.match_id),
+                                    scoreKey: key,
+                                    scoreValue: Number(row.points) || 0,
+                                    source,
+                                    version,
+                                    eventTimestamp: row.updated_at || row.created_at || null,
+                                    accepted: false
+                                });
+                            }
+                        });
+
+                        mergedMap.set(Number(matchId), Array.from(rowsByKey.values()));
+                    });
+
+                    return mergedMap;
                 }
 
                 function buildVolleyballScoreMap(rows) {
@@ -4985,12 +5049,24 @@
                     const nextSave = previousSave
                         .catch(() => null)
                         .then(async () => {
-                            const { error } = await supabase
+                            const { data: savedRow, error } = await supabase
                                 .from(BASKETBALL_STATS_TABLE)
                                 .update(payload)
-                                .eq("id", statId);
+                                .eq("id", statId)
+                                .select("*")
+                                .maybeSingle();
 
                             if (error) throw error;
+
+                            if (savedRow) {
+                                basketballStatsByMatch = mergeBasketballStatMaps(
+                                    basketballStatsByMatch,
+                                    buildBasketballStatMap([savedRow]),
+                                    "committee-save-confirmed",
+                                    Date.now()
+                                );
+                                renderMatches(matchesData);
+                            }
 
                             const idNumber = String(statRow.id_number || "").trim();
                             if (idNumber) {
@@ -5163,12 +5239,22 @@
                         updateQuery = updateQuery.eq("id", statRow.id);
                     }
 
-                    const { error } = await updateQuery;
+                    const { data: activeRows, error } = await updateQuery.select("*");
 
                     if (error) {
                         console.error("Basketball active player update error:", error.message || error);
                         alert("Unable to update active player. Run the basketball score SQL first.");
                         return;
+                    }
+
+                    if (Array.isArray(activeRows) && activeRows.length > 0) {
+                        basketballStatsByMatch = mergeBasketballStatMaps(
+                            basketballStatsByMatch,
+                            buildBasketballStatMap(activeRows),
+                            "committee-active-save-confirmed",
+                            Date.now()
+                        );
+                        renderMatches(matchesData);
                     }
                 }
 
@@ -7970,12 +8056,8 @@
                         if (basketballError) {
                             console.warn("Basketball score sheet load warning:", basketballError.message || basketballError);
                         } else if (Array.isArray(basketballRows)) {
-                            basketballRows.forEach(row => {
-                                const key = Number(row.match_id);
-                                if (!nextBasketballStatsByMatch.has(key)) {
-                                    nextBasketballStatsByMatch.set(key, []);
-                                }
-                                nextBasketballStatsByMatch.get(key).push(row);
+                            buildBasketballStatMap(basketballRows).forEach((rows, matchId) => {
+                                nextBasketballStatsByMatch.set(Number(matchId), rows);
                             });
                         }
 
@@ -8016,7 +8098,12 @@
                     }
 
                     matchesData = nextMatchesData;
-                    basketballStatsByMatch = nextBasketballStatsByMatch;
+                    basketballStatsByMatch = mergeBasketballStatMaps(
+                        basketballStatsByMatch,
+                        nextBasketballStatsByMatch,
+                        "committee-match-refresh",
+                        loadId
+                    );
                     volleyballScoresByMatch = mergeVolleyballScoreMaps(
                         volleyballScoresByMatch,
                         buildVolleyballScoreMap(nextVolleyballScoreRows),
