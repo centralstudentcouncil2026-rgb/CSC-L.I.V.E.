@@ -2900,6 +2900,45 @@
 
                     renderMatches(matchesData);
                 }
+
+                function captureScoreSheetScrollState() {
+                    const activeScoreSheet = document.activeElement?.closest?.(".basketball-score-sheet");
+
+                    return {
+                        preserveWindow: Boolean(activeScoreSheet),
+                        windowX: window.scrollX,
+                        windowY: window.scrollY,
+                        bodies: Array.from(document.querySelectorAll(".basketball-score-body[data-score-scroll-key]"))
+                            .map(body => ({
+                                key: body.dataset.scoreScrollKey,
+                                top: body.scrollTop,
+                                left: body.scrollLeft
+                            }))
+                    };
+                }
+
+                function restoreScoreSheetScrollState(scrollState) {
+                    if (!scrollState) return;
+
+                    const restore = () => {
+                        scrollState.bodies.forEach(item => {
+                            const body = Array.from(document.querySelectorAll(".basketball-score-body[data-score-scroll-key]"))
+                                .find(element => element.dataset.scoreScrollKey === item.key);
+                            if (!body) return;
+                            body.scrollTop = item.top;
+                            body.scrollLeft = item.left;
+                        });
+
+                        if (scrollState.preserveWindow) {
+                            window.scrollTo(scrollState.windowX, scrollState.windowY);
+                        }
+                    };
+
+                    requestAnimationFrame(() => {
+                        restore();
+                        requestAnimationFrame(restore);
+                    });
+                }
                 let scoreSheetEditDraftMatchId = null;
                 let scoreSheetEditStatsByMatch = new Map();
                 let scoreSheetEditVolleyballScoresByMatch = new Map();
@@ -4487,7 +4526,7 @@
                                                 `).join("")}
                                             </tr>
                                         </thead>
-                                        <tbody class="basketball-score-body">${renderBasketballRows(match, teamSide, canEditScoreSheet)}</tbody>
+                                        <tbody class="basketball-score-body" data-score-scroll-key="${match.id}-${teamSide}">${renderBasketballRows(match, teamSide, canEditScoreSheet)}</tbody>
                                         <tfoot>
                                             <tr class="${theme.footer}">
                                                 <td colspan="2" class="px-2 py-2 text-sm font-black uppercase">Match Stats Total</td>
@@ -8115,6 +8154,7 @@
                 }
 
                 function renderMatches(matches) {
+                    const scoreSheetScrollState = captureScoreSheetScrollState();
                     const visibleMatches = getFilteredMatchesForDisplay(matches);
                     const nextMatches = visibleMatches.filter(match => {
                         if (match.status !== "Next") return false;
@@ -8140,6 +8180,7 @@
                     addEditMatchListeners();
                     addDeleteMatchListeners();
                     setActiveStatusTab(activeStatusTab);
+                    restoreScoreSheetScrollState(scoreSheetScrollState);
                 }
 
                 function getLocalDateInputValue(dateValue) {
