@@ -8061,6 +8061,41 @@
                     restoreSelectValue(teamTwo, previousTeamTwoValue);
                 }
 
+                async function fetchAllRowsForMatchIds(tableName, matchIds, selectColumns = "*") {
+                    const ids = [...new Set((matchIds || []).map(id => Number(id)).filter(Number.isFinite))];
+                    const rows = [];
+                    const chunkSize = 75;
+                    const pageSize = 1000;
+
+                    for (let index = 0; index < ids.length; index += chunkSize) {
+                        const chunk = ids.slice(index, index + chunkSize);
+                        let from = 0;
+
+                        while (true) {
+                            const { data, error } = await supabase
+                                .from(tableName)
+                                .select(selectColumns)
+                                .in("match_id", chunk)
+                                .range(from, from + pageSize - 1);
+
+                            if (error) {
+                                return { data: rows, error };
+                            }
+
+                            const pageRows = Array.isArray(data) ? data : [];
+                            rows.push(...pageRows);
+
+                            if (pageRows.length < pageSize) {
+                                break;
+                            }
+
+                            from += pageSize;
+                        }
+                    }
+
+                    return { data: rows, error: null };
+                }
+
                 async function loadSavedMatches() {
                     const loadId = ++latestSavedMatchesLoadId;
 
@@ -8135,10 +8170,7 @@
                             }));
                         }
 
-                        const { data: basketballRows, error: basketballError } = await supabase
-                            .from(BASKETBALL_STATS_TABLE)
-                            .select("*")
-                            .in("match_id", matchIds);
+                        const { data: basketballRows, error: basketballError } = await fetchAllRowsForMatchIds(BASKETBALL_STATS_TABLE, matchIds);
 
                         if (basketballError) {
                             console.warn("Basketball score sheet load warning:", basketballError.message || basketballError);
