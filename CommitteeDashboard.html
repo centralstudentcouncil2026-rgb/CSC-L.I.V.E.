@@ -3925,6 +3925,29 @@
                     return Array.from(mergedRows.values());
                 }
 
+                function getBasketballPlayerKeys(row) {
+                    return [
+                        row?.id_number,
+                        row?.participant_id,
+                        row?.player_name
+                    ]
+                        .map(normalizeTeamValue)
+                        .filter(Boolean);
+                }
+
+                function basketballRowsReferToSamePlayer(firstRow, secondRow) {
+                    const firstKeys = new Set(getBasketballPlayerKeys(firstRow));
+                    return getBasketballPlayerKeys(secondRow).some(key => firstKeys.has(key));
+                }
+
+                function isBasketballPlayerActiveForMatch(matchId, teamId, playerRow) {
+                    return getBasketballStatsForMatch(matchId).some(row =>
+                        Number(row.team_id) === Number(teamId)
+                        && Boolean(row.is_active)
+                        && basketballRowsReferToSamePlayer(row, playerRow)
+                    );
+                }
+
                 function getBasketballTeamStats(match, teamSide, gamePeriod = getBasketballActivePeriod(match)) {
                     const teamId = getTeamId(match, teamSide);
                     return getSafeBasketballStatRows(getBasketballStatsForMatch(match.id))
@@ -4028,7 +4051,10 @@
                                 player_name: lineupRow.player_name || statRow?.player_name || "",
                                 participant_id: lineupRow.participant_id || statRow?.participant_id || null,
                                 game_period: 1,
-                                is_active: Boolean(statRow?.is_active),
+                                is_active: Boolean(statRow?.is_active) || isBasketballPlayerActiveForMatch(match.id, teamId, {
+                                    ...lineupRow,
+                                    ...statRow
+                                }),
                                 created_at: lineupRow.created_at || statRow?.created_at || null,
                                 lineup_index: lineupIndex
                             };
@@ -5189,7 +5215,19 @@
                         return;
                     }
 
-                    if (Number(amount) > 0 && !statRow.is_active) {
+                    const statRowIsActive = Boolean(statRow.is_active)
+                        || isBasketballPlayerActiveForMatch(
+                            statRow.match_id || options.matchId,
+                            statRow.team_id || options.teamId,
+                            {
+                                ...statRow,
+                                id_number: statRow.id_number || options.idNumber,
+                                participant_id: statRow.participant_id || options.participantId,
+                                player_name: statRow.player_name || options.playerName
+                            }
+                        );
+
+                    if (Number(amount) > 0 && !statRowIsActive) {
                         const selectedMatch = matchesData.find(match => Number(match.id) === Number(statRow.match_id || options.matchId));
                         alert(`Select this player as active in the current ${getScoreSheetPeriodLabel(selectedMatch || "").toLowerCase()} before adding points or ${getScoreSheetFaultLabel(selectedMatch || "").toLowerCase()}.`);
                         return;
@@ -5249,12 +5287,16 @@
                     }
 
                     const matchKey = Number(statRow.match_id || options.matchId);
-                    const playerKey = normalizeTeamValue(statRow.id_number || statRow.participant_id || options.idNumber || options.participantId);
                     const localRows = basketballStatsByMatch.get(matchKey) || [];
                     localRows
                         .filter(row =>
                             Number(row.team_id) === Number(statRow.team_id || options.teamId)
-                            && normalizeTeamValue(row.id_number || row.participant_id) === playerKey
+                            && basketballRowsReferToSamePlayer(row, {
+                                ...statRow,
+                                id_number: statRow.id_number || options.idNumber,
+                                participant_id: statRow.participant_id || options.participantId,
+                                player_name: statRow.player_name || options.playerName
+                            })
                         )
                         .forEach(row => {
                             row.is_active = Boolean(nextActive);
