@@ -4717,7 +4717,8 @@
                             .from(BASKETBALL_STATS_TABLE)
                             .update({
                                 ...payload,
-                                game_period: 1
+                                game_period: 1,
+                                is_active: Boolean(targetRow.is_active)
                             })
                             .eq("id", targetRow.id);
 
@@ -5263,22 +5264,27 @@
                     statRow.updated_at = new Date().toISOString();
                     renderMatches(matchesData);
 
-                    let updateQuery = supabase
+                    const activePayload = {
+                        match_id: Number(statRow.match_id || options.matchId),
+                        team_id: Number(statRow.team_id || options.teamId),
+                        team_name: statRow.team_name || options.teamName || "",
+                        game_period: 1,
+                        participant_id: statRow.participant_id || options.participantId || null,
+                        id_number: statRow.id_number || options.idNumber || options.participantId || "",
+                        player_name: statRow.player_name || options.playerName || statRow.id_number || options.idNumber || "Selected player",
+                        is_active: Boolean(nextActive),
+                        points: Math.max(0, Number(statRow.points) || 0),
+                        fouls: Math.max(0, Number(statRow.fouls) || 0),
+                        updated_at: new Date().toISOString()
+                    };
+
+                    const { data: activeRow, error } = await supabase
                         .from(BASKETBALL_STATS_TABLE)
-                        .update({
-                            is_active: Boolean(nextActive),
-                            updated_at: new Date().toISOString()
+                        .upsert(activePayload, {
+                            onConflict: "match_id,team_id,game_period,id_number"
                         })
-                        .eq("match_id", statRow.match_id || options.matchId)
-                        .eq("team_id", statRow.team_id || options.teamId);
-
-                    if (statRow.id_number || options.idNumber) {
-                        updateQuery = updateQuery.eq("id_number", statRow.id_number || options.idNumber);
-                    } else {
-                        updateQuery = updateQuery.eq("id", statRow.id);
-                    }
-
-                    const { data: activeRows, error } = await updateQuery.select("*");
+                        .select("*")
+                        .single();
 
                     if (error) {
                         console.error("Basketball active player update error:", error.message || error);
@@ -5286,10 +5292,10 @@
                         return;
                     }
 
-                    if (Array.isArray(activeRows) && activeRows.length > 0) {
+                    if (activeRow) {
                         basketballStatsByMatch = mergeBasketballStatMaps(
                             basketballStatsByMatch,
-                            buildBasketballStatMap(activeRows),
+                            buildBasketballStatMap([activeRow]),
                             "committee-active-save-confirmed",
                             Date.now()
                         );
