@@ -2203,6 +2203,34 @@
                 return { data: rows, error: null };
             }
 
+            function wait(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+
+            async function runSupabaseWithRetry(buildQuery, label, attempts = 3) {
+                let lastResult = { data: null, error: null };
+
+                for (let attempt = 1; attempt <= attempts; attempt += 1) {
+                    try {
+                        lastResult = await buildQuery();
+                    } catch (error) {
+                        lastResult = { data: null, error };
+                    }
+
+                    if (!lastResult.error) {
+                        return lastResult;
+                    }
+
+                    console.warn(`${label} attempt ${attempt} failed:`, lastResult.error.message || lastResult.error);
+
+                    if (attempt < attempts) {
+                        await wait(250 * attempt);
+                    }
+                }
+
+                return lastResult;
+            }
+
             async function loadStats() {
                 const [totalTeams, totalMatches, totalParticipants] = await Promise.all([
                     countRows(TEAMS_TABLE),
@@ -2248,10 +2276,13 @@
                 }
 
                 try {
-                    const { data: teams, error: teamsError } = await supabase
-                        .from(TEAMS_TABLE)
-                        .select("*")
-                        .order("team", { ascending: true });
+                    const { data: teams, error: teamsError } = await runSupabaseWithRetry(
+                        () => supabase
+                            .from(TEAMS_TABLE)
+                            .select("id, team")
+                            .order("team", { ascending: true }),
+                        "Leaderboard teams"
+                    );
 
                     if (teamsError) {
                         console.error("Leaderboard teams error:", teamsError.message || teamsError);
@@ -2276,17 +2307,26 @@
                         { data: attendancePointRows, error: attendancePointError },
                         { data: teamAdjustmentRows, error: teamAdjustmentError }
                     ] = await Promise.all([
-                        supabase
-                            .from(GAME_HISTORY_TABLE)
-                            .select("*"),
+                        runSupabaseWithRetry(
+                            () => supabase
+                                .from(GAME_HISTORY_TABLE)
+                                .select("*"),
+                            "Leaderboard game history"
+                        ),
 
-                        supabase
-                            .from(ATTENDANCE_POINTS_TABLE)
-                            .select("*"),
+                        runSupabaseWithRetry(
+                            () => supabase
+                                .from(ATTENDANCE_POINTS_TABLE)
+                                .select("*"),
+                            "Leaderboard attendance points"
+                        ),
 
-                        supabase
-                            .from(TEAM_POINT_ADJUSTMENTS_TABLE)
-                            .select("*")
+                        runSupabaseWithRetry(
+                            () => supabase
+                                .from(TEAM_POINT_ADJUSTMENTS_TABLE)
+                                .select("*"),
+                            "Leaderboard team adjustments"
+                        )
                     ]);
 
                     if (historyError) {
