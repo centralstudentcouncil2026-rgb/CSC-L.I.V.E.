@@ -1981,6 +1981,8 @@
                 window.clearTimeout(matchReloadTimer);
 
                 matchReloadTimer = window.setTimeout(async () => {
+                    if (document.hidden) return;
+
                     if (!force && isStudentUserBusy()) {
                         scheduleLiveMatchReload(STUDENT_REFRESH_IDLE_DELAY);
                         return;
@@ -1997,6 +1999,8 @@
                 window.clearTimeout(leaderboardReloadTimer);
 
                 leaderboardReloadTimer = window.setTimeout(async () => {
+                    if (document.hidden) return;
+
                     if (!force && isStudentUserBusy()) {
                         scheduleLiveLeaderboardReload(STUDENT_REFRESH_IDLE_DELAY);
                         return;
@@ -2018,6 +2022,8 @@
                 window.clearTimeout(studentSupplementalReloadTimer);
 
                 studentSupplementalReloadTimer = window.setTimeout(async () => {
+                    if (document.hidden) return;
+
                     if (isStudentUserBusy()) {
                         scheduleStudentSupplementalReload({}, STUDENT_REFRESH_IDLE_DELAY);
                         return;
@@ -2310,21 +2316,21 @@
                         runSupabaseWithRetry(
                             () => supabase
                                 .from(GAME_HISTORY_TABLE)
-                                .select("*"),
+                                .select("id, match_id, sport_name, team_one_id, team_two_id, team_one_name, team_two_name, winner_team_id, winner_team_name, loser_team_id, loser_team_name, winner_points_awarded, loser_points_awarded, best_player, match_time, result, declared_at, created_at, team_one_merit_points, team_one_merit_remarks, team_one_demerit_points, team_one_demerit_remarks, team_two_merit_points, team_two_merit_remarks, team_two_demerit_points, team_two_demerit_remarks"),
                             "Leaderboard game history"
                         ),
 
                         runSupabaseWithRetry(
                             () => supabase
                                 .from(ATTENDANCE_POINTS_TABLE)
-                                .select("*"),
+                                .select("attendance_date, session_title, team, total_present, total_points"),
                             "Leaderboard attendance points"
                         ),
 
                         runSupabaseWithRetry(
                             () => supabase
                                 .from(TEAM_POINT_ADJUSTMENTS_TABLE)
-                                .select("*"),
+                                .select("team_id, team, adjustment_type, points, remarks, created_at"),
                             "Leaderboard team adjustments"
                         )
                     ]);
@@ -3517,24 +3523,26 @@
                 refreshStudentAnnouncements({ showPopup: true })
             ]);
 
-            setInterval(updateCountdownDisplays, 1000);
-            setInterval(() => refreshStudentAnnouncements({ showPopup: false }), 2000);
-            setInterval(() => loadLeaderboard({ showLoading: false }), 2000);
-            setInterval(() => {
+            const STUDENT_FALLBACK_SYNC_INTERVAL = 3 * 60 * 1000;
+
+            function runStudentFallbackSync() {
+                if (document.hidden) return;
+
                 scheduleLiveMatchReload(0);
                 scheduleLiveLeaderboardReload(0);
                 scheduleStudentSupplementalReload({ sports: true, announcements: true }, 0);
-            }, 15000);
+            }
+
+            setInterval(updateCountdownDisplays, 1000);
+            setInterval(runStudentFallbackSync, STUDENT_FALLBACK_SYNC_INTERVAL);
 
             document.addEventListener("visibilitychange", function () {
                 if (!document.hidden) {
-                    scheduleLiveMatchReload(0);
-                    scheduleLiveLeaderboardReload(0);
-                    scheduleStudentSupplementalReload({ sports: true, announcements: true }, 0);
+                    runStudentFallbackSync();
                 }
             });
 
-            supabase.channel("student-dashboard-realtime")
+            const studentDashboardRealtimeChannel = supabase.channel("student-dashboard-realtime")
                 .on("postgres_changes", { event: "*", schema: "public", table: TEAMS_TABLE }, () => {
                     scheduleLiveLeaderboardReload(0, { force: true });
                     scheduleLiveMatchReload(0, { force: true });
@@ -3588,6 +3596,10 @@
                         console.warn("Realtime listener closed. Fallback auto-refresh is still active.");
                     }
                 });
+
+            window.addEventListener("beforeunload", () => {
+                void supabase.removeChannel(studentDashboardRealtimeChannel);
+            }, { once: true });
         });
     </script>
 </body>

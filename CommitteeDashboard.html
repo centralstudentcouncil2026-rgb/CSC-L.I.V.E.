@@ -10116,6 +10116,8 @@
                     window.clearTimeout(committeeRealtimeReloadTimer);
 
                     committeeRealtimeReloadTimer = window.setTimeout(async () => {
+                        if (document.hidden) return;
+
                         if (!options.force && isCommitteeUserBusy()) {
                             scheduleCommitteeRealtimeReload({}, COMMITTEE_REFRESH_IDLE_DELAY);
                             return;
@@ -10213,11 +10215,13 @@
                     placeMatchControlsForTab(document.querySelector(".tab-content:not(.hidden)")?.id || "overview");
                 });
 
-                setInterval(() => scheduleCommitteeRealtimeReload({ overview: true }), 10000);
-                setInterval(loadCommitteeAnnouncements, 2000);
-                setInterval(refreshCommitteeLeaderboard, 2000);
+                const COMMITTEE_FALLBACK_SYNC_INTERVAL = 3 * 60 * 1000;
+                const COMMITTEE_MESSAGING_FALLBACK_INTERVAL = 60 * 1000;
+
                 setInterval(updateCountdownDisplays, 1000);
                 function scheduleCommitteeFallbackSync() {
+                    if (document.hidden) return;
+
                     scheduleCommitteeRealtimeReload({
                         overview: true,
                         leaderboard: true,
@@ -10231,7 +10235,7 @@
                     }, 0);
                 }
 
-                setInterval(scheduleCommitteeFallbackSync, 15000);
+                setInterval(scheduleCommitteeFallbackSync, COMMITTEE_FALLBACK_SYNC_INTERVAL);
                 document.addEventListener("visibilitychange", function () {
                     if (!document.hidden) {
                         scheduleCommitteeFallbackSync();
@@ -10244,6 +10248,8 @@
                     window.clearTimeout(committeeRealtimeMessagingTimer);
 
                     committeeRealtimeMessagingTimer = window.setTimeout(async () => {
+                        if (document.hidden) return;
+
                         if (committeeMessagingSyncInProgress) {
                             scheduleCommitteeMessagingReload({ contactMessages, conversations }, delay);
                             return;
@@ -10346,7 +10352,7 @@
                 }
 
                 setInterval(async () => {
-                    if (committeeMessagingSyncInProgress) return;
+                    if (document.hidden || committeeMessagingSyncInProgress) return;
 
                     committeeMessagingSyncInProgress = true;
                     try {
@@ -10357,9 +10363,9 @@
                     } finally {
                         committeeMessagingSyncInProgress = false;
                     }
-                }, 5000);
+                }, COMMITTEE_MESSAGING_FALLBACK_INTERVAL);
 
-                supabase
+                const committeeDashboardRealtimeChannel = supabase
                     .channel("committee-dashboard-realtime")
                     .on(
                         "postgres_changes",
@@ -10549,6 +10555,10 @@
                         }
                     )
                     .subscribe();
+
+                window.addEventListener("beforeunload", () => {
+                    void supabase.removeChannel(committeeDashboardRealtimeChannel);
+                }, { once: true });
             });
         </script>
         

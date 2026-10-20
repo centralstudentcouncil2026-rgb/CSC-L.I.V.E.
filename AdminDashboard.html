@@ -12355,6 +12355,8 @@
                 window.clearTimeout(adminRealtimeReloadTimer);
 
                 adminRealtimeReloadTimer = window.setTimeout(async () => {
+                    if (document.hidden) return;
+
                     if (!options.force && isAdminUserBusy()) {
                         scheduleAdminRealtimeReload({}, ADMIN_REFRESH_IDLE_DELAY);
                         return;
@@ -12443,11 +12445,13 @@
                 loadAdminConversations()
             ]);
 
-            setInterval(() => scheduleAdminRealtimeReload({ overview: true }), 10000);
+            const ADMIN_FALLBACK_SYNC_INTERVAL = 3 * 60 * 1000;
+            const ADMIN_MESSAGING_FALLBACK_INTERVAL = 60 * 1000;
+
             setInterval(renderAttendanceSettingsStatus, 30000);
-            setInterval(() => scheduleAdminRealtimeReload({ feedback: true }), 5000);
-            setInterval(() => scheduleAdminRealtimeReload({ accounts: true }), 5000);
             function scheduleAdminFallbackSync() {
+                if (document.hidden) return;
+
                 scheduleAdminRealtimeReload({
                     teams: true,
                     sports: true,
@@ -12463,7 +12467,7 @@
                 }, 0);
             }
 
-            setInterval(scheduleAdminFallbackSync, 15000);
+            setInterval(scheduleAdminFallbackSync, ADMIN_FALLBACK_SYNC_INTERVAL);
             document.addEventListener("visibilitychange", function () {
                 if (!document.hidden) {
                     scheduleAdminFallbackSync();
@@ -12476,6 +12480,8 @@
                 window.clearTimeout(adminRealtimeMessagingTimer);
 
                 adminRealtimeMessagingTimer = window.setTimeout(async () => {
+                    if (document.hidden) return;
+
                     if (adminMessagingSyncInProgress) {
                         scheduleAdminMessagingReload({ contactMessages, conversations }, delay);
                         return;
@@ -12512,7 +12518,7 @@
             }
 
             setInterval(async () => {
-                if (adminMessagingSyncInProgress) return;
+                if (document.hidden || adminMessagingSyncInProgress) return;
 
                 adminMessagingSyncInProgress = true;
                 try {
@@ -12523,9 +12529,9 @@
                 } finally {
                     adminMessagingSyncInProgress = false;
                 }
-            }, 5000);
+            }, ADMIN_MESSAGING_FALLBACK_INTERVAL);
 
-            supabase
+            const adminDashboardRealtimeChannel = supabase
                 .channel("admin-realtime-updates")
                 .on(
                     "postgres_changes",
@@ -12681,6 +12687,10 @@
                     }
                 )
                 .subscribe();
+
+            window.addEventListener("beforeunload", () => {
+                void supabase.removeChannel(adminDashboardRealtimeChannel);
+            }, { once: true });
         });
     </script>
 
