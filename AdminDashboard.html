@@ -4279,21 +4279,40 @@
                 let resolvedUser = null;
 
                 try {
-                    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-                    if (sessionError || !sessionData?.session) {
-                        throw sessionError || new Error("No active admin session.");
+                    let activeSession = null;
+                    let sessionError = null;
+
+                    for (let attempt = 0; attempt < 3 && !activeSession; attempt += 1) {
+                        const sessionResult = await supabase.auth.getSession();
+                        sessionError = sessionResult.error;
+                        activeSession = sessionResult.data?.session || null;
+
+                        if (!activeSession && attempt < 2) {
+                            await new Promise(resolve => window.setTimeout(resolve, 200 * (attempt + 1)));
+                        }
                     }
 
-                    const { data: authData, error: authError } = await supabase.auth.getUser();
+                    if (sessionError || !activeSession?.user) {
+                        throw sessionError || new Error("No active admin session reached the dashboard.");
+                    }
 
-                    if (authError || !authData?.user) throw authError || new Error("No authenticated admin session.");
+                    const authUser = activeSession.user;
+                    let profile = null;
+                    let profileError = null;
 
-                    const authUser = authData.user;
-                    const { data: profile, error: profileError } = await supabase
-                        .from(ACCOUNT_PROFILES_TABLE)
-                        .select("*")
-                        .eq("id", authUser.id)
-                        .maybeSingle();
+                    for (let attempt = 0; attempt < 3 && !profile; attempt += 1) {
+                        const profileResult = await supabase
+                            .from(ACCOUNT_PROFILES_TABLE)
+                            .select("*")
+                            .eq("id", authUser.id)
+                            .maybeSingle();
+                        profile = profileResult.data;
+                        profileError = profileResult.error;
+
+                        if (profileError && attempt < 2) {
+                            await new Promise(resolve => window.setTimeout(resolve, 250 * (attempt + 1)));
+                        }
+                    }
 
                     if (profileError) throw profileError;
 
@@ -4323,6 +4342,10 @@
                     sessionStorage.setItem("user", JSON.stringify(resolvedUser));
                 } catch (error) {
                     console.warn("Current admin lookup failed:", error.message || error);
+                    sessionStorage.setItem(
+                        "csc-live-dashboard-auth-error",
+                        error.message || "The admin session could not be validated. Please log in again."
+                    );
                     await supabase.auth.signOut();
                     sessionStorage.removeItem("user");
                     window.location.href = "index.html";

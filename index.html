@@ -1157,6 +1157,12 @@
         });
 
         // If this tab already has a valid Supabase session, refresh its cached dashboard profile.
+        const dashboardAuthError = sessionStorage.getItem("csc-live-dashboard-auth-error");
+        if (dashboardAuthError) {
+            sessionStorage.removeItem("csc-live-dashboard-auth-error");
+            showAlert("error", dashboardAuthError);
+        }
+
         const { data: sessionData } = await supabase.auth.getSession();
 
         if (sessionData?.session?.user) {
