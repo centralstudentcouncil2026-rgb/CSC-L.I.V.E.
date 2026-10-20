@@ -25,7 +25,7 @@ begin
       and lower(trim(role)) = 'admin'
       and lower(trim(approval_status)) = 'approved';
 
-    if current_admin_email is distinct from 'centralstudentcouncil2026@gmail.com' then
+    if current_admin_email is distinct from 'centralstudentcouncil@aup.edu.ph' then
         raise exception 'Only the main CSC admin account can assign dashboard tab access.';
     end if;
 
@@ -37,7 +37,7 @@ begin
     update public.user_profiles
     set allowed_tabs = cleaned_tabs
     where id = target_user_id
-      and lower(trim(email)) <> 'centralstudentcouncil2026@gmail.com';
+      and lower(trim(email)) <> 'centralstudentcouncil@aup.edu.ph';
 
     if not found then
         raise exception 'Account profile not found or main admin access cannot be changed.';

@@ -16,3 +16,4 @@ build/
 *.pfx
 supabase/.branches/
 supabase/.temp/
+.tools/
