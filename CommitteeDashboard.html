@@ -889,7 +889,7 @@
                     font-size: 1.08rem !important;
                 }
             }
-        
+
 
             /* HARD MOBILE FIX:
             Prevents the hidden sidebar from reserving desktop width and squeezing the page. */
@@ -1325,7 +1325,8 @@
     </style>
     <link rel="stylesheet" href="./portal-guard.css?v=20261022-context">
 <script src="./portal-policy.js?v=20261022-context"></script>
-<script src="./portal-guard.js?v=20261022-context" data-csc-site="CSC-L.I.V.E."></script>
+<script src="./portal-guard.js?v=20261022-live-header" data-csc-site="CSC-L.I.V.E."></script>
+<link rel="stylesheet" href="./live-header.css?v=20261022-uniform">
 </head>
 
     <body class="dashboard-auth-locked bg-gray-50 overflow-hidden match-controls-pending">
@@ -1428,24 +1429,15 @@
 
             <!-- Main Content -->
             <div class="main-content flex-1 min-w-0 overflow-hidden flex flex-col">
-                
+
 
                 <!-- Header -->
                 <div class="admin-header dashboard-header bg-yellow-400">
                     <div class="admin-header-row mb-0 flex justify-between">
-                        <div class="dashboard-header-brand" aria-hidden="true">
-                            <img src="L1.png" alt="">
-                        </div>
+                        <div class="dashboard-header-brand" aria-hidden="true"><img src="csc-torch.png" alt=""></div>
+<div class="live-header-identity"><strong>CSC L.I.V.E.</strong><small>League Information and Viewing Engine</small></div>
 
-                        <div class="admin-header-text flex-1">
-                            <h2 id="pageTitle" class="text-xl sm:text-3xl font-bold text-blue-900 mb-2">
-                                Committee Dashboard
-                            </h2>
 
-                            <p id="pageDesc" class="text-blue-800 text-sm sm:text-base break-safe">
-                                Monitor sports activities and team performance.
-                            </p>
-                        </div>
 
                         <div id="matchHeaderControls" class="match-header-controls" aria-label="Match management controls"></div>
 
@@ -1481,9 +1473,15 @@
                             ☰ Menu
                         </button>
                     </div>
-                </div>
+                </div><div class="content-scroll"><div class="live-section-heading">
+                            <h2 id="pageTitle" class="text-xl sm:text-3xl font-bold text-blue-900 mb-2">
+                                Committee Dashboard
+                            </h2>
 
-                <div class="content-scroll">
+                            <p id="pageDesc" class="text-blue-800 text-sm sm:text-base break-safe">
+                                Monitor sports activities and team performance.
+                            </p>
+                        </div>
 
                 <!-- Overview Tab -->
                 <div id="overview" class="tab-content mt-8 ml-5 mr-5">
@@ -2490,19 +2488,14 @@
                 });
             }
 
-            async function logout() {
-                try {
-                    if (window.committeeSupabase?.auth) {
-                        await window.committeeSupabase.auth.signOut();
-                    }
-                } catch (error) {
-                    console.warn('Supabase sign out could not complete:', error.message || error);
-                }
-
-                sessionStorage.removeItem('user');
-                sessionStorage.removeItem(COMMITTEE_SESSION_STARTED_KEY);
-                window.location.href = 'index.html';
-            }
+            function logout() {
+            // Start local SDK cleanup, but leave without rendering the login screen.
+            try { void window.committeeSupabase?.auth.signOut({ scope: 'local' }).catch(() => {}); } catch (_) {}
+            sessionStorage.removeItem(COMMITTEE_SESSION_STARTED_KEY);
+            sessionStorage.removeItem('user');
+            sessionStorage.removeItem('csc-live-auth-session');
+            window.location.replace('https://centralstudentcouncil2026-rgb.github.io/CSC-SYNC-Admin/csc-officers.html');
+        }
 
             function getStoredDashboardUserForBadge() {
                 const storedUser = sessionStorage.getItem('user');
@@ -10564,6 +10557,6 @@
                 }, { once: true });
             });
         </script>
-        
+
     </body>
     </html>

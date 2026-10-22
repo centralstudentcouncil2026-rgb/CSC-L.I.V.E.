@@ -1,0 +1,32 @@
+/* Match the shared CSC gold header and navy divider. */
+.admin-header.dashboard-header { --admin-header-height:64px; height:64px !important; min-height:64px !important; padding:0 16px !important; background:linear-gradient(110deg,#facc15,#eab308 52%,#ca8a04) !important; border-bottom:4px solid #0c1665 !important; color:#0c1665 !important; }
+.admin-header .admin-header-row { height:60px !important; min-height:0 !important; padding:0 !important; display:flex !important; flex-direction:row !important; flex-wrap:nowrap !important; align-items:center !important; gap:12px !important; }
+.admin-header .dashboard-header-brand { display:flex !important; flex:0 0 29px !important; width:29px !important; height:43px !important; margin:0 !important; padding:0 !important; border:0 !important; border-radius:0 !important; background:transparent !important; box-shadow:none !important; }
+.admin-header .dashboard-header-brand img { width:29px !important; height:43px !important; object-fit:contain; border-radius:0 !important; }
+.live-header-identity { flex:1; min-width:0; container-type:inline-size; }
+.live-header-identity strong { display:block; font-size:23px; font-weight:800; line-height:1.2; letter-spacing:.5px; white-space:nowrap; }
+.live-header-identity small { display:block; font-size:11px; line-height:1.4; white-space:nowrap; }
+.admin-header #sidebarToggle { order:-1 !important; align-self:center !important; flex:0 0 auto !important; height:34px !important; min-height:34px !important; padding:0 10px !important; border-radius:7px !important; background:#fff8db !important; color:#0c1665 !important; font-size:12px !important; font-weight:700; }
+.admin-header :is(#adminNotificationContainer,#messageNotificationContainer) { margin:0 !important; flex:0 0 auto; }
+.admin-header :is(#adminMessageNotificationBell,#messageNotificationBell) { height:34px !important; width:34px !important; padding:7px !important; }
+.admin-header :is(#adminMessageNotificationBell,#messageNotificationBell) svg { height:20px !important; width:20px !important; }
+.admin-header :is(.csc-return-guard,[data-csc-portal-back]) { display:none !important; }
+.live-section-heading { padding:12px 16px; }
+.live-section-heading h2 { margin:0 0 3px; font-size:22px; font-weight:800; line-height:1.3; color:#101e46; }
+.live-section-heading p { margin:0; font-size:12px; line-height:1.5; color:#52627b; }
+@media(max-width:700px) {
+ .admin-header.dashboard-header { height:58px !important; min-height:58px !important; padding:0 12px !important; }
+ .admin-header .admin-header-row { height:54px !important; gap:8px !important; }
+ .admin-header .dashboard-header-brand { flex-basis:23px !important; width:23px !important; height:35px !important; }
+ .admin-header .dashboard-header-brand img { width:23px !important; height:35px !important; }
+ .live-header-identity strong { font-size:clamp(15px,4.4vw,19px); }
+ .live-header-identity small { font-size:min(9px,4.5cqw); }
+ .admin-header #sidebarToggle { padding:0 8px !important; font-size:11px !important; }
+ .live-section-heading { padding:10px 12px; }
+ .live-section-heading h2 { font-size:20px; }
+}
+
+.admin-header #sidebarToggle { order:-3 !important; }
+.admin-header .dashboard-header-brand { order:0 !important; }
+.admin-header .live-header-identity { order:1 !important; }
+.admin-header :is(#adminNotificationContainer,#notificationContainer) { order:2 !important; margin:0 !important; flex:0 0 auto; }
