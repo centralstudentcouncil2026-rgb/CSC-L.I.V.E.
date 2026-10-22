@@ -108,3 +108,12 @@
 :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh form[aria-busy="true"] button[type="submit"]::after { content:''; flex:0 0 14px; width:14px; height:14px; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:login-submit-spin .8s linear infinite; }
 @keyframes login-submit-spin { to { transform:rotate(360deg); } }
 @media(prefers-reduced-motion:reduce) { :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh form[aria-busy="true"] button[type="submit"]::after { animation:none; } }
+
+/* Restore the soft CSC card finish while retaining the refined login content. */
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh {
+ background:radial-gradient(ellipse at 100% 0%,#edf2ff 0%,transparent 48%),radial-gradient(ellipse at 0% 100%,#fff5d8 0%,transparent 42%),linear-gradient(145deg,#fff 35%,#f8faff 100%) !important;
+ overflow:hidden;
+}
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh::before {
+ content:''; display:block; position:absolute; z-index:-1; pointer-events:none; width:210px; height:210px; border-radius:50%; right:-125px; top:-120px; border:1px solid #0c166510; box-shadow:0 0 0 30px #0c166504,0 0 0 60px #0c166503;
+}
