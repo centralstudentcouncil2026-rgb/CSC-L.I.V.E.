@@ -1,0 +1,110 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* Scoped to the three existing login cards; outer sizing and placement remain unchanged. */
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh { font-family:Inter,Arial,sans-serif; color:#14234B; background:#fff !important; padding:28px 32px !important; overflow:visible; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh::before { display:none; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .login-card-content { width:100%; min-height:0; max-height:100%; display:flex; flex-direction:column; justify-content:center; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .login-card-content > :is(.auth-card-icon,.login-icon,.live-login-card-icon) { display:none !important; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .login-heading { margin:0 0 24px; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .login-heading :is(.auth-eyebrow,.eyebrow,.live-login-eyebrow) { display:block; margin:0 0 10px; color:#64748B; font-size:11px; font-weight:600; letter-spacing:1.3px; line-height:1.5; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .login-heading h2, :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh #formTitle { margin:0 0 12px !important; font-family:inherit; font-size:34px !important; font-weight:700; line-height:1.18 !important; letter-spacing:-1px; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .login-heading p, :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh #formSubtitle { margin:0 !important; color:#64748B; font-size:15px !important; font-weight:400; line-height:1.5 !important; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="trace"] .login-heading { padding-bottom:24px; border-bottom:1px solid #E8EDF5; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh form:not(.hidden), :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh #signInForm:not(.hidden) { display:flex; flex-direction:column; flex:0 0 auto; margin:0 !important; padding:0 !important; gap:24px; justify-content:flex-start; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .login-fields { display:grid; gap:22px; margin:0 !important; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh :is(label,.login-field > label) { display:grid; gap:8px; margin:0 !important; color:#14234B; font-size:14px; line-height:1.5; font-weight:600; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .login-field { display:grid; gap:8px; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh :is(input,.input,.auth-input) { width:100%; height:52px; min-height:52px; margin:0 !important; border:1px solid #DCE3EF; border-radius:10px; padding:12px 14px; background:#F8FAFC; color:#14234B; font-family:inherit; font-size:16px; line-height:1.5; box-shadow:none; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh input::placeholder { color:#94A3B8; opacity:1; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh :is(input,button,a):focus-visible { outline:3px solid #5279C8; outline-offset:3px; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh input:focus { border-color:#5279C8; outline:2px solid #5279C840; outline-offset:1px; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh input[aria-invalid="true"] { border-color:#B42318; background:#FFF9F8; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh :is(button[type="submit"],.white-pill) { width:100%; min-height:52px; border-radius:10px; padding:12px 16px !important; font:600 15px/1.4 Inter,Arial,sans-serif; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .login-actions { display:flex; flex-direction:column; gap:12px; margin:0; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh :is(.blue-pill,.submit-btn) { background:#14234B; color:#fff; border:1px solid #14234B; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .white-pill { margin:0; background:white; color:#14234B; border:1px solid #DCE3EF; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="trace"] button[type="submit"] { background:#F5C518; color:#14234B; border:1px solid #E5B70E; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh button:hover:not(:disabled) { filter:brightness(.97); }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh button:disabled { opacity:.55; cursor:not-allowed; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh form[aria-busy="true"] button[type="submit"] { cursor:progress; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .login-password { position:relative; width:100%; min-width:0; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .login-password input { padding-right:54px; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .login-password-toggle { position:absolute; right:5px; top:50%; transform:translateY(-50%); display:grid; place-items:center; width:40px; height:40px; padding:9px; border:0; border-radius:8px; background:transparent; color:#64748B; cursor:pointer; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .login-password-toggle svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:1.8; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh :is(#login-error,.login-inline-error) { position:static; display:block; min-height:20px; margin:0; padding:0; background:none; border:0; color:#B42318; font-size:13px; line-height:1.5; box-shadow:none; transform:none; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh #login-error:empty { display:block; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh #alertBox { margin:12px 0 0; padding:10px 12px; border-radius:8px; font-size:13px; }
+/* LIVE keeps the existing mode and role handlers; only their presentation changes. */
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .login-heading > .mb-6 { margin:0 !important; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .login-card-content > .auth-card { display:flex; flex-direction:column; flex:0 0 auto; gap:0; min-height:0; margin:0; padding:0 !important; background:transparent !important; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .auth-card > .grid { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin:0 0 20px; padding:4px; border:1px solid #DCE3EF; border-radius:10px; background:#F8FAFC; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .mode-btn { min-height:32px; padding:6px 12px !important; border-radius:7px; border:0; background:transparent; color:#64748B; font:600 13px/1.4 Inter,Arial,sans-serif; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .mode-btn.active { background:white; color:#14234B; box-shadow:0 1px 4px #14234B1A; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh #signInForm > * { margin:0 !important; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh #signInForm > .space-y-2 { display:grid; gap:8px; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh #signInForm .space-y-2 > * { margin:0; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .signin-role-btn { min-height:36px; padding:7px 12px !important; border-radius:7px; border:0; background:transparent; color:#64748B; font:600 14px/1.4 Inter,Arial,sans-serif; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .signin-role-btn.active { color:#fff; background:#14234B; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh #signInForm .space-y-2 > .grid { display:grid; grid-template-columns:1fr 1fr; gap:4px; padding:4px; border:1px solid #DCE3EF; border-radius:10px; background:#F8FAFC; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh #signInForm .small-text { color:#64748B; font-size:12px !important; line-height:1.4 !important; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh #signInForm:not(.hidden) { gap:20px; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .auth-card > .mt-6 { margin-top:16px; padding-top:12px; border-top:1px solid #E8EDF5; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh #helperText { margin:0; color:#64748B; font-size:12px !important; line-height:1.5 !important; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh #helperText button { color:#14234B; font-weight:600; }
+@media(max-width:900px) { :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh { padding:24px 22px !important; } }
+@media(min-width:901px) and (max-height:740px) {
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh { padding:20px 28px !important; }
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .login-heading { margin-bottom:20px; }
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="trace"] .login-heading { padding-bottom:20px; }
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh form:not(.hidden),:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh #signInForm:not(.hidden) { gap:18px; }
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .login-fields { gap:20px; }
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="live"] .login-heading { margin-bottom:14px; }
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="live"] .auth-card > .grid { margin-bottom:14px; }
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="live"] #signInForm:not(.hidden) { gap:14px; }
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="live"] .login-heading h2 { font-size:32px !important; margin-bottom:8px !important; }
+}
+@media(max-height:580px) { :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .login-card-content { overflow-y:auto; padding:3px; margin:-3px; width:calc(100% + 6px); justify-content:flex-start; } }
+
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh #login-error:empty, :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh .login-inline-error:empty { display:none !important; }
+
+@media(max-width:900px) {
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="live"] .login-heading { margin-bottom:20px; }
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="live"] .login-heading h2 { font-size:32px !important; }
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="live"] .auth-card > .grid { margin-bottom:16px; }
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="live"] .auth-card > .mt-6 { margin-top:10px; padding-top:8px; }
+}
+@media(min-width:901px) and (max-height:630px) {
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh { padding-block:16px !important; }
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="live"] .login-heading { margin-bottom:12px; }
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="live"] .login-heading > .live-login-eyebrow { margin-bottom:8px; }
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="live"] .auth-card > .grid { margin-bottom:12px; }
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="live"] #signInForm:not(.hidden) { gap:12px; }
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="live"] :is(.mode-btn,.signin-role-btn) { min-height:30px; padding-block:5px !important; }
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="live"] .auth-card > .mt-6 { margin-top:8px; padding-top:8px; }
+}
+
+@media(min-width:901px) and (min-height:741px) {
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="live"] .login-heading { margin-bottom:20px; }
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="live"] .login-heading h2 { font-size:32px !important; }
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="live"] .login-heading > .live-login-eyebrow { margin-bottom:8px; }
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="live"] .auth-card > .grid { margin-bottom:16px; }
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="live"] #signInForm:not(.hidden) { gap:18px; }
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="live"] #signInForm > .space-y-2:first-child { margin-bottom:2px !important; }
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="live"] .auth-card > .mt-6 { margin-top:10px; padding-top:8px; }
+}
+
+@media(min-width:901px) and (min-height:631px) and (max-height:740px) {
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="live"] .auth-card > .mt-6 { margin-top:10px; padding-top:8px; }
+}
+
+@media(min-width:901px) and (max-height:630px) {
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="live"] #signInForm:not(.hidden) { gap:10px; }
+ :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh[data-login-design="live"] .auth-card > .grid { margin-bottom:10px; }
+}
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh.login-has-error .login-card-content { overflow-y:auto; justify-content:flex-start; padding:3px; margin:-3px; width:calc(100% + 6px); }
+
+@media(max-width:900px) { :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh { height:640px; } }
+
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh button[type="submit"] { display:flex; align-items:center; justify-content:center; gap:10px; }
+:is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh form[aria-busy="true"] button[type="submit"]::after { content:''; flex:0 0 14px; width:14px; height:14px; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:login-submit-spin .8s linear infinite; }
+@keyframes login-submit-spin { to { transform:rotate(360deg); } }
+@media(prefers-reduced-motion:reduce) { :is(.auth-page .auth-card,body .login-card,body .auth-panel).login-ui-refresh form[aria-busy="true"] button[type="submit"]::after { animation:none; } }
