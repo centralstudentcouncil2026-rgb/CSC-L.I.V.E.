@@ -1,0 +1,66 @@
+body.live-login-page { padding:12px; min-height:100dvh; display:flex; flex-direction:column; gap:8px; }
+.live-login-page .auth-shell { flex:1; min-height:0; margin:0 auto; padding:clamp(12px,3vh,30px); gap:28px; }
+.live-login-footer { margin:0 auto; }
+.live-login-page .auth-panel { padding:18px 22px; }
+.live-login-card-icon { height:44px; margin-bottom:6px; }
+.live-login-page .auth-panel > .mb-6 { margin-bottom:12px; }
+.live-login-page .auth-card > .grid { margin-bottom:12px; }
+.live-login-page #registerForm:not(.hidden) { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px 10px; }
+.live-login-page #registerForm > * { min-width:0; margin-top:0; }
+.live-login-page #registerForm > button { grid-column:1/-1; }
+.live-login-page #registerForm :is(input,button) { min-height:36px; }
+.live-login-page #registerForm .small-text { font-size:9px !important; line-height:1.3 !important; }
+.live-login-page #registerForm .auth-input { padding:7px 9px; }
+.live-login-page #registerForm .space-y-2 > :not([hidden]) ~ :not([hidden]) { margin-top:4px; }
+.live-login-page .auth-panel:has(#registerForm:not(.hidden)) .live-login-card-icon { display:none; }
+.live-login-page .auth-panel > .csc-return-guard { margin-bottom:8px; }
+@media(max-width:760px) {
+ .live-login-page .auth-shell { display:flex !important; align-items:center; width:100%; padding:12px; }
+ .live-login-page .auth-input { font-size:16px; }
+ .live-login-page #registerSportAssignmentGroup { grid-column:1/-1; }
+}
+@media(max-height:800px) {
+ .live-login-card-icon { display:none; }
+ .live-login-page #formTitle { font-size:25px !important; margin:5px 0; }
+ .live-login-page .auth-panel { padding:14px 18px; }
+ .live-login-page form > :not([hidden]) ~ :not([hidden]) { margin-top:9px; }
+ .live-login-page .auth-input { min-height:38px; padding:8px 10px; }
+ .live-login-page .auth-panel .mt-6 { margin-top:10px; padding-top:8px; }
+ .live-login-page #helperText { margin-top:0; }
+ .live-login-flame { height:90px; margin:14px 0; }
+}
+@media(max-height:540px) {
+ .live-login-story, .live-login-footer, .auth-panel > .live-login-eyebrow, .live-login-page #formSubtitle { display:none; }
+ .live-login-page .auth-shell { display:flex !important; justify-content:center; padding:8px; }
+ .live-login-page .auth-panel { max-width:640px; }
+ .live-login-page #registerForm:not(.hidden) { grid-template-columns:repeat(3,minmax(0,1fr)); }
+ .live-login-page #registerForm .small-text { display:none; }
+ .live-login-page #signInForm:not(.hidden) { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+ .live-login-page #signInForm > :is(button,div:last-of-type) { grid-column:1/-1; }
+ .live-login-page #signInForm > * { margin-top:0; }
+}
+
+@media(max-height:740px) {
+ .live-login-page .auth-panel:has(#registerForm:not(.hidden)) > .live-login-eyebrow,
+ .live-login-page .auth-panel:has(#registerForm:not(.hidden)) #formSubtitle { display:none; }
+ .live-login-page .auth-panel:has(#registerForm:not(.hidden)) { padding:10px 14px; }
+ .live-login-page .auth-panel:has(#registerForm:not(.hidden)) > .mb-6 { margin-bottom:8px; }
+ body.live-login-page:has(#registerForm:not(.hidden)) { padding:8px; gap:4px; }
+ .live-login-page:has(#registerForm:not(.hidden)) .live-login-footer { display:none; }
+}
+@media(max-height:540px) {
+ .live-login-page .auth-card > .mt-6 { display:none; }
+ .live-login-page #signInForm .small-text { display:none; }
+ .live-login-page .auth-panel .auth-input,
+ .live-login-page .auth-panel :is(.mode-btn,.role-btn,.signin-role-btn,.submit-btn) { min-height:32px; padding-top:5px !important; padding-bottom:5px !important; }
+ .live-login-page .auth-panel > .mb-6 { margin-bottom:6px; }
+ .live-login-page .auth-card > .grid { margin-bottom:6px; }
+ .live-login-page #registerForm .space-y-2 > :not([hidden]) ~ :not([hidden]) { margin-top:2px; }
+ .live-login-page #registerForm { gap:5px 10px; }
+ .live-login-page .auth-panel > .csc-return-guard { min-height:28px; padding:4px 8px; margin-bottom:4px; }
+ .live-login-page #formTitle { font-size:23px !important; margin:2px 0; }
+}
+
+@media(max-height:540px) and (min-width:621px) { .live-login-page #registerForm > button { grid-column:2/-1; align-self:end; } }
+
+@media(max-width:480px) { .live-login-page #registerForm .role-btn { font-size:11px !important; padding-left:4px !important; padding-right:4px !important; } }
