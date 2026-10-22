@@ -230,6 +230,7 @@
 <script src="./portal-guard.js?v=20261022-context" data-csc-site="CSC-L.I.V.E."></script>
 <link rel="stylesheet" href="login-theme.css?v=20261022-csc-login">
 <link rel="stylesheet" href="./login-fit.css?v=20261022-fit">
+<script src="./remembered-accounts.js?v=20261022-accounts"></script>
 </head>
 
 <body class="bg-gray-50 live-login-page">
@@ -281,17 +282,17 @@
                     </div>
 
                     <!-- Log In Form -->
-                    <form id="signInForm" class="space-y-5">
+                    <form id="signInForm" class="space-y-5" data-csc-account-scope="live-admin">
                         <div class="space-y-2">
                             <label for="signInEmail" class="block text-sm font-medium text-gray-700">
                                 Email Address
                             </label>
                             <div class="relative">
                                 <input
-                                    id="signInEmail"
+                                    id="signInEmail" data-csc-username name="liveAccount"
                                     type="email"
                                     required
-                                    autocomplete="email"
+                                    autocomplete="section-csc-live-admin username"
                                     placeholder="your.email@school.edu"
                                     class="auth-input">
                             </div>
@@ -303,10 +304,10 @@
                             </label>
                             <div class="relative">
                                 <input
-                                    id="signInPassword"
+                                    id="signInPassword" data-csc-password name="livePassword"
                                     type="password"
                                     required
-                                    autocomplete="current-password"
+                                    autocomplete="section-csc-live-admin current-password"
                                     placeholder="••••••••"
                                     class="auth-input">
                             </div>
@@ -372,7 +373,7 @@
                                     id="registerEmail"
                                     type="email"
                                     required
-                                    autocomplete="email"
+                                    autocomplete="section-csc-live-admin username"
                                     placeholder="your.email@school.edu"
                                     class="auth-input">
                             </div>
@@ -638,6 +639,8 @@
 
         function setSignInRole(role) {
             selectedSignInRole = role;
+            signInForm.dataset.cscAccountScope = "live-" + role;
+            window.CSCAccounts?.bind(signInForm);
 
             document.querySelectorAll(".signin-role-btn").forEach(button => {
                 button.classList.toggle("active", button.dataset.signinRole === role);
@@ -977,6 +980,7 @@
 
                 const userData = await saveLocalSession(data.user, profile);
 
+                window.CSCAccounts?.remember("live-" + actualRole, email);
                 redirectByRole(userData.role);
 
             } catch (error) {
