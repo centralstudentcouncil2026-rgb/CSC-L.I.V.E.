@@ -1,0 +1,62 @@
+/* Match the campus-photo welcome panel used by CSC TRACE and SYNC. */
+html { background: #e8f3ff; }
+body.live-login-page { margin: 0; min-height: 100dvh; padding: 28px 24px 16px; background: #e8f3ff; color: #101e46; }
+.live-login-page .auth-shell {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 430px);
+  align-items: center;
+  gap: 55px;
+  width: min(1220px, 100%);
+  min-height: min(700px, calc(100dvh - 76px));
+  margin: 0 auto;
+  padding: 38px 48px;
+  border-radius: 18px;
+  background: linear-gradient(90deg, #081833db, #081833a3), url('login-campus.jpg') center / cover;
+  box-shadow: 0 16px 50px #1022491a;
+}
+.live-login-story { min-width: 0; color: white; }
+.live-login-eyebrow { display: block; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; line-height: 1.6; }
+.live-login-story .live-login-eyebrow { color: #f6df9b; }
+.live-login-story h1 { margin: 17px 0; font-size: clamp(34px, 3.4vw, 47px); font-weight: 700; line-height: 1.15; letter-spacing: -1px; }
+.live-login-story p { max-width: 350px; margin: 0; color: #e1e7f4; font-size: 14px; line-height: 1.8; }
+.live-login-flame { display: block; width: 88px; height: 130px; object-fit: contain; margin: 24px 0; }
+.live-login-tagline { color: #ffe08b; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; }
+.live-login-page .form-wrap { display: block; min-height: 0 !important; padding: 0 !important; width: 100%; }
+.live-login-page .auth-panel { width: 100%; max-width: none; padding: 28px 30px; border: 1px solid #e2e7ee; border-radius: 12px; background: white; box-shadow: 0 12px 35px #07152c26; }
+.live-login-card-icon { display: grid; place-items: center; width: 48px; height: 58px; margin-bottom: 12px; border-radius: 10px; background: #edf7ff; }
+.live-login-card-icon img { width: 29px; height: 43px; object-fit: contain; }
+.auth-panel > .live-login-eyebrow { color: #7b879c; }
+.live-login-page #formTitle { margin: 8px 0; color: #101e46; font-size: 29px !important; font-weight: 700; line-height: 1.2 !important; letter-spacing: -.7px; }
+.live-login-page #formSubtitle { margin: 0; color: #66738a; font-size: 12px !important; line-height: 1.6 !important; }
+.live-login-page .auth-panel > .mb-6 { margin-bottom: 18px; }
+.live-login-page .auth-card { padding: 0 !important; border: 0; border-radius: 0; background: transparent; box-shadow: none; backdrop-filter: none; }
+.live-login-page .auth-card > .grid { margin-bottom: 18px; gap: 8px; }
+.live-login-page .mode-btn, .live-login-page .role-btn, .live-login-page .signin-role-btn { min-height: 36px; padding: 8px 10px !important; border: 1px solid #dfe3ec; border-radius: 7px; font-size: 12px !important; box-shadow: none; }
+.live-login-page :is(.mode-btn, .role-btn, .signin-role-btn).active { background: #101e46; border-color: #101e46; color: white; box-shadow: none; }
+.live-login-page :is(.mode-btn, .role-btn, .signin-role-btn):not(.active) { background: #f3f6fa; color: #43516e; }
+.live-login-page .auth-input { min-height: 44px; padding: 10px 12px; border: 1px solid #dfe3ec; border-radius: 7px; background: white; color: #101e46; font-size: 14px; }
+.live-login-page .auth-input:focus { outline: 2px solid #597acb; outline-offset: 1px; border-color: #597acb; box-shadow: none; }
+.live-login-page label { color: #43516e; font-size: 12px; font-weight: 600; }
+.live-login-page form > :not([hidden]) ~ :not([hidden]) { margin-top: 13px; }
+.live-login-page .small-text { font-size: 10px !important; line-height: 1.5 !important; }
+.live-login-page .submit-btn { min-height: 44px; padding: 11px 14px !important; border: 1px solid #101e46; border-radius: 7px; background: #101e46; color: white; font-size: 13px !important; box-shadow: none; }
+.live-login-page .submit-btn:hover { background: #1c3467; }
+.live-login-page :is(button, a):focus-visible { outline: 3px solid #597acb; outline-offset: 3px; }
+.live-login-page #helperText { margin-top: 16px; color: #66738a; font-size: 11px; line-height: 1.6; }
+.live-login-page #helperText button { color: #203866; }
+.live-login-footer { width: min(1220px, 100%); margin: 14px auto 0; color: #66738a; text-align: center; font-size: 10px; line-height: 1.6; }
+@media (max-width: 1000px) {
+  .live-login-page .auth-shell { grid-template-columns: minmax(0, 1fr) minmax(320px, 390px); gap: 30px; padding: 30px; }
+  .live-login-story h1 { font-size: 34px; }
+}
+@media (max-width: 760px) {
+  body.live-login-page { padding: 18px 12px 12px; }
+  .live-login-page .auth-shell { display: block !important; min-height: calc(100dvh - 70px); padding: 24px 16px; border-radius: 12px; }
+  .live-login-story { display: none; }
+  .live-login-page .auth-panel { max-width: 480px; margin: auto; padding: 24px; }
+}
+@media (max-width: 380px) {
+  .live-login-page .auth-shell { padding: 16px 10px; }
+  .live-login-page .auth-panel { padding: 20px 16px; }
+  .live-login-page #formTitle { font-size: 26px !important; }
+}

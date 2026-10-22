@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CSC L.I.V.E. - Log In / Sign In</title>
 
-    <link rel="icon" href="data:,">
+    <link rel="icon" type="image/png" href="csc-torch.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -228,93 +228,28 @@
 <link rel="stylesheet" href="./portal-guard.css?v=20261022-context">
 <script src="./portal-policy.js?v=20261022-context"></script>
 <script src="./portal-guard.js?v=20261022-context" data-csc-site="CSC-L.I.V.E."></script>
+<link rel="stylesheet" href="login-theme.css?v=20261022-csc-login">
 </head>
 
-<body class="bg-gray-50">
+<body class="bg-gray-50 live-login-page">
     <main class="auth-shell grid grid-cols-1 lg:grid-cols-2 bg-gray-50">
 
         <!-- Hero Section -->
-        <section class="auth-hero flex relative overflow-hidden items-center justify-center px-8 py-12">
-            <div class="relative z-10 max-w-md text-center">
-                <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-yellow-400 mb-6 shadow-lg">
-                    <img
-                        src="L1.png"
-                        alt="School Logo"
-                        class="w-16 h-16 object-contain">
-                </div>
-
-                <h1 class="font-display text-4xl font-bold text-white mb-4">
-                    Adventist University of the Philippines
-                </h1>
-
-                <p class="text-blue-100 text-lg mb-8">
-                    Central Student Council - Physical Development Web App
-                </p>
-
-                <div class="space-y-4 text-left">
-                    <div class="flex items-start gap-3">
-                        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-yellow-400 text-blue-900 font-bold">✓</div>
-                        <div>
-                            <p class="text-white font-semibold">Real-time Leaderboard</p>
-                            <p class="text-blue-100 text-sm">Track team performance instantly.</p>
-                        </div>
-                    </div>
-
-                    <div class="flex items-start gap-3">
-                        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-yellow-400 text-blue-900 font-bold">✓</div>
-                        <div>
-                            <p class="text-white font-semibold">Game Scheduling</p>
-                            <p class="text-blue-100 text-sm">Organize matches and manage attendance.</p>
-                        </div>
-                    </div>
-
-                    <div class="flex items-start gap-3">
-                        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-yellow-400 text-blue-900 font-bold">✓</div>
-                        <div>
-                            <p class="text-white font-semibold">Team Management</p>
-                            <p class="text-blue-100 text-sm">Manage participants and teams efficiently.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="hero-auth-actions mt-8 hidden grid-cols-2 gap-3">
-                    <button
-                        type="button"
-                        data-hero-auth-mode="signin"
-                        class="rounded-xl bg-yellow-400 px-4 py-3 text-sm font-bold text-blue-950 shadow-lg transition hover:bg-yellow-300">
-                        Log In
-                    </button>
-                    <button
-                        type="button"
-                        data-hero-auth-mode="register"
-                        class="rounded-xl border border-white/70 bg-white/15 px-4 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-white/25">
-                        Sign In
-                    </button>
-                </div>
-            </div>
-        </section>
+        <section class="live-login-story" aria-labelledby="live-login-title">
+  <span class="live-login-eyebrow">THE CENTRAL STUDENT COUNCIL</span>
+  <h1 id="live-login-title">Every game.<br>One community.</h1>
+  <p>League Information and Viewing Engine</p>
+  <p style="margin-top:14px">Manage league schedules, teams, and live results from one council workspace.</p>
+  <img class="live-login-flame" src="csc-torch.png" alt="Central Student Council torch logo" width="88" height="130">
+  <span class="live-login-tagline">CSC L.I.V.E. · CONNECTED THROUGH SPORT.</span>
+</section>
 
         <!-- Log In / Sign In Section -->
         <section id="authForms" class="form-wrap flex min-h-screen min-h-dvh items-center justify-center px-6 py-8 sm:px-8 lg:px-12">
             <div class="auth-panel">
 
                 <!-- Mobile Brand -->
-                <div class="mobile-brand hidden items-center gap-3 mb-6">
-                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-600">
-                        <img
-                            src="Adventist_University_of_the_Philippines_logo.png"
-                            alt="School Logo"
-                            class="h-10 w-10 object-contain">
-                    </div>
-                    <div>
-                        <p class="font-display text-sm font-bold text-blue-900">
-                            Adventist University of the Philippines
-                        </p>
-                        <p class="text-xs text-gray-500">
-                            CSC- L.I.V.E.
-                        </p>
-                    </div>
-                </div>
+                <div class="live-login-card-icon"><img src="csc-torch.png" alt="CSC torch logo" width="29" height="43"></div><span class="live-login-eyebrow">CSC L.I.V.E. · COUNCIL ACCESS</span>
 
                 <div class="mb-6">
                     <h2 id="formTitle" class="auth-title font-display text-3xl font-bold text-gray-900 mb-2">
@@ -556,7 +491,7 @@
                 </div>
             </div>
         </section>
-    </main>
+    </main><footer class="live-login-footer">Central Student Council · Adventist University of the Philippines</footer>
 
     <div id="registerSportModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
         <div class="max-h-[80vh] w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
